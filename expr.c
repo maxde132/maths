@@ -2,6 +2,7 @@
 #include <stdlib.h>
 
 #include "expr.h"
+#include "config.h"
 
 const uint8_t PRECEDENCE[] = {
 	1,
@@ -9,7 +10,9 @@ const uint8_t PRECEDENCE[] = {
 	1,
 	3, 3, 3,
 	4, 4,
-	6, 6, 7
+
+	6, 6, 6, 6,
+	7, 7,
 };
 
 const TokenType TOK_BY_CHAR[] = { // starts at 0x21
@@ -135,7 +138,7 @@ void print_expr(Expr *expr, uint32_t indent)
 		print_expr(expr->u.o.right, indent+4);
 		break;
 	case Number_type:
-		printf("Number(%.6f)", expr->u.n);
+		printf("Number(%.*f)", global_config.precision, expr->u.n);
 		break;
 	case String_type:
 		printf("String('%.*s')", (int)expr->u.s.len, expr->u.s.s);

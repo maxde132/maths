@@ -1,4 +1,4 @@
-OBJECTS := expr.o parser.o eval.o main.o
+OBJECTS := expr.o parser.o eval.o main.o config.o map.o
 OBJ_FILES := $(patsubst %.o, obj/%.o, $(OBJECTS))
 
 CC := gcc
@@ -19,11 +19,17 @@ obj/expr.o: expr.c expr.h
 obj/parser.o: parser.c parser.h token.h expr.h
 	$(CC) parser.c -c -o obj/parser.o $(CFLAGS)
 
-obj/eval.o: eval.c eval.h expr.h
+obj/eval.o: eval.c eval.h expr.h eval_funcs_incl.c
 	$(CC) eval.c -c -o obj/eval.o $(CFLAGS)
 
 obj/main.o: main.c expr.h token.h
 	$(CC) main.c -c -o obj/main.o $(CFLAGS)
+
+obj/config.o: config.c config.h token.h
+	$(CC) config.c -c -o obj/config.o $(CFLAGS)
+
+obj/map.o: c-hashmap/map.c c-hashmap/map.h
+	$(CC) c-hashmap/map.c -Ic-hashmap -c -o obj/map.o $(CFLAGS)
 
 obj:
 	mkdir obj

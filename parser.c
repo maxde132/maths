@@ -6,9 +6,6 @@
 
 #include "parser.h"
 
-#define PI_M	3.14159265358979323846
-#define E_M		2.71828182845904523536
-
 static const char *saved_s = NULL;
 static Token peeked_tok;
 static bool has_peeked = false;
@@ -37,10 +34,6 @@ Token get_next_token(const char **s)
 	case OP_ADD_TOK:
 	case OP_SUB_TOK:
 	case OP_MOD_TOK:
-	case OP_LESS_TOK:
-	case OP_GREATER_TOK:
-	case OP_EQ_TOK:
-	case OP_NOT_TOK:
 	case OPEN_PAREN_TOK:
 	case CLOSE_PAREN_TOK:
 	case OPEN_BRAC_TOK:
@@ -50,8 +43,46 @@ Token get_next_token(const char **s)
 		ret = nToken(type, *s, 1);
 		++*s;
 		break;
+	case OP_LESS_TOK:
+		if ((*s)[1] == '=')
+		{
+			ret = nToken(OP_LESSEQ_TOK, *s, 2);
+			*s += 2;
+		}
+		ret = nToken(OP_LESS_TOK, *s, 1);
+		++*s;
+		break;
+	case OP_GREATER_TOK:
+		if ((*s)[1] == '=')
+		{
+			ret = nToken(OP_GREATEREQ_TOK, *s, 2);
+			*s += 2;
+		}
+		ret = nToken(OP_GREATER_TOK, *s, 1);
+		++*s;
+		break;
+	case OP_EQ_TOK:
+		if ((*s)[1] != '=')
+		{
+			fprintf(stderr, "assignment operator is not yet supported. "
+					"'==' is the equality operator\n");
+			break;
+		}
+		ret = nToken(OP_EQ_TOK, *s, 2);
+		*s += 2;
+		break;
+	case OP_NOT_TOK:
+		if ((*s)[1] != '=')
+		{
+			fprintf(stderr, "boolean NOT operator is not yet supported. "
+					"'!=' is the inequality operator\n");
+			break;
+		}
+		ret = nToken(OP_NOTEQ_TOK, *s, 2);
+		*s += 2;
+		break;
 	case DIGIT_TOK:
-		ret.buf.s = *s;
+		ret.buf.s = (char *)*s;
 		char *end;
 		strtod(ret.buf.s, &end);
 		ret.buf.len = end - ret.buf.s;
@@ -60,7 +91,7 @@ Token get_next_token(const char **s)
 		break;
 	case LETTER_TOK:
 	case UNDERSCORE_TOK:
-		ret.buf.s = *s;
+		ret.buf.s = (char *)*s;
 		do {
 			++*s;
 		} while (isalnum(**s) || **s == '_');
@@ -73,8 +104,8 @@ Token get_next_token(const char **s)
 		exit(1);
 	}
 
-	printf("token decoded: { %d, '%.*s' }\n",
-			ret.type, (int)ret.buf.len, ret.buf.s);
+	/*printf("token decoded: { %d, '%.*s' }\n",
+			ret.type, (int)ret.buf.len, ret.buf.s);*/
 	return ret;
 }
 
@@ -106,12 +137,10 @@ Expr *parse_expr(const char **s, uint32_t max_preced)
 
 		if (next_tok.type == OPEN_PAREN_TOK)
 		{
-			printf("calling function: '%.*s'\n", (int)ident.buf.len, ident.buf.s);
+			//printf("calling function: '%.*s'\n", (int)ident.buf.len, ident.buf.s);
 			Expr *name = calloc(1, sizeof(Expr));
 			name->type = String_type;
-			name->u.s.len = ident.buf.len;
-			name->u.s.s = strndup(ident.buf.s, ident.buf.len);
-			name->u.s.allocd = true;
+			name->u.s = ident.buf;
 
 			left->type = Operation_type;
 			left->u.o.left = name;
@@ -127,10 +156,11 @@ Expr *parse_expr(const char **s, uint32_t max_preced)
 				free_expr(left);
 				return NULL;
 			}
-			//tok = next_token(s, false);
 		} else
 		{
-			if (strncmp(ident.buf.s, "pi", ident.buf.len) == 0)
+			left->type = String_type;
+			left->u.s = ident.buf;
+			/*if (strncmp(ident.buf.s, "pi", ident.buf.len) == 0)
 			{
 				left->type = Number_type;
 				left->u.n = PI_M;
@@ -144,7 +174,7 @@ Expr *parse_expr(const char **s, uint32_t max_preced)
 						(int)ident.buf.len, ident.buf.s);
 				free_expr(left);
 				return NULL;
-			}
+			}*/
 		}
 	} else if (tok.type == OPEN_PAREN_TOK)
 	{
@@ -165,19 +195,16 @@ Expr *parse_expr(const char **s, uint32_t max_preced)
 		return NULL;
 	}
 
-	//*s = look_ahead;
-
-	//tok = next_token(s);
-
 	for (;;)
 	{
 		Token op_tok = peek_token(s);
-		if (op_tok.type > NOT_OP_TOK) break;
+		if (op_tok.type > NOT_OP_TOK)
+			break;
 
 		uint32_t preced = PRECEDENCE[op_tok.type];
-		if (preced > max_preced) break;
+		if (preced > max_preced)
+			break;
 
-		//peek_n_times = 1;
 		get_next_token(s);
 
 		//Expr *right = parse_expr(s, preced-1);

@@ -11,10 +11,15 @@ typedef enum {
 	OP_POW_TOK,
 	OP_MUL_TOK, OP_DIV_TOK, OP_MOD_TOK,
 	OP_ADD_TOK, OP_SUB_TOK,
-	OP_LESS_TOK, OP_GREATER_TOK, OP_EQ_TOK,
+
+	OP_LESS_TOK, OP_GREATER_TOK,
+	OP_LESSEQ_TOK, OP_GREATEREQ_TOK,
+	OP_EQ_TOK, OP_NOTEQ_TOK,
+
 
 	OP_NOT_TOK, // this is boolean not
 	NOT_OP_TOK,
+
 	// non-operator tokens
 	IDENT_TOK = 0x80,
 	NUMBER_TOK,
@@ -54,7 +59,7 @@ typedef enum {
 } TokenType;
 
 typedef struct strbuf {
-	const char *s;
+	char *s;
 	size_t len;
 	bool allocd;
 } strbuf;
@@ -64,6 +69,6 @@ typedef struct Token {
 	TokenType type;
 } Token;
 
-#define nToken(type, buf, len) ((Token) { { (buf), (len), false }, (type) })
+#define nToken(type, buf, len) ((Token) { { (char *)(buf), (len), false }, (type) })
 
 #endif /* TOKEN_H */

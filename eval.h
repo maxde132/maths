@@ -3,6 +3,7 @@
 
 #include "expr.h"
 
+void init_evaluator(void);
 double eval_expr(const Expr *expr);
 
 #endif /* EVAL_H */

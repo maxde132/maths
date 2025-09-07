@@ -31,6 +31,10 @@ typedef struct Expr {
 	} u;
 } Expr;
 
+#define PI_M	3.14159265358979323846
+#define E_M		2.71828182845904523536
+#define PHI_M	1.61803398874989484820
+
 void print_indent(uint32_t indent);
 void print_exprh(Expr *expr);
 
