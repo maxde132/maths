@@ -105,7 +105,7 @@ Token get_next_token(const char **s)
 	}
 
 	/*printf("token decoded: { %d, '%.*s' }\n",
-			ret.type, (int)ret.buf.len, ret.buf.s);*/
+			TOK_STRINGS[ret.type], (int)ret.buf.len, ret.buf.s);*/
 	return ret;
 }
 
@@ -140,7 +140,7 @@ Expr *parse_expr(const char **s, uint32_t max_preced)
 		Token ident = tok;
 		Token next_tok = peek_token(s);
 
-		if (next_tok.type == OPEN_PAREN_TOK)
+		if (next_tok.type == OPEN_BRAC_TOK)
 		{
 			//printf("calling function: '%.*s'\n", (int)ident.buf.len, ident.buf.s);
 			Expr *name = calloc(1, sizeof(Expr));
@@ -155,9 +155,9 @@ Expr *parse_expr(const char **s, uint32_t max_preced)
 			left->u.o.right = parse_expr(s, PARSER_MAX_PRECED);
 
 			Token close_paren_tok = get_next_token(s);
-			if (close_paren_tok.type != CLOSE_PAREN_TOK)
+			if (close_paren_tok.type != CLOSE_BRAC_TOK)
 			{
-				fprintf(stderr, "expected close paren for function call, got %u\n", close_paren_tok.type);
+				fprintf(stderr, "expected closing brace for function call, got %s\n", TOK_STRINGS[close_paren_tok.type]);
 				free_expr(left);
 				return NULL;
 			}
@@ -187,7 +187,7 @@ Expr *parse_expr(const char **s, uint32_t max_preced)
 		Token close_paren_tok = get_next_token(s);
 		if (close_paren_tok.type != CLOSE_PAREN_TOK)
 		{
-			fprintf(stderr, "expected close paren for parenthesis block, got %u\n", close_paren_tok.type);
+			fprintf(stderr, "expected close paren for parenthesis block, got %s\n", TOK_STRINGS[close_paren_tok.type]);
 			free_expr(left);
 			return NULL;
 		}
@@ -219,7 +219,8 @@ Expr *parse_expr(const char **s, uint32_t max_preced)
 
 		if (right == NULL)
 		{
-			fprintf(stderr, "missing right operand for operator %u\n", op_tok.type);
+			fprintf(stderr, "missing right operand for operator %s\n",
+					TOK_STRINGS[op_tok.type]);
 			free_expr(left);
 			return NULL;
 		}

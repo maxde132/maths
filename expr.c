@@ -7,7 +7,9 @@
 const uint8_t PRECEDENCE[] = {
 	1,
 	1,
-	1,
+
+	2,
+
 	3, 3, 3,
 	4, 4,
 
@@ -112,6 +114,60 @@ const TokenType TOK_BY_CHAR[] = { // starts at 0x21
 	TILDE_TOK,		//'~'
 };
 
+//#define n16_NULLS NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL
+
+
+const char *TOK_STRINGS[] = {
+	"OP_FUNC_CALL",
+	"OP_DOT",
+
+	"OP_POW",
+
+	"OP_MUL", "OP_DIV", "OP_MOD",
+	"OP_ADD", "OP_SUB",
+
+	"OP_LESS", "OP_GREATER",
+	"OP_LESSEQ", "OP_GREATEREQ",
+	"OP_EQ", "OP_NOTEQ",
+	
+	"OP_NOT",
+	"NOT_OP",
+
+
+	"IDENT_TOK",
+	"NUMBER_TOK",
+
+	"DIGIT_TOK",
+	"LETTER_TOK",
+	"UNDERSCORE_TOK",
+
+	"OPEN_PAREN_TOK",
+	"CLOSE_PAREN_TOK",
+
+	"OPEN_BRACKET_TOK",
+	"CLOSE_BRACKET_TOK",
+
+	"DQUOTE_TOK",
+	"SQUOTE_TOK",
+	"BACKTICK_TOK",
+
+	"COLON_TOK",
+	"SEMICOLON_TOK",
+	"COMMA_TOK",
+
+	"HASHTAG_TOK",
+	"QUESTION_TOK",
+	"BACKSLASH_TOK",
+	"DOLLAR_TOK",
+	"AMPER_TOK",
+	"PIPE_TOK",
+	"TILDE_TOK",
+	"AT_SYMB_TOK",
+
+	"INVALID_TOK",
+	"EOF_TOK",
+};
+
 void print_indent(uint32_t indent)
 {
 	printf("%*s", indent, "");
@@ -127,7 +183,7 @@ void print_expr(Expr *expr, uint32_t indent)
 	}
 	switch (expr->type) {
 	case Operation_type:
-		printf("Expr(op=%d):\n", expr->u.o.op);
+		printf("Expr(op=%s):\n", TOK_STRINGS[expr->u.o.op]);
 		print_indent(indent+2);
 
 		printf("Left:\n");

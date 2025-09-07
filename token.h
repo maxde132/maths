@@ -8,7 +8,9 @@ typedef enum {
 	// operator tokens
 	OP_FUNC_CALL_TOK,
 	OP_DOT_TOK,
+
 	OP_POW_TOK,
+
 	OP_MUL_TOK, OP_DIV_TOK, OP_MOD_TOK,
 	OP_ADD_TOK, OP_SUB_TOK,
 
@@ -16,12 +18,11 @@ typedef enum {
 	OP_LESSEQ_TOK, OP_GREATEREQ_TOK,
 	OP_EQ_TOK, OP_NOTEQ_TOK,
 
-
 	OP_NOT_TOK, // this is boolean not
 	NOT_OP_TOK,
 
 	// non-operator tokens
-	IDENT_TOK = 0x80,
+	IDENT_TOK,
 	NUMBER_TOK,
 
 	DIGIT_TOK, // not really used

@@ -7,6 +7,7 @@
 
 extern const uint8_t PRECEDENCE[];
 extern const TokenType TOK_BY_CHAR[];
+extern const char *TOK_STRINGS[];
 
 typedef struct Expr Expr;
 
