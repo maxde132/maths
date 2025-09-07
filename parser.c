@@ -101,11 +101,11 @@ Token get_next_token(const char **s)
 		break;
 	default:
 		fprintf(stderr, "invalid token starts at '%.5s'\n", *s);
-		exit(1);
+		break;
 	}
 
-	/*printf("token decoded: { %d, '%.*s' }\n",
-			TOK_STRINGS[ret.type], (int)ret.buf.len, ret.buf.s);*/
+	printf("token decoded: { %s, '%.*s' }\n",
+			TOK_STRINGS[ret.type], (int)ret.buf.len, ret.buf.s);
 	return ret;
 }
 
@@ -203,6 +203,12 @@ Expr *parse_expr(const char **s, uint32_t max_preced)
 	for (;;)
 	{
 		Token op_tok = peek_token(s);
+		if (op_tok.type == INVALID_TOK)
+		{
+			fprintf(stderr, "invalid token found\n");
+			free_expr(left);
+			return NULL;
+		}
 		if (op_tok.type > NOT_OP_TOK)
 			break;
 
