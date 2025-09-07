@@ -10,7 +10,7 @@ LDFLAGS := $(CFLAGS) -lm
 
 .PHONY: clean
 
-$(EXEC): Makefile $(OBJ_FILES)
+$(EXEC): obj Makefile $(OBJ_FILES)
 	$(CC) $(OBJ_FILES) -o $(EXEC) $(LDFLAGS)
 
 obj/expr.o: expr.c expr.h
@@ -24,6 +24,9 @@ obj/eval.o: eval.c eval.h expr.h
 
 obj/main.o: main.c expr.h token.h
 	$(CC) main.c -c -o obj/main.o $(CFLAGS)
+
+obj:
+	mkdir obj
 
 clean:
 	rm -f $(EXEC) $(OBJ_FILES)
