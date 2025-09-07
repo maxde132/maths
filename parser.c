@@ -124,6 +124,11 @@ Token peek_token(const char **s)
 
 #define PARSER_MAX_PRECED 15
 
+bool op_is_right_associative(TokenType op)
+{
+	return op == OP_POW_TOK;
+}
+
 Expr *parse_expr(const char **s, uint32_t max_preced)
 {
 	Token tok = get_next_token(s);
@@ -207,8 +212,11 @@ Expr *parse_expr(const char **s, uint32_t max_preced)
 
 		get_next_token(s);
 
-		//Expr *right = parse_expr(s, preced-1);
-		Expr *right = parse_expr(s, preced);
+		Expr *right = parse_expr(s,
+				op_is_right_associative(op_tok.type)
+					? preced
+					: preced-1);
+
 		if (right == NULL)
 		{
 			fprintf(stderr, "missing right operand for operator %u\n", op_tok.type);
