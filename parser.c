@@ -10,16 +10,28 @@
 #define E_M		2.71828182845904523536
 
 static Token cur_tok = nToken(INVALID_TOK, NULL, 0);
+static uint32_t peek_n_times = 0;
 
 Token next_token(const char **s)
 {
 	Token ret = nToken(INVALID_TOK, NULL, 0);
+	const char **sp_proxy = s;
+	static const char *s_proxy_helper = NULL;
+	if (peek_n_times > 0)
+	{
+		if (!s_proxy_helper) s_proxy_helper = *s;
+		sp_proxy = &s_proxy_helper;
+		--peek_n_times;
+	} else
+	{
+		s_proxy_helper = NULL;
+	}
 
-	while (isspace(**s)) ++*s;
+	while (isspace(**sp_proxy)) ++*sp_proxy;
 
-	if (**s == '\0') return nToken(EOF_TOK, NULL, 0);
+	if (**sp_proxy == '\0') return nToken(EOF_TOK, NULL, 0);
 
-	TokenType type = TOK_BY_CHAR[**s - 0x21];
+	TokenType type = TOK_BY_CHAR[**sp_proxy - 0x21];
 	switch (type) {
 	case OP_DOT_TOK:
 	case OP_MUL_TOK:
@@ -39,58 +51,55 @@ Token next_token(const char **s)
 	
 	case OPEN_BRAC_TOK:
 	case CLOSE_BRAC_TOK:
-		ret = nToken(type, *s, 1);
-		++*s;
+		ret = nToken(type, *sp_proxy, 1);
+		++*sp_proxy;
 		break;
 	case DIGIT_TOK:
-		ret.buf.s = *s;
+		ret.buf.s = *sp_proxy;
 		char *end;
 		strtod(ret.buf.s, &end);
 		ret.buf.len = end - ret.buf.s;
-		*s = end;
+		*sp_proxy = end;
 		ret.type = NUMBER_TOK;
 		break;
 	case LETTER_TOK:
 	case UNDERSCORE_TOK:
-		ret.buf.s = *s;
+		ret.buf.s = *sp_proxy;
 		do {
-			++*s;
-		} while (isalnum(**s) || **s == '_');
-		ret.buf.len = *s - ret.buf.s;
+			++*sp_proxy;
+		} while (isalnum(**sp_proxy) || **sp_proxy == '_');
+		ret.buf.len = *sp_proxy - ret.buf.s;
 		ret.type = IDENT_TOK;
 		ret.buf.allocd = false;
 		break;
 	default:
-		fprintf(stderr, "invalid token starts at '%.5s'\n", *s);
+		fprintf(stderr, "invalid token starts at '%.5s'\n", *sp_proxy);
 		exit(1);
 	}
 
-	//printf("token decoded: { %d, '%.*s' }\n",
-	//		ret.type, (int)ret.len, ret.str);
+	printf("token decoded: { %d, '%.*s' }\n",
+			ret.type, (int)ret.buf.len, ret.buf.s);
 	return cur_tok = ret;
 }
 
 #define PARSER_MAX_PRECED 15
 
-static bool use_cur = false;
-
 Expr *parse_expr(const char **s, uint32_t max_preced)
 {
-	Token tok = (use_cur || cur_tok.type != INVALID_TOK) ? cur_tok : next_token(s);
-	use_cur = false;
-	bool peeked = false;
+	peek_n_times = 1;
+	Token tok = next_token(s);
 
 	Expr *left = calloc(1, sizeof(Expr));
 
 	if (tok.type == IDENT_TOK)
 	{
-		peeked = true;
-
 		Token ident = tok;
+		peek_n_times = 1;
 		tok = next_token(s);
 
 		if (tok.type == OPEN_PAREN_TOK)
 		{
+			printf("calling function: '%.*s'\n", (int)ident.buf.len, ident.buf.s);
 			Expr *name = calloc(1, sizeof(Expr));
 			name->type = String_type;
 			name->u.s.len = ident.buf.len;
@@ -99,16 +108,18 @@ Expr *parse_expr(const char **s, uint32_t max_preced)
 
 			left->type = Operation_type;
 			left->u.o.left = name;
+			peek_n_times = 1;
 			tok = next_token(s);
 			left->u.o.right = parse_expr(s, PARSER_MAX_PRECED);
 			left->u.o.op = OP_FUNC_CALL_TOK;
 
 			if (cur_tok.type != CLOSE_PAREN_TOK)
 			{
-				fprintf(stderr, "expected close paren\n");
+				fprintf(stderr, "expected close paren for function call, got %u\n", cur_tok.type);
 				free_expr(left);
 				return NULL;
 			}
+			//tok = next_token(s, false);
 		} else
 		{
 			if (strncmp(ident.buf.s, "pi", ident.buf.len) == 0)
@@ -133,7 +144,7 @@ Expr *parse_expr(const char **s, uint32_t max_preced)
 		left = parse_expr(s, PARSER_MAX_PRECED);
 		if (cur_tok.type != CLOSE_PAREN_TOK)
 		{
-			fprintf(stderr, "expected close paren\n");
+			fprintf(stderr, "expected close paren for parenthesis block\n");
 			return NULL;
 		}
 	} else if (tok.type == NUMBER_TOK)
@@ -145,19 +156,21 @@ Expr *parse_expr(const char **s, uint32_t max_preced)
 		return NULL;
 	}
 
-	if (!peeked)
-		tok = next_token(s);
+	//*s = look_ahead;
+
+	tok = next_token(s);
 
 	for (;;)
 	{
-		//printf("%*stok == %d\n", level*2, "", tok.type);
-		//tok = next_token(s);
+		peek_n_times = 1;
+		tok = next_token(s);
 		if (tok.type > NOT_OP_TOK) break;
 
 		uint32_t preced = PRECEDENCE[tok.type];
 		if (preced > max_preced) break;
 
 		Token op_tok = tok;
+		//peek_n_times = 1;
 		tok = next_token(s);
 
 		Expr *right = parse_expr(s, preced-1);
@@ -167,6 +180,8 @@ Expr *parse_expr(const char **s, uint32_t max_preced)
 			free_expr(left);
 			return NULL;
 		}
+
+		next_token(s);
 
 		Expr *opnode = calloc(1, sizeof(Expr));
 		opnode->type = Operation_type;

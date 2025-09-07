@@ -1,28 +1,29 @@
+OBJECTS := expr.o parser.o eval.o main.o
+OBJ_FILES := $(patsubst %.o, obj/%.o, $(OBJECTS))
+
 CC := gcc
 
-OBJECTS := expr.o parser.o eval.o main.o
-
-EXEC = mml
+EXEC := mml
 
 CFLAGS := -Wall -Wextra -Wpedantic -g
 LDFLAGS := $(CFLAGS) -lm
 
 .PHONY: clean
 
-$(EXEC): $(OBJECTS)
-	$(CC) $(OBJECTS) -o $(EXEC) $(LDFLAGS)
+$(EXEC): Makefile $(OBJ_FILES)
+	$(CC) $(OBJ_FILES) -o $(EXEC) $(LDFLAGS)
 
-expr.o: expr.c expr.h
-	$(CC) expr.c -c -o expr.o $(CFLAGS)
+obj/expr.o: expr.c expr.h
+	$(CC) expr.c -c -o obj/expr.o $(CFLAGS)
 
-parser.o: parser.c parser.h token.h expr.h
-	$(CC) parser.c -c -o parser.o $(CFLAGS)
+obj/parser.o: parser.c parser.h token.h expr.h
+	$(CC) parser.c -c -o obj/parser.o $(CFLAGS)
 
-eval.o: eval.c eval.h expr.h
-	$(CC) eval.c -c -o eval.o $(CFLAGS)
+obj/eval.o: eval.c eval.h expr.h
+	$(CC) eval.c -c -o obj/eval.o $(CFLAGS)
 
-main.o: main.c expr.h token.h
-	$(CC) main.c -c -o main.o $(CFLAGS)
+obj/main.o: main.c expr.h token.h
+	$(CC) main.c -c -o obj/main.o $(CFLAGS)
 
 clean:
-	rm -f $(EXEC) $(OBJECTS)
+	rm -f $(EXEC) $(OBJ_FILES)
