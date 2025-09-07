@@ -42,9 +42,9 @@ double eval_expr(const Expr *expr)
 		 || right == NULL
 		 || left->type != String_type)
 			return NAN;
-		if (strncmp(left->u.s.s, "cos", 3) == 0)
+		if (strncmp(left->u.s.s, "cos", left->u.s.len) == 0)
 			return cos(eval_expr(right));
-		if (strncmp(left->u.s.s, "sin", 3) == 0)
+		if (strncmp(left->u.s.s, "sin", left->u.s.len) == 0)
 			return sin(eval_expr(right));
 
 		fprintf(stderr, "invalid function in function call: '%.*s'\n",
