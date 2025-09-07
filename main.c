@@ -27,6 +27,7 @@ int32_t main(int32_t argc, char **argv)
 		printf("%.*f", global_config.precision, val);
 
 	free_expr(expr);
+	cleanup_evaluator();
 
 	return 0;
 }

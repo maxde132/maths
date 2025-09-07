@@ -38,6 +38,12 @@ void init_evaluator(void)
 	eval_is_init = true;
 }
 
+void cleanup_evaluator(void)
+{
+	hashmap_free(func_map);
+	hashmap_free(constants);
+}
+
 double apply_binary_op(double a, double b, TokenType op)
 {
 	switch (op) {

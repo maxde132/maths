@@ -25,17 +25,33 @@ void print_usage(void)
                     "  -P, --print                        Print the result value even if `print` was not called\n"
                     "  -p PREC, --precision=PREC          Set the number of decimal digits to be printed when printing numbers\n"
 			  "  -h, --help                         Display this help message\n"
+			  "  -V, --version                      Display program information\n"
 			  "  -                                  Read expression string from stdin\n"
 			, global_config.PROG_NAME);
+	exit(1);
+}
+
+void print_info(void)
+{
+	printf("Compiled on " __DATE__ " at " __TIME__ " with "
+#ifdef __GNUC__
+	"GCC"
+#elif defined(__clang__)
+	"Clang"
+#elif defined(__INTEL_COMPILER__)
+	"an Intel compiler of"
+#endif
+		" version " __VERSION__ " and C standard version %ld.\n",
+		__STDC_VERSION__);
 	exit(1);
 }
 
 void parse_args(int32_t argc, char **argv)
 {
 	global_config.PROG_NAME = argv[0];
-	for (int32_t arg_n = 1; arg_n < argc; ++arg_n)
+	int32_t arg_n = 1;
+	for (; arg_n < argc; ++arg_n)
 	{
-		continue_outer_loop:
 		if (strncmp(argv[arg_n], "--", 2) == 0)
 		{
 			if (strcmp(argv[arg_n]+2, "debug") == 0)
@@ -44,6 +60,8 @@ void parse_args(int32_t argc, char **argv)
 				SET_FLAG(PRINT);
 			else if (strcmp(argv[arg_n]+2, "help") == 0)
 				print_usage();
+			else if (strcmp(argv[arg_n]+2, "version") == 0)
+				print_info();
 			else if (strncmp(argv[arg_n]+2, "precision=", 10) == 0)
 				global_config.precision = strtoul(argv[arg_n]+2+10, NULL, 10);
 			else
@@ -59,6 +77,10 @@ void parse_args(int32_t argc, char **argv)
 				switch (*cur) {
 				case 'h':
 					print_usage();
+					break;
+				case 'V':
+					print_info();
+					break;
 				case 'd':
 					SET_FLAG(DEBUG);
 					break;
@@ -68,9 +90,8 @@ void parse_args(int32_t argc, char **argv)
 				case 'p':
 					if (cur[1] != '\0')
 					{
-						global_config.precision = strtoul(++cur, NULL, 10);
-						++arg_n;
-						goto continue_outer_loop;
+						global_config.precision = strtoul(cur+1, &cur, 10);
+						--cur;
 						break;
 					}
 					if (argv[arg_n+1] == NULL)
