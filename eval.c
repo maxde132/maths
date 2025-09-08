@@ -27,13 +27,14 @@ void init_evaluator(void)
 	hashmap_set(func_map, hashmap_str_lit("println"),	(uintptr_t)println_double);
 
 	constants = hashmap_create();
-	union {
-		uintptr_t u;
-		double d;
-	} d2u;
-	d2u.d = PI_M;	hashmap_set(constants, hashmap_str_lit("pi"),	d2u.u);
-	d2u.d = E_M;	hashmap_set(constants, hashmap_str_lit("e"),	d2u.u);
-	d2u.d = PHI_M;	hashmap_set(constants, hashmap_str_lit("phi"),	d2u.u);
+	static TypedValue constant_structs[] = {
+		VAL_NUM(PI_M),
+		VAL_NUM(E_M),
+		VAL_NUM(PHI_M),
+	};
+	hashmap_set(constants, hashmap_str_lit("pi"),	(uintptr_t)&constant_structs[0]);
+	hashmap_set(constants, hashmap_str_lit("e"),	(uintptr_t)&constant_structs[1]);
+	hashmap_set(constants, hashmap_str_lit("phi"),	(uintptr_t)&constant_structs[2]);
 
 	eval_is_init = true;
 }
@@ -67,12 +68,14 @@ TypedValue apply_binary_op(TypedValue a, TypedValue b, TokenType op)
 				fprintf(stderr, "invalid operator on real operands: %s\n", TOK_STRINGS[op]);
 				return VAL_NUM(NAN);
 		}
-	} else if (a.type == Vector_type && b.type == Number_type && op == OP_DOT_TOK)
+	} else if (a.type == Vector_type
+		  && b.type == Number_type
+		  && op == OP_DOT_TOK)
 	{
 		size_t i = (size_t)b.v.n;
-		if (fabs(i - b.v.n) > EPSILON)
+		if (fabs(i - b.v.n) > EPSILON || b.v.n < 0)
 		{
-			fprintf(stderr, "vectors may only be indexed by an integer\n");
+			fprintf(stderr, "vectors may only be indexed by a positive integer\n");
 			return VAL_NUM(NAN);
 		}
 		if (i >= a.v.v.n)
@@ -106,14 +109,14 @@ TypedValue eval_expr(const Expr *expr)
 		return VAL_NUM(expr->u.v.n);
 	if (expr->type == String_type)
 	{
-		double val;
+		TypedValue *val;
 		if (hashmap_get(constants, expr->u.v.s.s, expr->u.v.s.len, (uintptr_t *)&val) == 0)
 		{
 			fprintf(stderr, "undefined identifier: '%.*s'\n",
 					(int)expr->u.v.s.len, expr->u.v.s.s);
 			return VAL_NUM(NAN);
 		}
-		return VAL_NUM(val);
+		return *val;
 	}
 	const Expr *left = expr->u.o.left;
 	const Expr *right = expr->u.o.right;
