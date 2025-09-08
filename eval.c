@@ -44,52 +44,74 @@ void cleanup_evaluator(void)
 	hashmap_free(constants);
 }
 
-double apply_binary_op(double a, double b, TokenType op)
+#define EPSILON 1e-15
+
+TypedValue apply_binary_op(TypedValue a, TypedValue b, TokenType op)
 {
-	switch (op) {
-		case OP_POW_TOK: return pow(a, b);
-		case OP_MUL_TOK: return a * b;
-		case OP_DIV_TOK: return a / b;
-		case OP_MOD_TOK: return fmod(a, b);
-		case OP_ADD_TOK: return a + b;
-		case OP_SUB_TOK: return a - b;
-		case OP_LESS_TOK: return a < b;
-		case OP_GREATER_TOK: return a > b;
-		case OP_LESSEQ_TOK: return a <= b;
-		case OP_GREATEREQ_TOK: return a >= b;
-		case OP_EQ_TOK: return a == b;
-		case OP_NOTEQ_TOK: return a != b;
-		default:
-			fprintf(stderr, "invalid operator: %u\n", op);
-			return NAN;
+	if (a.type == Number_type && b.type == Number_type)
+	{
+		switch (op) {
+			case OP_POW_TOK: return VAL_NUM(pow(a.v.n, b.v.n));
+			case OP_MUL_TOK: return VAL_NUM(a.v.n * b.v.n);
+			case OP_DIV_TOK: return VAL_NUM(a.v.n / b.v.n);
+			case OP_MOD_TOK: return VAL_NUM(fmod(a.v.n, b.v.n));
+			case OP_ADD_TOK: return VAL_NUM(a.v.n + b.v.n);
+			case OP_SUB_TOK: return VAL_NUM(a.v.n - b.v.n);
+			case OP_LESS_TOK: return VAL_NUM(a.v.n < b.v.n);
+			case OP_GREATER_TOK: return VAL_NUM(a.v.n > b.v.n);
+			case OP_LESSEQ_TOK: return VAL_NUM(a.v.n <= b.v.n);
+			case OP_GREATEREQ_TOK: return VAL_NUM(a.v.n >= b.v.n);
+			case OP_EQ_TOK: return VAL_NUM(a.v.n == b.v.n);
+			case OP_NOTEQ_TOK: return VAL_NUM(a.v.n != b.v.n);
+			default:
+				fprintf(stderr, "invalid operator on real operands: %s\n", TOK_STRINGS[op]);
+				return VAL_NUM(NAN);
+		}
+	} else if (a.type == Vector_type && b.type == Number_type)
+	{
+		size_t i = (size_t)b.v.n;
+		if (fabs(i - b.v.n) > EPSILON)
+		{
+			fprintf(stderr, "vectors may only be indexed by an integer\n");
+			return VAL_NUM(NAN);
+		}
+		if (i >= a.v.v.n)
+		{
+			fprintf(stderr, "index %zu out of range for vector of length %zu\n", i, a.v.v.n);
+			return VAL_NUM(NAN);
+		}
+		return eval_expr(a.v.v.ptr[i]);
 	}
+
+	fprintf(stderr, "invalid operator: %s\n", TOK_STRINGS[op]);
+	return VAL_NUM(NAN);
 }
 
-double eval_expr(const Expr *expr)
+TypedValue eval_expr(const Expr *expr)
 {
 	if (!eval_is_init)
 	{
 		fprintf(stderr, "you must run `init_evaluator` before using any evaluator functions.\n");
-		return NAN;
+		return VAL_NUM(NAN);
 	}
 
 	if (expr == NULL)
 	{
 		fprintf(stderr, "error: NULL expression found while evaluating\n");
-		return NAN;
+		return VAL_NUM(NAN);
 	}
 	if (expr->type == Number_type)
-		return expr->u.n;
+		return VAL_NUM(expr->u.v.n);
 	if (expr->type == String_type)
 	{
 		double val;
-		if (hashmap_get(constants, expr->u.s.s, expr->u.s.len, (uintptr_t *)&val) == 0)
+		if (hashmap_get(constants, expr->u.v.s.s, expr->u.v.s.len, (uintptr_t *)&val) == 0)
 		{
 			fprintf(stderr, "undefined identifier: '%.*s'\n",
-					(int)expr->u.s.len, expr->u.s.s);
-			return NAN;
+					(int)expr->u.v.s.len, expr->u.v.s.s);
+			return VAL_NUM(NAN);
 		}
-		return val;
+		return VAL_NUM(val);
 	}
 	const Expr *left = expr->u.o.left;
 	const Expr *right = expr->u.o.right;
@@ -98,22 +120,22 @@ double eval_expr(const Expr *expr)
 		if (left == NULL
 		 || right == NULL
 		 || left->type != String_type)
-			return NAN;
+			return VAL_NUM(NAN);
 		double (*func) (double);
-		if (hashmap_get(func_map, left->u.s.s, left->u.s.len, (uintptr_t *)&func) == 0)
+		if (hashmap_get(func_map, left->u.v.s.s, left->u.v.s.len, (uintptr_t *)&func) == 0)
 		{
 			fprintf(stderr, "undefined function in function call: '%.*s'\n",
-				(int)left->u.s.len, left->u.s.s);
-			return NAN;
+				(int)left->u.v.s.len, left->u.v.s.s);
+			return VAL_NUM(NAN);
 		}
 
-		return (*func)(eval_expr(right));
-		//if (strncmp(left->u.s.s, "cos", left->u.s.len) == 0)
-		//	return cos(eval_expr(right));
-		//if (strncmp(left->u.s.s, "sin", left->u.s.len) == 0)
-		//	return sin(eval_expr(right));
-
+		TypedValue ret = eval_expr(right);
+		if (ret.type == Number_type)
+			return VAL_NUM((*func)(ret.v.n));
+		fprintf(stderr, "functions with vector arguments are not yet supported\n");
+		return VAL_NUM(NAN);
 	}
+
 	return apply_binary_op(
 			eval_expr(left),
 			eval_expr(right),

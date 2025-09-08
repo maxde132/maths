@@ -21,16 +21,35 @@ typedef enum ExprType {
 	Operation_type,
 	Number_type,
 	String_type,
+	Vector_type,
 } ExprType;
+
+typedef struct VecN {
+	Expr **ptr;
+	size_t n;
+} VecN;
+
+typedef union EvalValue {
+	double n;
+	strbuf s;
+	VecN v;
+} EvalValue;
+
+typedef struct TypedValue {
+	ExprType type;
+	EvalValue v;
+} TypedValue;
 
 typedef struct Expr {
 	ExprType type;
 	union {
 		Operation o;
-		double n;
-		strbuf s;
+		EvalValue v;
 	} u;
 } Expr;
+
+#define EXPR_NUM(num) ((Expr) { Number_type, .u.v.n = (num) })
+#define VAL_NUM(num) ((TypedValue) { Number_type, .v.n = (num) })
 
 #define PI_M	3.14159265358979323846
 #define E_M		2.71828182845904523536

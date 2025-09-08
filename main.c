@@ -22,9 +22,14 @@ int32_t main(int32_t argc, char **argv)
 	if (FLAG_IS_SET(DEBUG)) print_exprh(expr);
 
 	init_evaluator();
-	double val = eval_expr(expr);
+	TypedValue val = eval_expr(expr);
 	if (FLAG_IS_SET(PRINT))
-		printf("%.*f", global_config.precision, val);
+	{
+		if (val.type == Number_type)
+			printf("%.*f", global_config.precision, val.v.n);
+		else
+			print_exprh(&((Expr) { val.type, .u.v = val.v }));
+	}
 
 	free_expr(expr);
 	cleanup_evaluator();

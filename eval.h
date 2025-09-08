@@ -5,6 +5,6 @@
 
 void init_evaluator(void);
 void cleanup_evaluator(void);
-double eval_expr(const Expr *expr);
+TypedValue eval_expr(const Expr *expr);
 
 #endif /* EVAL_H */

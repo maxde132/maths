@@ -194,11 +194,18 @@ void print_expr(Expr *expr, uint32_t indent)
 		print_expr(expr->u.o.right, indent+4);
 		break;
 	case Number_type:
-		printf("Number(%.*f)", global_config.precision, expr->u.n);
+		printf("Number(%.*f)", global_config.precision, expr->u.v.n);
 		break;
 	case String_type:
-		printf("String('%.*s')", (int)expr->u.s.len, expr->u.s.s);
+		printf("String('%.*s')", (int)expr->u.v.s.len, expr->u.v.s.s);
 		break;
+	case Vector_type:
+		printf("Vector(n=%zu):\n", expr->u.v.v.n);
+		for (size_t i = 0; i < expr->u.v.n; ++i)
+		{
+			print_expr(expr->u.v.v.ptr[i], indent+2);
+			if (i < expr->u.v.n - 1) fputc('\n', stdout);
+		}
 	}
 }
 
@@ -217,7 +224,11 @@ void free_expr(Expr *e)
 		free_expr(e->u.o.right);
 	} else if (e->type == String_type)
 	{
-		if (e->u.s.allocd) free((void *)e->u.s.s);
+		if (e->u.v.s.allocd) free((void *)e->u.v.s.s);
+	} else if (e->type == Vector_type)
+	{
+		for (size_t i = 0; i < e->u.v.n; ++i)
+			free_expr(e->u.v.v.ptr[i]);
 	}
 
 	free(e);

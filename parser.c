@@ -5,7 +5,6 @@
 #include <stdio.h>
 
 #include "parser.h"
-#include "config.h"
 
 static const char *saved_s = NULL;
 static Token peeked_tok;
@@ -145,7 +144,7 @@ Expr *parse_expr(const char **s, uint32_t max_preced)
 			//printf("calling function: '%.*s'\n", (int)ident.buf.len, ident.buf.s);
 			Expr *name = calloc(1, sizeof(Expr));
 			name->type = String_type;
-			name->u.s = ident.buf;
+			name->u.v.s = ident.buf;
 
 			left->type = Operation_type;
 			left->u.o.left = name;
@@ -164,7 +163,7 @@ Expr *parse_expr(const char **s, uint32_t max_preced)
 		} else
 		{
 			left->type = String_type;
-			left->u.s = ident.buf;
+			left->u.v.s = ident.buf;
 			/*if (strncmp(ident.buf.s, "pi", ident.buf.len) == 0)
 			{
 				left->type = Number_type;
@@ -191,9 +190,32 @@ Expr *parse_expr(const char **s, uint32_t max_preced)
 			free_expr(left);
 			return NULL;
 		}
+	} else if (tok.type == OPEN_BRACKET_TOK)
+	{
+		VecN vec = { calloc(1, sizeof(Expr *)), 0 };
+		while (tok.type != CLOSE_BRACKET_TOK)
+		{
+			vec.ptr[vec.n++] = parse_expr(s, PARSER_MAX_PRECED);
+			if ((tok = get_next_token(s)).type == COMMA_TOK)
+			{
+				/* TODO: FINISH */
+				Expr **tmp = realloc(vec.ptr, 2*vec.n * sizeof(Expr *));
+				if (tmp == NULL)
+				{
+					fprintf(stderr, "unable to expand memory for vector\n");
+					for (size_t i = 0; i < vec.n; ++i)
+						free_expr(vec.ptr[i]);
+					free(vec.ptr);
+					free_expr(left);
+					return NULL;
+				}
+				vec.ptr = tmp;
+			} else break;
+		}
+		*left = (Expr) { Vector_type, .u.v.v = vec };
 	} else if (tok.type == NUMBER_TOK)
 	{
-		*left = (Expr) { Number_type, .u.n = strtod(tok.buf.s, NULL) };
+		*left = EXPR_NUM(strtod(tok.buf.s, NULL)); 
 	} else
 	{
 		free_expr(left);
