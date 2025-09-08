@@ -5,6 +5,7 @@
 #include <stdio.h>
 
 #include "parser.h"
+#include "config.h"
 
 static const char *saved_s = NULL;
 static Token peeked_tok;
@@ -40,6 +41,7 @@ Token get_next_token(const char **s)
 	case CLOSE_BRAC_TOK:
 	case OPEN_BRACKET_TOK:
 	case CLOSE_BRACKET_TOK:
+	case COMMA_TOK:
 		ret = nToken(type, *s, 1);
 		++*s;
 		break;
@@ -104,8 +106,6 @@ Token get_next_token(const char **s)
 		break;
 	}
 
-	printf("token decoded: { %s, '%.*s' }\n",
-			TOK_STRINGS[ret.type], (int)ret.buf.len, ret.buf.s);
 	return ret;
 }
 
