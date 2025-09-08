@@ -188,10 +188,13 @@ void print_expr(Expr *expr, uint32_t indent)
 
 		printf("Left:\n");
 		print_expr(expr->u.o.left, indent+4);
-		fputc('\n', stdout);
-		print_indent(indent+2);
-		printf("Right:\n");
-		print_expr(expr->u.o.right, indent+4);
+		if (expr->u.o.right)
+		{
+			fputc('\n', stdout);
+			print_indent(indent+2);
+			printf("Right:\n");
+			print_expr(expr->u.o.right, indent+4);
+		}
 		break;
 	case Number_type:
 		printf("Number(%.*f)", global_config.precision, expr->u.v.n);
