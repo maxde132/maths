@@ -1,3 +1,4 @@
+#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -236,4 +237,26 @@ void free_expr(Expr *e)
 	}
 
 	free(e);
+}
+
+TypedValue *construct_vec(size_t n, ...)
+{
+	TypedValue *ret = calloc(1, sizeof(TypedValue));
+	ret->type = Vector_type;
+	ret->v.v.n = n;
+	ret->v.v.ptr = calloc(n, sizeof(Expr *));
+	TypedValue cur;
+	va_list args;
+	va_start(args, n);
+	for (size_t i = 0; i < n; ++i)
+	{
+		cur = va_arg(args, TypedValue);
+		ret->v.v.ptr[i] = calloc(1, sizeof(Expr));
+		ret->v.v.ptr[i]->type = cur.type;
+		ret->v.v.ptr[i]->u.v = cur.v;
+	}
+
+	va_end(args);
+
+	return ret;
 }

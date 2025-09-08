@@ -6,6 +6,8 @@
 #include <inttypes.h>
 
 #include "token.h"
+#include "parser.h"
+#include "eval.h"
 
 struct config global_config = {
 	.PROG_NAME = NULL,
@@ -13,6 +15,9 @@ struct config global_config = {
 };
 
 char *expression = NULL;
+
+UserVar *user_vars = NULL;
+UserVar *user_vars_top = NULL;
 
 uint32_t runtime_flags = 0;
 
@@ -64,7 +69,41 @@ void parse_args(int32_t argc, char **argv)
 				print_info();
 			else if (strncmp(argv[arg_n]+2, "precision=", 10) == 0)
 				global_config.precision = strtoul(argv[arg_n]+2+10, NULL, 10);
-			else
+			else if (strncmp(argv[arg_n]+2, "set_var:", 8) == 0)
+			{
+				const char *cur = argv[arg_n]+2+8;
+				while (*cur != '=' && *cur)
+					++cur;
+				if (*cur++ == '\0')
+				{
+					fprintf(stderr, "argument error: expected expression following command-line variable definition\n");
+					cleanup_evaluator();
+					exit(1);
+				}
+				strbuf name = { argv[arg_n]+2+8, cur - (argv[arg_n]+2+8) - 1, false };
+				Expr *expr = parse(cur);
+				TypedValue ret = eval_expr(expr);
+				if (user_vars == NULL)
+				{
+					user_vars = calloc(1, sizeof(UserVar));
+					user_vars_top = user_vars;
+				} else
+				{
+					size_t user_vars_top_offset = user_vars_top - user_vars;
+					UserVar *tmp = realloc(
+							user_vars,
+							((user_vars_top_offset)*=2) * sizeof(UserVar));
+					if (tmp == NULL)
+					{
+						fprintf(stderr, "could not resize user variable memory\n");
+						cleanup_evaluator();
+						exit(1);
+					}
+					user_vars = tmp;
+					user_vars_top = user_vars + user_vars_top_offset;
+				}
+				*user_vars_top++ = (UserVar) { name, ret };
+			} else
 			{
 				fprintf(stderr, "argument error: unknown option '%s'\n", argv[arg_n]);
 				print_usage();
@@ -117,6 +156,9 @@ void parse_args(int32_t argc, char **argv)
 
 	if (expression == NULL)
 		SET_FLAG(READ_STDIN);
+
+	for (ptrdiff_t i = 0; i < (user_vars_top - user_vars); ++i)
+		set_variable(user_vars[i].name, &user_vars[i].v);
 }
 
 strbuf read_string_from_stream(FILE *stream)

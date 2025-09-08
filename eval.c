@@ -11,42 +11,50 @@
 #include "c-hashmap/map.h"
 #include "eval_funcs_incl.c"
 
-static hashmap *func_map;
-static hashmap *constants;
+static hashmap *builtins;
+static hashmap *variables;
 static bool eval_is_init = false;
 
 void init_evaluator(void)
 {
-	func_map = hashmap_create();
-	hashmap_set(func_map, hashmap_str_lit("sin"),		(uintptr_t)sin);
-	hashmap_set(func_map, hashmap_str_lit("cos"),		(uintptr_t)cos);
-	hashmap_set(func_map, hashmap_str_lit("tan"),		(uintptr_t)tan);
-	hashmap_set(func_map, hashmap_str_lit("asin"),		(uintptr_t)asin);
-	hashmap_set(func_map, hashmap_str_lit("acos"),		(uintptr_t)acos);
-	hashmap_set(func_map, hashmap_str_lit("atan"),		(uintptr_t)atan);
-	hashmap_set(func_map, hashmap_str_lit("log"),		(uintptr_t)log);
-	hashmap_set(func_map, hashmap_str_lit("log2"),		(uintptr_t)log2);
-	hashmap_set(func_map, hashmap_str_lit("sqrt"),		(uintptr_t)sqrt);
-	hashmap_set(func_map, hashmap_str_lit("print"),		(uintptr_t)print_double);
-	hashmap_set(func_map, hashmap_str_lit("println"),	(uintptr_t)println_double);
+	builtins = hashmap_create();
+	hashmap_set(builtins, hashmap_str_lit("sin"),		(uintptr_t)sin);
+	hashmap_set(builtins, hashmap_str_lit("cos"),		(uintptr_t)cos);
+	hashmap_set(builtins, hashmap_str_lit("tan"),		(uintptr_t)tan);
+	hashmap_set(builtins, hashmap_str_lit("asin"),		(uintptr_t)asin);
+	hashmap_set(builtins, hashmap_str_lit("acos"),		(uintptr_t)acos);
+	hashmap_set(builtins, hashmap_str_lit("atan"),		(uintptr_t)atan);
+	hashmap_set(builtins, hashmap_str_lit("log"),		(uintptr_t)log);
+	hashmap_set(builtins, hashmap_str_lit("log2"),		(uintptr_t)log2);
+	hashmap_set(builtins, hashmap_str_lit("sqrt"),		(uintptr_t)sqrt);
+	hashmap_set(builtins, hashmap_str_lit("print"),		(uintptr_t)print_double);
+	hashmap_set(builtins, hashmap_str_lit("println"),	(uintptr_t)println_double);
 
-	constants = hashmap_create();
 	static TypedValue constant_structs[] = {
 		VAL_NUM(PI_M),
 		VAL_NUM(E_M),
 		VAL_NUM(PHI_M),
 	};
-	hashmap_set(constants, hashmap_str_lit("pi"),	(uintptr_t)&constant_structs[0]);
-	hashmap_set(constants, hashmap_str_lit("e"),	(uintptr_t)&constant_structs[1]);
-	hashmap_set(constants, hashmap_str_lit("phi"),	(uintptr_t)&constant_structs[2]);
+	hashmap_set(builtins, hashmap_str_lit("pi"),	(uintptr_t)&constant_structs[0]);
+	hashmap_set(builtins, hashmap_str_lit("e"),	(uintptr_t)&constant_structs[1]);
+	hashmap_set(builtins, hashmap_str_lit("phi"),	(uintptr_t)&constant_structs[2]);
+
+	variables = hashmap_create();
 
 	eval_is_init = true;
 }
 
 void cleanup_evaluator(void)
 {
-	hashmap_free(func_map);
-	hashmap_free(constants);
+	hashmap_free(builtins);
+	hashmap_free(variables);
+
+	eval_is_init = false;
+}
+
+int32_t set_variable(strbuf name, TypedValue *val)
+{
+	return hashmap_set(variables, name.s, name.len, (uintptr_t)val);
 }
 
 #define EPSILON 1e-15
@@ -141,13 +149,14 @@ TypedValue eval_expr(const Expr *expr)
 	if (expr->type == String_type)
 	{
 		TypedValue *val;
-		if (hashmap_get(constants, expr->u.v.s.s, expr->u.v.s.len, (uintptr_t *)&val) == 0)
-		{
-			fprintf(stderr, "undefined identifier: '%.*s'\n",
-					(int)expr->u.v.s.len, expr->u.v.s.s);
-			return VAL_NUM(NAN);
-		}
-		return *val;
+		if (hashmap_get(builtins, expr->u.v.s.s, expr->u.v.s.len, (uintptr_t *)&val))
+			return *val;
+		else if (hashmap_get(variables, expr->u.v.s.s, expr->u.v.s.len, (uintptr_t *)&val))
+			return *val;
+
+		fprintf(stderr, "undefined identifier: '%.*s'\n",
+				(int)expr->u.v.s.len, expr->u.v.s.s);
+		return VAL_NUM(NAN);
 	}
 	const Expr *left = expr->u.o.left;
 	const Expr *right = expr->u.o.right;
@@ -158,7 +167,7 @@ TypedValue eval_expr(const Expr *expr)
 		 || left->type != String_type)
 			return VAL_NUM(NAN);
 		double (*func) (double);
-		if (hashmap_get(func_map, left->u.v.s.s, left->u.v.s.len, (uintptr_t *)&func) == 0)
+		if (hashmap_get(builtins, left->u.v.s.s, left->u.v.s.len, (uintptr_t *)&func) == 0)
 		{
 			fprintf(stderr, "undefined function in function call: '%.*s'\n",
 				(int)left->u.v.s.len, left->u.v.s.s);

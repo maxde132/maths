@@ -165,21 +165,6 @@ Expr *parse_expr(const char **s, uint32_t max_preced)
 		{
 			left->type = String_type;
 			left->u.v.s = ident.buf;
-			/*if (strncmp(ident.buf.s, "pi", ident.buf.len) == 0)
-			{
-				left->type = Number_type;
-				left->u.n = PI_M;
-			} else if (strncmp(ident.buf.s, "e", ident.buf.len) == 0)
-			{
-				left->type = Number_type;
-				left->u.n = E_M;
-			} else
-			{
-				fprintf(stderr, "unknown identifier: '%.*s'\n",
-						(int)ident.buf.len, ident.buf.s);
-				free_expr(left);
-				return NULL;
-			}*/
 		}
 	} else if (tok.type == OPEN_PAREN_TOK)
 	{
@@ -236,6 +221,7 @@ Expr *parse_expr(const char **s, uint32_t max_preced)
 		*left = EXPR_NUM(strtod(tok.buf.s, NULL)); 
 	} else
 	{
+		fprintf(stderr, "found no valid operations/literals, returning (null)\n");
 		free_expr(left);
 		return NULL;
 	}
@@ -283,7 +269,10 @@ Expr *parse_expr(const char **s, uint32_t max_preced)
 	return left;
 }
 
-inline Expr *parse(const char *s)
+Expr *parse(const char *s)
 {
+	saved_s = NULL;
+	has_peeked = false;
+	peeked_tok = nToken(INVALID_TOK, NULL, 0);
 	return parse_expr(&s, PARSER_MAX_PRECED);
 }

@@ -5,6 +5,7 @@
 #include <stdio.h>
 
 #include "token.h"
+#include "expr.h"
 
 #define BIT(n) (1<<n)
 enum {
@@ -23,6 +24,13 @@ struct config {
 	uint32_t precision;
 };
 extern struct config global_config;
+typedef struct UserVars {
+	strbuf name;
+	TypedValue v;
+} UserVar;
+
+extern UserVar *user_vars;
+extern UserVar *user_vars_top;
 
 void print_usage(void);
 void parse_args(int32_t argc, char **argv);

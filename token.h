@@ -65,6 +65,8 @@ typedef struct strbuf {
 	bool allocd;
 } strbuf;
 
+#define str_lit(s) ((strbuf) { (s), sizeof(s)-1, false })
+
 typedef struct Token {
 	strbuf buf;
 	TokenType type;

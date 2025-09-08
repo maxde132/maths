@@ -50,6 +50,7 @@ typedef struct Expr {
 
 #define EXPR_NUM(num) ((Expr) { Number_type, .u.v.n = (num) })
 #define VAL_NUM(num) ((TypedValue) { Number_type, .v.n = (num) })
+#define VAL2EXPRP(val) (&(Expr) { .type = (val).type, .u.v = (val).v })
 
 #define PI_M	3.14159265358979323846
 #define E_M		2.71828182845904523536
@@ -59,5 +60,7 @@ void print_indent(uint32_t indent);
 void print_exprh(Expr *expr);
 
 void free_expr(Expr *e);
+
+TypedValue *construct_vec(size_t n, ...);
 
 #endif /* EXPR_H */

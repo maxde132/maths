@@ -5,6 +5,7 @@
 
 void init_evaluator(void);
 void cleanup_evaluator(void);
+int32_t set_variable(strbuf name, TypedValue *val);
 TypedValue eval_expr(const Expr *expr);
 
 #endif /* EVAL_H */
