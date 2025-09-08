@@ -32,7 +32,11 @@ int32_t main(int32_t argc, char **argv)
 	}
 
 	if (user_vars != NULL)
+	{
+		for (ptrdiff_t i = 0; i < (user_vars_top - user_vars); ++i)
+			free_expr(user_vars[i].e);
 		free(user_vars);
+	}
 	free_expr(expr);
 	cleanup_evaluator();
 

@@ -85,6 +85,7 @@ TypedValue apply_binary_op(TypedValue a, TypedValue b, TokenType op)
 		  && b.type == Number_type
 		  && op == OP_DOT_TOK)
 	{
+		// vector index
 		size_t i = (size_t)b.v.n;
 		if (fabs(i - b.v.n) > EPSILON || b.v.n < 0)
 		{
@@ -99,22 +100,21 @@ TypedValue apply_binary_op(TypedValue a, TypedValue b, TokenType op)
 		return eval_expr(a.v.v.ptr[i]);
 	} else if (a.type == Vector_type && b.type == Vector_type
 		  && op == OP_MUL_TOK
-		  && a.v.v.n == 2 && b.v.v.n == 2)
+		  && a.v.v.n == b.v.v.n)
 	{
-		TypedValue first_product = apply_binary_op(
-				eval_expr(a.v.v.ptr[0]),
-				eval_expr(b.v.v.ptr[0]),
-				OP_MUL_TOK);
-		TypedValue second_product = apply_binary_op(
-				eval_expr(a.v.v.ptr[1]),
-				eval_expr(b.v.v.ptr[1]),
-				OP_MUL_TOK);
-		return apply_binary_op(
-				first_product,
-				second_product,
-				OP_ADD_TOK);
+		// n-dimensional dot product
+		double sum = 0.0;
+		for (size_t i = 0; i < a.v.v.n; ++i)
+		{
+			sum += apply_binary_op(
+					eval_expr(a.v.v.ptr[i]),
+					eval_expr(b.v.v.ptr[i]),
+					OP_MUL_TOK).v.n;
+		}
+		return VAL_NUM(sum);
 	} else if (a.type == Vector_type && op == PIPE_TOK)
 	{
+		// compute vector magnitude
 		double sum = 0.0;
 		TypedValue cur_elem;
 		for (size_t i = 0; i < a.v.v.n; ++i)

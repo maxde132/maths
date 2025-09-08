@@ -175,6 +175,7 @@ Expr *parse_expr(const char **s, uint32_t max_preced)
 		}
 	} else if (tok.type == OPEN_PAREN_TOK)
 	{
+		free(left); // have to free the memory block held in `left` before overwriting the pointer
 		left = parse_expr(s, PARSER_MAX_PRECED);
 		Token close_paren_tok = get_next_token(s);
 		if (close_paren_tok.type != CLOSE_PAREN_TOK)
@@ -191,7 +192,6 @@ Expr *parse_expr(const char **s, uint32_t max_preced)
 			vec.ptr[vec.n++] = parse_expr(s, PARSER_MAX_PRECED);
 			if ((tok = get_next_token(s)).type == COMMA_TOK)
 			{
-				/* TODO: FINISH */
 				Expr **tmp = realloc(vec.ptr, 2*vec.n * sizeof(Expr *));
 				if (tmp == NULL)
 				{

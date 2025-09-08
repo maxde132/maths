@@ -18,6 +18,7 @@ char *expression = NULL;
 
 UserVar *user_vars = NULL;
 UserVar *user_vars_top = NULL;
+size_t user_vars_size = 0;
 
 uint32_t runtime_flags = 0;
 
@@ -84,14 +85,20 @@ void parse_args(int32_t argc, char **argv)
 				Expr *expr = parse(cur);
 				if (user_vars == NULL)
 				{
-					user_vars = calloc(1, sizeof(UserVar));
+					user_vars = calloc(user_vars_size = 1, sizeof(UserVar));
+					if (user_vars == NULL)
+					{
+						fprintf(stderr, "failed to allocate user variable memory\n");
+						cleanup_evaluator();
+						exit(1);
+					}
 					user_vars_top = user_vars;
-				} else
+				} else if (user_vars_size < (size_t)(user_vars_top - user_vars + 1))
 				{
 					size_t user_vars_top_offset = user_vars_top - user_vars;
 					UserVar *tmp = realloc(
 							user_vars,
-							((user_vars_top_offset)*=2) * sizeof(UserVar));
+							(user_vars_size = user_vars_top_offset*2) * sizeof(UserVar));
 					if (tmp == NULL)
 					{
 						fprintf(stderr, "could not resize user variable memory\n");
