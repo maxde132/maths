@@ -84,6 +84,22 @@ TypedValue apply_binary_op(TypedValue a, TypedValue b, TokenType op)
 			return VAL_NUM(NAN);
 		}
 		return eval_expr(a.v.v.ptr[i]);
+	} else if (a.type == Vector_type && b.type == Vector_type
+		  && op == OP_MUL_TOK
+		  && a.v.v.n == 2 && b.v.v.n == 2)
+	{
+		TypedValue first_product = apply_binary_op(
+				eval_expr(a.v.v.ptr[0]),
+				eval_expr(b.v.v.ptr[0]),
+				OP_MUL_TOK);
+		TypedValue second_product = apply_binary_op(
+				eval_expr(a.v.v.ptr[1]),
+				eval_expr(b.v.v.ptr[1]),
+				OP_MUL_TOK);
+		return apply_binary_op(
+				first_product,
+				second_product,
+				OP_ADD_TOK);
 	}
 
 	fprintf(stderr, "invalid operator: %s\n", TOK_STRINGS[op]);
