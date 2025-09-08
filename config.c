@@ -82,7 +82,6 @@ void parse_args(int32_t argc, char **argv)
 				}
 				strbuf name = { argv[arg_n]+2+8, cur - (argv[arg_n]+2+8) - 1, false };
 				Expr *expr = parse(cur);
-				TypedValue ret = eval_expr(expr);
 				if (user_vars == NULL)
 				{
 					user_vars = calloc(1, sizeof(UserVar));
@@ -102,7 +101,7 @@ void parse_args(int32_t argc, char **argv)
 					user_vars = tmp;
 					user_vars_top = user_vars + user_vars_top_offset;
 				}
-				*user_vars_top++ = (UserVar) { name, ret };
+				*user_vars_top++ = (UserVar) { name, expr };
 			} else
 			{
 				fprintf(stderr, "argument error: unknown option '%s'\n", argv[arg_n]);
@@ -158,7 +157,7 @@ void parse_args(int32_t argc, char **argv)
 		SET_FLAG(READ_STDIN);
 
 	for (ptrdiff_t i = 0; i < (user_vars_top - user_vars); ++i)
-		set_variable(user_vars[i].name, &user_vars[i].v);
+		set_variable(user_vars[i].name, user_vars[i].e);
 }
 
 strbuf read_string_from_stream(FILE *stream)

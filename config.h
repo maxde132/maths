@@ -26,7 +26,7 @@ struct config {
 extern struct config global_config;
 typedef struct UserVars {
 	strbuf name;
-	TypedValue v;
+	Expr *e;
 } UserVar;
 
 extern UserVar *user_vars;

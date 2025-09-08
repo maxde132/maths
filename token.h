@@ -8,6 +8,7 @@ typedef enum {
 	// operator tokens
 	OP_FUNC_CALL_TOK,
 	OP_DOT_TOK,
+	OP_AT_TOK,
 
 	OP_POW_TOK,
 
@@ -53,7 +54,6 @@ typedef enum {
 	AMPER_TOK,
 	PIPE_TOK,
 	TILDE_TOK,
-	AT_SYMB_TOK,
 
 	INVALID_TOK,
 	EOF_TOK,

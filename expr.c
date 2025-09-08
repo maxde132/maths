@@ -8,6 +8,7 @@
 const uint8_t PRECEDENCE[] = {
 	1,
 	1,
+	1,
 
 	2,
 
@@ -50,7 +51,7 @@ const TokenType TOK_BY_CHAR[] = { // starts at 0x21
 	OP_EQ_TOK,		//'='
 	OP_GREATER_TOK,	//'>'
 	QUESTION_TOK,	//'?'
-	AT_SYMB_TOK,	//'@'
+	OP_AT_TOK,		//'@'
 	LETTER_TOK,		//'A'
 	LETTER_TOK,		//'B'
 	LETTER_TOK,		//'C'
@@ -121,6 +122,7 @@ const TokenType TOK_BY_CHAR[] = { // starts at 0x21
 const char *TOK_STRINGS[] = {
 	"OP_FUNC_CALL",
 	"OP_DOT",
+	"OP_AT_TOK",
 
 	"OP_POW",
 
@@ -163,7 +165,6 @@ const char *TOK_STRINGS[] = {
 	"AMPER_TOK",
 	"PIPE_TOK",
 	"TILDE_TOK",
-	"AT_SYMB_TOK",
 
 	"INVALID_TOK",
 	"EOF_TOK",

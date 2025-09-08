@@ -6,19 +6,22 @@
 
 #include "parser.h"
 
-static const char *saved_s = NULL;
-static Token peeked_tok;
-static bool has_peeked = false;
+static struct {
+	const char *saved_s;
+	Token peeked_tok;
+	bool has_peeked;
+	bool looking_for_int;
+} parser_config = {0};
 
 // Gets the next token and advances the string pointer.
 Token get_next_token(const char **s)
 {
 	Token ret = nToken(INVALID_TOK, NULL, 0);
 
-	if (has_peeked) {
-		has_peeked = false;
-		*s = saved_s;
-		return peeked_tok;
+	if (parser_config.has_peeked) {
+		parser_config.has_peeked = false;
+		*s = parser_config.saved_s;
+		return parser_config.peeked_tok;
 	}
 
 	while (isspace(**s)) ++*s;
@@ -28,12 +31,13 @@ Token get_next_token(const char **s)
 	TokenType type = TOK_BY_CHAR[**s - 0x21];
 	switch (type) {
 	case OP_DOT_TOK:
-	case OP_MUL_TOK:
+	case OP_AT_TOK:
 	case OP_POW_TOK:
+	case OP_MUL_TOK:
 	case OP_DIV_TOK:
+	case OP_MOD_TOK:
 	case OP_ADD_TOK:
 	case OP_SUB_TOK:
-	case OP_MOD_TOK:
 	case OPEN_PAREN_TOK:
 	case CLOSE_PAREN_TOK:
 	case OPEN_BRAC_TOK:
@@ -86,7 +90,10 @@ Token get_next_token(const char **s)
 	case DIGIT_TOK:
 		ret.buf.s = (char *)*s;
 		char *end;
-		strtod(ret.buf.s, &end);
+		if (parser_config.looking_for_int)
+			strtoll(ret.buf.s, &end, 10);
+		else
+			strtod(ret.buf.s, &end);
 		ret.buf.len = end - ret.buf.s;
 		*s = end;
 		ret.type = NUMBER_TOK;
@@ -112,14 +119,14 @@ Token get_next_token(const char **s)
 // Peeks at the next token without advancing the string pointer.
 Token peek_token(const char **s)
 {
-	if (!has_peeked)
+	if (!parser_config.has_peeked)
 	{
 		const char *s_copy = *s;
-		peeked_tok = get_next_token(&s_copy);
-		saved_s = s_copy;
-		has_peeked = true;
+		parser_config.peeked_tok = get_next_token(&s_copy);
+		parser_config.saved_s = s_copy;
+		parser_config.has_peeked = true;
 	}
-	return peeked_tok;
+	return parser_config.peeked_tok;
 }
 
 #define PARSER_MAX_PRECED 15
@@ -218,7 +225,11 @@ Expr *parse_expr(const char **s, uint32_t max_preced)
 		left = opnode;
 	} else if (tok.type == NUMBER_TOK)
 	{
-		*left = EXPR_NUM(strtod(tok.buf.s, NULL)); 
+		if (parser_config.looking_for_int)
+			*left = EXPR_NUM((double)strtoll(tok.buf.s, NULL, 10));
+		else
+			*left = EXPR_NUM(strtod(tok.buf.s, NULL)); 
+		parser_config.looking_for_int = false;
 	} else
 	{
 		fprintf(stderr, "found no valid operations/literals, returning (null)\n");
@@ -243,6 +254,9 @@ Expr *parse_expr(const char **s, uint32_t max_preced)
 			break;
 
 		get_next_token(s);
+
+		if (op_tok.type == OP_DOT_TOK)
+			parser_config.looking_for_int = true;
 
 		Expr *right = parse_expr(s,
 				op_is_right_associative(op_tok.type)
@@ -271,8 +285,6 @@ Expr *parse_expr(const char **s, uint32_t max_preced)
 
 Expr *parse(const char *s)
 {
-	saved_s = NULL;
-	has_peeked = false;
-	peeked_tok = nToken(INVALID_TOK, NULL, 0);
+	memset(&parser_config, 0, sizeof(parser_config));
 	return parse_expr(&s, PARSER_MAX_PRECED);
 }

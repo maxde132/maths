@@ -52,9 +52,9 @@ void cleanup_evaluator(void)
 	eval_is_init = false;
 }
 
-int32_t set_variable(strbuf name, TypedValue *val)
+int32_t set_variable(strbuf name, Expr *expr)
 {
-	return hashmap_set(variables, name.s, name.len, (uintptr_t)val);
+	return hashmap_set(variables, name.s, name.len, (uintptr_t)expr);
 }
 
 #define EPSILON 1e-15
@@ -149,10 +149,11 @@ TypedValue eval_expr(const Expr *expr)
 	if (expr->type == String_type)
 	{
 		TypedValue *val;
+		Expr *out;
 		if (hashmap_get(builtins, expr->u.v.s.s, expr->u.v.s.len, (uintptr_t *)&val))
 			return *val;
-		else if (hashmap_get(variables, expr->u.v.s.s, expr->u.v.s.len, (uintptr_t *)&val))
-			return *val;
+		else if (hashmap_get(variables, expr->u.v.s.s, expr->u.v.s.len, (uintptr_t *)&out))
+			return eval_expr(out);
 
 		fprintf(stderr, "undefined identifier: '%.*s'\n",
 				(int)expr->u.v.s.len, expr->u.v.s.s);
