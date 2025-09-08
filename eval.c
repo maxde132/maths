@@ -67,7 +67,7 @@ TypedValue apply_binary_op(TypedValue a, TypedValue b, TokenType op)
 				fprintf(stderr, "invalid operator on real operands: %s\n", TOK_STRINGS[op]);
 				return VAL_NUM(NAN);
 		}
-	} else if (a.type == Vector_type && b.type == Number_type)
+	} else if (a.type == Vector_type && b.type == Number_type && op == OP_DOT_TOK)
 	{
 		size_t i = (size_t)b.v.n;
 		if (fabs(i - b.v.n) > EPSILON)
@@ -100,6 +100,8 @@ TypedValue eval_expr(const Expr *expr)
 		fprintf(stderr, "error: NULL expression found while evaluating\n");
 		return VAL_NUM(NAN);
 	}
+	if (expr->type == Vector_type)
+		return (TypedValue) { Vector_type, .v.v = expr->u.v.v };
 	if (expr->type == Number_type)
 		return VAL_NUM(expr->u.v.n);
 	if (expr->type == String_type)

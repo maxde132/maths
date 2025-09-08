@@ -229,6 +229,7 @@ void free_expr(Expr *e)
 	{
 		for (size_t i = 0; i < e->u.v.n; ++i)
 			free_expr(e->u.v.v.ptr[i]);
+		free(e->u.v.v.ptr);
 	}
 
 	free(e);

@@ -195,6 +195,7 @@ Expr *parse_expr(const char **s, uint32_t max_preced)
 		VecN vec = { calloc(1, sizeof(Expr *)), 0 };
 		while (tok.type != CLOSE_BRACKET_TOK)
 		{
+			/* this line is creating memory that leaks at some point */
 			vec.ptr[vec.n++] = parse_expr(s, PARSER_MAX_PRECED);
 			if ((tok = get_next_token(s)).type == COMMA_TOK)
 			{
@@ -253,6 +254,7 @@ Expr *parse_expr(const char **s, uint32_t max_preced)
 			return NULL;
 		}
 
+		/* this line is creating memory that leaks at some point */
 		Expr *opnode = calloc(1, sizeof(Expr));
 		opnode->type = Operation_type;
 		opnode->u.o.left = left;
