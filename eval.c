@@ -18,8 +18,12 @@ static bool eval_is_init = false;
 void init_evaluator(void)
 {
 	func_map = hashmap_create();
-	hashmap_set(func_map, hashmap_str_lit("cos"),		(uintptr_t)cos);
 	hashmap_set(func_map, hashmap_str_lit("sin"),		(uintptr_t)sin);
+	hashmap_set(func_map, hashmap_str_lit("cos"),		(uintptr_t)cos);
+	hashmap_set(func_map, hashmap_str_lit("tan"),		(uintptr_t)tan);
+	hashmap_set(func_map, hashmap_str_lit("asin"),		(uintptr_t)asin);
+	hashmap_set(func_map, hashmap_str_lit("acos"),		(uintptr_t)acos);
+	hashmap_set(func_map, hashmap_str_lit("atan"),		(uintptr_t)atan);
 	hashmap_set(func_map, hashmap_str_lit("log"),		(uintptr_t)log);
 	hashmap_set(func_map, hashmap_str_lit("log2"),		(uintptr_t)log2);
 	hashmap_set(func_map, hashmap_str_lit("sqrt"),		(uintptr_t)sqrt);
@@ -64,6 +68,7 @@ TypedValue apply_binary_op(TypedValue a, TypedValue b, TokenType op)
 			case OP_GREATEREQ_TOK: return VAL_NUM(a.v.n >= b.v.n);
 			case OP_EQ_TOK: return VAL_NUM(a.v.n == b.v.n);
 			case OP_NOTEQ_TOK: return VAL_NUM(a.v.n != b.v.n);
+			case PIPE_TOK: return VAL_NUM(fabs(a.v.n));
 			default:
 				fprintf(stderr, "invalid operator on real operands: %s\n", TOK_STRINGS[op]);
 				return VAL_NUM(NAN);
@@ -100,6 +105,16 @@ TypedValue apply_binary_op(TypedValue a, TypedValue b, TokenType op)
 				first_product,
 				second_product,
 				OP_ADD_TOK);
+	} else if (a.type == Vector_type && op == PIPE_TOK)
+	{
+		double sum = 0.0;
+		TypedValue cur_elem;
+		for (size_t i = 0; i < a.v.v.n; ++i)
+		{
+			cur_elem = eval_expr(a.v.v.ptr[i]);
+			sum += apply_binary_op(cur_elem, cur_elem, OP_MUL_TOK).v.n;
+		}
+		return VAL_NUM(sqrt(sum));
 	}
 
 	fprintf(stderr, "invalid operator: %s\n", TOK_STRINGS[op]);
@@ -159,6 +174,6 @@ TypedValue eval_expr(const Expr *expr)
 
 	return apply_binary_op(
 			eval_expr(left),
-			eval_expr(right),
+			(right) ? eval_expr(right) : VAL_NUM(NAN),
 			expr->u.o.op);
 }

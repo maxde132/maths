@@ -41,6 +41,7 @@ Token get_next_token(const char **s)
 	case OPEN_BRACKET_TOK:
 	case CLOSE_BRACKET_TOK:
 	case COMMA_TOK:
+	case PIPE_TOK:
 		ret = nToken(type, *s, 1);
 		++*s;
 		break;
@@ -195,7 +196,6 @@ Expr *parse_expr(const char **s, uint32_t max_preced)
 		VecN vec = { calloc(1, sizeof(Expr *)), 0 };
 		while (tok.type != CLOSE_BRACKET_TOK)
 		{
-			/* this line is creating memory that leaks at some point */
 			vec.ptr[vec.n++] = parse_expr(s, PARSER_MAX_PRECED);
 			if ((tok = get_next_token(s)).type == COMMA_TOK)
 			{
@@ -214,6 +214,23 @@ Expr *parse_expr(const char **s, uint32_t max_preced)
 			} else break;
 		}
 		*left = (Expr) { Vector_type, .u.v.v = vec };
+	} else if (tok.type == PIPE_TOK)
+	{
+		left = parse_expr(s, PARSER_MAX_PRECED);
+		Token close_pipe_tok = get_next_token(s);
+		if (close_pipe_tok.type != PIPE_TOK)
+		{
+			fprintf(stderr, "expected closing pipe for pipe block, got %s\n", TOK_STRINGS[close_pipe_tok.type]);
+			free_expr(left);
+			return NULL;
+		}
+		Expr *opnode = calloc(1, sizeof(Expr));
+		opnode->type = Operation_type;
+		opnode->u.o.left = left;
+		opnode->u.o.right = NULL;
+		opnode->u.o.op = PIPE_TOK;
+
+		left = opnode;
 	} else if (tok.type == NUMBER_TOK)
 	{
 		*left = EXPR_NUM(strtod(tok.buf.s, NULL)); 
@@ -254,7 +271,6 @@ Expr *parse_expr(const char **s, uint32_t max_preced)
 			return NULL;
 		}
 
-		/* this line is creating memory that leaks at some point */
 		Expr *opnode = calloc(1, sizeof(Expr));
 		opnode->type = Operation_type;
 		opnode->u.o.left = left;
