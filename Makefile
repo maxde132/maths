@@ -13,22 +13,22 @@ LDFLAGS := $(CFLAGS) -lm
 $(EXEC): obj Makefile $(OBJ_FILES)
 	$(CC) $(OBJ_FILES) -o $(EXEC) $(LDFLAGS)
 
-obj/expr.o: expr.c expr.h
+obj/expr.o: Makefile expr.c expr.h
 	$(CC) expr.c -c -o obj/expr.o $(CFLAGS)
 
-obj/parser.o: parser.c parser.h token.h expr.h
+obj/parser.o: Makefile parser.c parser.h token.h expr.h
 	$(CC) parser.c -c -o obj/parser.o $(CFLAGS)
 
-obj/eval.o: eval.c eval.h expr.h eval_funcs_incl.c
+obj/eval.o: Makefile eval.c eval.h expr.h eval_funcs_incl.c
 	$(CC) eval.c -c -o obj/eval.o $(CFLAGS)
 
-obj/main.o: main.c expr.h token.h
+obj/main.o: Makefile main.c expr.h token.h
 	$(CC) main.c -c -o obj/main.o $(CFLAGS)
 
-obj/config.o: config.c config.h token.h
+obj/config.o: Makefile config.c config.h token.h
 	$(CC) config.c -c -o obj/config.o $(CFLAGS)
 
-obj/map.o: c-hashmap/map.c c-hashmap/map.h
+obj/map.o: Makefile c-hashmap/map.c c-hashmap/map.h
 	$(CC) c-hashmap/map.c -Ic-hashmap -c -o obj/map.o $(CFLAGS)
 
 obj:

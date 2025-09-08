@@ -6,22 +6,15 @@
 
 #include "parser.h"
 
-static struct {
-	const char *saved_s;
-	Token peeked_tok;
-	bool has_peeked;
-	bool looking_for_int;
-} parser_config = {0};
-
 // Gets the next token and advances the string pointer.
-Token get_next_token(const char **s)
+Token get_next_token(const char **s, struct parser_state *state)
 {
 	Token ret = nToken(INVALID_TOK, NULL, 0);
 
-	if (parser_config.has_peeked) {
-		parser_config.has_peeked = false;
-		*s = parser_config.saved_s;
-		return parser_config.peeked_tok;
+	if (state->has_peeked) {
+		state->has_peeked = false;
+		*s = state->saved_s;
+		return state->peeked_tok;
 	}
 
 	while (isspace(**s)) ++*s;
@@ -90,7 +83,7 @@ Token get_next_token(const char **s)
 	case DIGIT_TOK:
 		ret.buf.s = (char *)*s;
 		char *end;
-		if (parser_config.looking_for_int)
+		if (state->looking_for_int)
 			strtoll(ret.buf.s, &end, 10);
 		else
 			strtod(ret.buf.s, &end);
@@ -117,16 +110,16 @@ Token get_next_token(const char **s)
 }
 
 // Peeks at the next token without advancing the string pointer.
-Token peek_token(const char **s)
+Token peek_token(const char **s, struct parser_state *state)
 {
-	if (!parser_config.has_peeked)
+	if (!state->has_peeked)
 	{
 		const char *s_copy = *s;
-		parser_config.peeked_tok = get_next_token(&s_copy);
-		parser_config.saved_s = s_copy;
-		parser_config.has_peeked = true;
+		state->peeked_tok = get_next_token(&s_copy, state);
+		state->saved_s = s_copy;
+		state->has_peeked = true;
 	}
-	return parser_config.peeked_tok;
+	return state->peeked_tok;
 }
 
 #define PARSER_MAX_PRECED 15
@@ -136,16 +129,16 @@ bool op_is_right_associative(TokenType op)
 	return op == OP_POW_TOK;
 }
 
-Expr *parse_expr(const char **s, uint32_t max_preced)
+Expr *parse_expr(const char **s, uint32_t max_preced, struct parser_state *state)
 {
-	Token tok = get_next_token(s);
+	Token tok = get_next_token(s, state);
 
 	Expr *left = calloc(1, sizeof(Expr));
 
 	if (tok.type == IDENT_TOK)
 	{
 		Token ident = tok;
-		Token next_tok = peek_token(s);
+		Token next_tok = peek_token(s, state);
 
 		if (next_tok.type == OPEN_BRAC_TOK)
 		{
@@ -158,10 +151,10 @@ Expr *parse_expr(const char **s, uint32_t max_preced)
 			left->u.o.left = name;
 			left->u.o.op = OP_FUNC_CALL_TOK;
 
-			get_next_token(s);
-			left->u.o.right = parse_expr(s, PARSER_MAX_PRECED);
+			get_next_token(s, state);
+			left->u.o.right = parse_expr(s, PARSER_MAX_PRECED, state);
 
-			Token close_paren_tok = get_next_token(s);
+			Token close_paren_tok = get_next_token(s, state);
 			if (close_paren_tok.type != CLOSE_BRAC_TOK)
 			{
 				fprintf(stderr, "expected closing brace for function call, got %s\n", TOK_STRINGS[close_paren_tok.type]);
@@ -176,8 +169,8 @@ Expr *parse_expr(const char **s, uint32_t max_preced)
 	} else if (tok.type == OPEN_PAREN_TOK)
 	{
 		free(left); // have to free the memory block held in `left` before overwriting the pointer
-		left = parse_expr(s, PARSER_MAX_PRECED);
-		Token close_paren_tok = get_next_token(s);
+		left = parse_expr(s, PARSER_MAX_PRECED, state);
+		Token close_paren_tok = get_next_token(s, state);
 		if (close_paren_tok.type != CLOSE_PAREN_TOK)
 		{
 			fprintf(stderr, "expected close paren for parenthesis block, got %s\n", TOK_STRINGS[close_paren_tok.type]);
@@ -189,8 +182,8 @@ Expr *parse_expr(const char **s, uint32_t max_preced)
 		VecN vec = { calloc(1, sizeof(Expr *)), 0 };
 		while (tok.type != CLOSE_BRACKET_TOK)
 		{
-			vec.ptr[vec.n++] = parse_expr(s, PARSER_MAX_PRECED);
-			if ((tok = get_next_token(s)).type == COMMA_TOK)
+			vec.ptr[vec.n++] = parse_expr(s, PARSER_MAX_PRECED, state);
+			if ((tok = get_next_token(s, state)).type == COMMA_TOK)
 			{
 				Expr **tmp = realloc(vec.ptr, 2*vec.n * sizeof(Expr *));
 				if (tmp == NULL)
@@ -208,8 +201,8 @@ Expr *parse_expr(const char **s, uint32_t max_preced)
 		*left = (Expr) { Vector_type, .u.v.v = vec };
 	} else if (tok.type == PIPE_TOK)
 	{
-		left = parse_expr(s, PARSER_MAX_PRECED);
-		Token close_pipe_tok = get_next_token(s);
+		left = parse_expr(s, PARSER_MAX_PRECED, state);
+		Token close_pipe_tok = get_next_token(s, state);
 		if (close_pipe_tok.type != PIPE_TOK)
 		{
 			fprintf(stderr, "expected closing pipe for pipe block, got %s\n", TOK_STRINGS[close_pipe_tok.type]);
@@ -225,11 +218,11 @@ Expr *parse_expr(const char **s, uint32_t max_preced)
 		left = opnode;
 	} else if (tok.type == NUMBER_TOK)
 	{
-		if (parser_config.looking_for_int)
+		if (state->looking_for_int)
 			*left = EXPR_NUM((double)strtoll(tok.buf.s, NULL, 10));
 		else
 			*left = EXPR_NUM(strtod(tok.buf.s, NULL)); 
-		parser_config.looking_for_int = false;
+		state->looking_for_int = false;
 	} else
 	{
 		fprintf(stderr, "found no valid operations/literals, returning (null)\n");
@@ -239,7 +232,7 @@ Expr *parse_expr(const char **s, uint32_t max_preced)
 
 	for (;;)
 	{
-		Token op_tok = peek_token(s);
+		Token op_tok = peek_token(s, state);
 		if (op_tok.type == INVALID_TOK)
 		{
 			fprintf(stderr, "invalid token found\n");
@@ -253,15 +246,15 @@ Expr *parse_expr(const char **s, uint32_t max_preced)
 		if (preced > max_preced)
 			break;
 
-		get_next_token(s);
+		get_next_token(s, state);
 
 		if (op_tok.type == OP_DOT_TOK)
-			parser_config.looking_for_int = true;
+			state->looking_for_int = true;
 
 		Expr *right = parse_expr(s,
 				op_is_right_associative(op_tok.type)
 					? preced
-					: preced-1);
+					: preced-1, state);
 
 		if (right == NULL)
 		{
@@ -283,8 +276,8 @@ Expr *parse_expr(const char **s, uint32_t max_preced)
 	return left;
 }
 
-Expr *parse(const char *s)
+inline Expr *parse(const char *s)
 {
-	memset(&parser_config, 0, sizeof(parser_config));
-	return parse_expr(&s, PARSER_MAX_PRECED);
+	struct parser_state state = {0};
+	return parse_expr(&s, PARSER_MAX_PRECED, &state);
 }
