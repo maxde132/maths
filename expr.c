@@ -201,10 +201,10 @@ void print_expr(Expr *expr, uint32_t indent)
 		break;
 	case Vector_type:
 		printf("Vector(n=%zu):\n", expr->u.v.v.n);
-		for (size_t i = 0; i < expr->u.v.n; ++i)
+		for (size_t i = 0; i < expr->u.v.v.n; ++i)
 		{
 			print_expr(expr->u.v.v.ptr[i], indent+2);
-			if (i < expr->u.v.n - 1) fputc('\n', stdout);
+			if (i < expr->u.v.v.n - 1) fputc('\n', stdout);
 		}
 	}
 }
@@ -227,7 +227,7 @@ void free_expr(Expr *e)
 		if (e->u.v.s.allocd) free((void *)e->u.v.s.s);
 	} else if (e->type == Vector_type)
 	{
-		for (size_t i = 0; i < e->u.v.n; ++i)
+		for (size_t i = 0; i < e->u.v.v.n; ++i)
 			free_expr(e->u.v.v.ptr[i]);
 		free(e->u.v.v.ptr);
 	}
