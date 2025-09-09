@@ -17,10 +17,6 @@ struct config global_config = {
 
 char *expression = NULL;
 
-UserVar *user_vars = NULL;
-UserVar *user_vars_top = NULL;
-size_t user_vars_size = 0;
-
 extern struct evaluator_state eval_state;
 
 void print_usage(void)
@@ -37,11 +33,11 @@ void print_usage(void)
 			  "  -V, --version                      Display program information\n"
 			  "  -                                  Read expression string from stdin\n"
 			, global_config.PROG_NAME);
-	if (user_vars != NULL)
+	if (eval_state.user_vars.ptr != NULL)
 	{
-		for (ptrdiff_t i = 0; i < (user_vars_top - user_vars); ++i)
-			free_expr(user_vars[i].e);
-		free(user_vars);
+		for (size_t i = 0; i < eval_state.user_vars.in_use; ++i)
+			free_expr(eval_state.user_vars.ptr[i]);
+		free(eval_state.user_vars.ptr);
 	}
 	cleanup_evaluator(&eval_state);
 	exit(1);
@@ -97,32 +93,32 @@ void parse_args(int32_t argc, char **argv)
 				}
 				strbuf name = { argv[arg_n]+2+8, cur - (argv[arg_n]+2+8) - 1, false };
 				Expr *expr = parse(cur);
-				if (user_vars == NULL)
+				if (eval_state.user_vars.ptr == NULL)
 				{
-					user_vars = calloc(user_vars_size = 1, sizeof(UserVar));
-					if (user_vars == NULL)
+					eval_state.user_vars.ptr = calloc(eval_state.user_vars.allocd_size = 1, sizeof(Expr *));
+					if (eval_state.user_vars.ptr == NULL)
 					{
 						fprintf(stderr, "failed to allocate user variable memory\n");
 						cleanup_evaluator(&eval_state);
 						exit(1);
 					}
-					user_vars_top = user_vars;
-				} else if (user_vars_size < (size_t)(user_vars_top - user_vars + 1))
+					eval_state.user_vars.in_use = 0;
+				} else if (eval_state.user_vars.allocd_size < (size_t)(eval_state.user_vars.in_use+1))
 				{
-					size_t user_vars_top_offset = user_vars_top - user_vars;
-					UserVar *tmp = realloc(
-							user_vars,
-							(user_vars_size = user_vars_top_offset*2) * sizeof(UserVar));
+					Expr **tmp = realloc(
+							eval_state.user_vars.ptr,
+							(eval_state.user_vars.allocd_size = eval_state.user_vars.in_use*2) * sizeof(Expr *));
 					if (tmp == NULL)
 					{
 						fprintf(stderr, "could not resize user variable memory\n");
+						free(eval_state.user_vars.ptr);
 						cleanup_evaluator(&eval_state);
 						exit(1);
 					}
-					user_vars = tmp;
-					user_vars_top = user_vars + user_vars_top_offset;
+					eval_state.user_vars.ptr = tmp;
 				}
-				*user_vars_top++ = (UserVar) { name, expr };
+				eval_state.user_vars.ptr[eval_state.user_vars.in_use] = expr;
+				set_variable(&eval_state, name, eval_state.user_vars.in_use++);
 			} else
 			{
 				fprintf(stderr, "argument error: unknown option '%s'\n", argv[arg_n]);
@@ -176,9 +172,6 @@ void parse_args(int32_t argc, char **argv)
 
 	if (expression == NULL)
 		SET_FLAG(READ_STDIN);
-
-	for (ptrdiff_t i = 0; i < (user_vars_top - user_vars); ++i)
-		set_variable(&eval_state, user_vars[i].name, user_vars[i].e);
 }
 
 strbuf read_string_from_stream(FILE *stream)

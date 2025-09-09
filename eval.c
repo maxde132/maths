@@ -51,6 +51,8 @@ void init_evaluator(struct evaluator_state *state)
 		VAL_NUM(E_M),
 		VAL_NUM(PHI_M),
 		VAL_CNUM(I),
+		VAL_NUM(NAN),
+		VAL_NUM(INFINITY),
 	};
 	hashmap_set(state->builtins, hashmap_str_lit("true"),	(uintptr_t)&constant_structs[0]);
 	hashmap_set(state->builtins, hashmap_str_lit("false"),(uintptr_t)&constant_structs[1]);
@@ -58,6 +60,8 @@ void init_evaluator(struct evaluator_state *state)
 	hashmap_set(state->builtins, hashmap_str_lit("e"),	(uintptr_t)&constant_structs[3]);
 	hashmap_set(state->builtins, hashmap_str_lit("phi"),	(uintptr_t)&constant_structs[4]);
 	hashmap_set(state->builtins, hashmap_str_lit("i"),	(uintptr_t)&constant_structs[5]);
+	hashmap_set(state->builtins, hashmap_str_lit("nan"),	(uintptr_t)&constant_structs[6]);
+	hashmap_set(state->builtins, hashmap_str_lit("inf"),	(uintptr_t)&constant_structs[7]);
 
 	state->variables = hashmap_create();
 
@@ -72,9 +76,9 @@ void cleanup_evaluator(struct evaluator_state *state)
 	state->is_init = false;
 }
 
-int32_t set_variable(struct evaluator_state *state, strbuf name, Expr *expr)
+int32_t set_variable(struct evaluator_state *state, strbuf name, size_t index)
 {
-	return hashmap_set(state->variables, name.s, name.len, (uintptr_t)expr);
+	return hashmap_set(state->variables, name.s, name.len, (uintptr_t)index);
 }
 
 #define EPSILON 1e-15
@@ -207,11 +211,11 @@ TypedValue eval_expr(struct evaluator_state *state, const Expr *expr)
 	if (expr->type == String_type)
 	{
 		TypedValue *val;
-		Expr *out;
+		size_t out;
 		if (hashmap_get(state->builtins, expr->u.v.s.s, expr->u.v.s.len, (uintptr_t *)&val))
 			return *val;
 		else if (hashmap_get(state->variables, expr->u.v.s.s, expr->u.v.s.len, (uintptr_t *)&out))
-			return eval_expr(state, out);
+			return eval_expr(state, state->user_vars.ptr[out]);
 
 		fprintf(stderr, "undefined identifier: '%.*s'\n",
 				(int)expr->u.v.s.len, expr->u.v.s.s);

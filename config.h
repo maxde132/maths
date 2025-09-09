@@ -25,13 +25,6 @@ struct config {
 	uint32_t runtime_flags;
 };
 extern struct config global_config;
-typedef struct UserVars {
-	strbuf name;
-	Expr *e;
-} UserVar;
-
-extern UserVar *user_vars;
-extern UserVar *user_vars_top;
 
 void print_usage(void);
 void parse_args(int32_t argc, char **argv);

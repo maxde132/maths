@@ -25,11 +25,11 @@ int32_t main(int32_t argc, char **argv)
 	if (FLAG_IS_SET(PRINT))
 		print_typedval(&val);
 
-	if (user_vars != NULL)
+	if (global_config.user_vars.ptr != NULL)
 	{
-		for (ptrdiff_t i = 0; i < (user_vars_top - user_vars); ++i)
-			free_expr(user_vars[i].e);
-		free(user_vars);
+		for (size_t i = 0; i < global_config.user_vars.in_use; ++i)
+			free_expr(global_config.user_vars.ptr[i]);
+		free(global_config.user_vars.ptr);
 	}
 	free_expr(expr);
 	cleanup_evaluator(&eval_state);
