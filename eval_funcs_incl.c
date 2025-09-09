@@ -1,13 +1,13 @@
+#include <complex.h>
 #include <stdio.h>
 #include "config.h"
 
-double print_double(double a)
+_Complex double custom_clog2(_Complex double a)
 {
-	printf("%.*f", global_config.precision, a);
-	return a;
+	return clog(a)/clog(2.0);
 }
-double println_double(double a)
+
+_Complex double custom_sqrt(double a)
 {
-	printf("%.*f\n", global_config.precision, a);
-	return a;
+	return csqrt(a + 0.0*I);
 }

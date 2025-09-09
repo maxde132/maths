@@ -12,6 +12,7 @@
 struct config global_config = {
 	.PROG_NAME = NULL,
 	.precision = 6,
+	.bools_print_num = false,
 };
 
 char *expression = NULL;
@@ -22,14 +23,17 @@ size_t user_vars_size = 0;
 
 uint32_t runtime_flags = 0;
 
+extern struct evaluator_state eval_state;
+
 void print_usage(void)
 {
 	fprintf(stderr, "usage: %s [options] <EXPR>\n\n"
 
                     "options:\n"
                     "  -d, --debug                        Enable debug output\n"
-                    "  -P, --print                        Print the result value even if `print` was not called\n"
-                    "  -p PREC, --precision=PREC          Set the number of decimal digits to be printed when printing numbers\n"
+                    "  -P, --print                        Print the result value even if `print` was not called (default OFF)\n"
+                    "  -p PREC, --precision=PREC          Set the number of decimal digits to be printed when printing numbers (default 6)\n"
+                    "  --bools-are-nums                   Write the number 1 or 0 to represent boolean values (default OFF)\n"
 			  "  -h, --help                         Display this help message\n"
 			  "  -V, --version                      Display program information\n"
 			  "  -                                  Read expression string from stdin\n"
@@ -70,6 +74,8 @@ void parse_args(int32_t argc, char **argv)
 				print_info();
 			else if (strncmp(argv[arg_n]+2, "precision=", 10) == 0)
 				global_config.precision = strtoul(argv[arg_n]+2+10, NULL, 10);
+			else if (strcmp(argv[arg_n]+2, "bools-are-nums") == 0)
+				global_config.bools_print_num = true;
 			else if (strncmp(argv[arg_n]+2, "set_var:", 8) == 0)
 			{
 				const char *cur = argv[arg_n]+2+8;
@@ -78,7 +84,7 @@ void parse_args(int32_t argc, char **argv)
 				if (*cur++ == '\0')
 				{
 					fprintf(stderr, "argument error: expected expression following command-line variable definition\n");
-					cleanup_evaluator();
+					cleanup_evaluator(&eval_state);
 					exit(1);
 				}
 				strbuf name = { argv[arg_n]+2+8, cur - (argv[arg_n]+2+8) - 1, false };
@@ -89,7 +95,7 @@ void parse_args(int32_t argc, char **argv)
 					if (user_vars == NULL)
 					{
 						fprintf(stderr, "failed to allocate user variable memory\n");
-						cleanup_evaluator();
+						cleanup_evaluator(&eval_state);
 						exit(1);
 					}
 					user_vars_top = user_vars;
@@ -102,7 +108,7 @@ void parse_args(int32_t argc, char **argv)
 					if (tmp == NULL)
 					{
 						fprintf(stderr, "could not resize user variable memory\n");
-						cleanup_evaluator();
+						cleanup_evaluator(&eval_state);
 						exit(1);
 					}
 					user_vars = tmp;
@@ -164,7 +170,7 @@ void parse_args(int32_t argc, char **argv)
 		SET_FLAG(READ_STDIN);
 
 	for (ptrdiff_t i = 0; i < (user_vars_top - user_vars); ++i)
-		set_variable(user_vars[i].name, user_vars[i].e);
+		set_variable(&eval_state, user_vars[i].name, user_vars[i].e);
 }
 
 strbuf read_string_from_stream(FILE *stream)

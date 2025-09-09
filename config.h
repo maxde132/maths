@@ -22,6 +22,7 @@ extern uint32_t runtime_flags;
 struct config {
 	char *PROG_NAME;
 	uint32_t precision;
+	bool bools_print_num;
 };
 extern struct config global_config;
 typedef struct UserVars {

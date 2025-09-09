@@ -175,6 +175,45 @@ void print_indent(uint32_t indent)
 	printf("%*s", indent, "");
 }
 
+void print_typedval(TypedValue *val)
+{
+	if (val == NULL)
+	{
+		printf("(null)");
+		return;
+	}
+	switch (val->type) {
+	case RealNumber_type:
+		printf("%.*f", global_config.precision, val->v.n);
+		break;
+	case ComplexNumber_type:
+		printf("%.*f%+.*fi",
+				global_config.precision, creal(val->v.cn),
+				global_config.precision, cimag(val->v.cn));
+		break;
+	case Boolean_type:
+		if (global_config.bools_print_num)
+			printf("%.*f",
+					global_config.precision, (val->v.b) ? 1.0 : 0.0);
+		else
+			printf("%s", (val->v.b) ? "true" : "false");
+		break;
+	case String_type:
+		printf("%.*s", (int)val->v.s.len, val->v.s.s);
+		break;
+	case Vector_type:
+		print_exprh(VAL2EXPRP(*val));
+		break;
+	default:
+		break;
+	}
+}
+inline void println_typedval(TypedValue *val)
+{
+	print_typedval(val);
+	fputc('\n', stdout);
+}
+
 void print_expr(Expr *expr, uint32_t indent)
 {
 	print_indent(indent);
@@ -198,8 +237,20 @@ void print_expr(Expr *expr, uint32_t indent)
 			print_expr(expr->u.o.right, indent+4);
 		}
 		break;
-	case Number_type:
-		printf("Number(%.*f)", global_config.precision, expr->u.v.n);
+	case RealNumber_type:
+		printf("RealNumber(%.*f)", global_config.precision, expr->u.v.n);
+		break;
+	case ComplexNumber_type:
+		printf("ComplexNumber(%.*f%+.*fi)",
+				global_config.precision, creal(expr->u.v.cn),
+				global_config.precision, cimag(expr->u.v.cn));
+		break;
+	case Boolean_type:
+		if (global_config.bools_print_num)
+			printf("Boolean(%.*f)",
+					global_config.precision, (expr->u.v.b) ? 1.0 : 0.0);
+		else
+			printf("Boolean(%s)", (expr->u.v.b) ? "true" : "false");
 		break;
 	case String_type:
 		printf("String('%.*s')", (int)expr->u.v.s.len, expr->u.v.s.s);
@@ -260,4 +311,17 @@ TypedValue *construct_vec(size_t n, ...)
 	va_end(args);
 
 	return ret;
+}
+
+inline double get_number(TypedValue *v)
+{
+	return (v->type == RealNumber_type)
+		? v->v.n
+		: ((v->v.b) ? 1.0 : 0.0);
+}
+inline _Complex double get_complex(TypedValue *v)
+{
+	return (v->type == ComplexNumber_type)
+		? v->v.cn
+		: get_number(v) + 0.0*I;
 }
