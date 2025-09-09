@@ -196,7 +196,7 @@ void print_typedval(TypedValue *val)
 				global_config.precision, cimag(val->v.cn));
 		break;
 	case Boolean_type:
-		if (global_config.bools_print_num)
+		if (FLAG_IS_SET(BOOLS_PRINT_NUM))
 			printf("%.*f",
 					global_config.precision, (val->v.b) ? 1.0 : 0.0);
 		else
@@ -250,7 +250,7 @@ void print_expr(Expr *expr, uint32_t indent)
 				global_config.precision, cimag(expr->u.v.cn));
 		break;
 	case Boolean_type:
-		if (global_config.bools_print_num)
+		if (FLAG_IS_SET(BOOLS_PRINT_NUM))
 			printf("Boolean(%.*f)",
 					global_config.precision, (expr->u.v.b) ? 1.0 : 0.0);
 		else

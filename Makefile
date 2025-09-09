@@ -5,7 +5,7 @@ CC := gcc
 
 EXEC := mml
 
-CFLAGS := -Wall -Wextra -Wpedantic -g
+CFLAGS := -Wall -Wextra -O3
 LDFLAGS := $(CFLAGS) -lm
 
 .PHONY: clean

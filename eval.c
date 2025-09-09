@@ -79,6 +79,14 @@ int32_t set_variable(struct evaluator_state *state, strbuf name, Expr *expr)
 
 #define EPSILON 1e-15
 
+inline bool doubles_are_equal_func(double a, double b)
+{
+	if (FLAG_IS_SET(ESTIMATE_EQUALITY))
+		return fabs(a-b) < EPSILON;
+	return a == b;
+}
+bool doubles_are_equal_func(double, double);
+
 TypedValue apply_binary_op(struct evaluator_state *state, TypedValue a, TypedValue b, TokenType op)
 {
 	if (VAL_IS_NUM(a) && VAL_IS_NUM(b)
@@ -95,8 +103,8 @@ TypedValue apply_binary_op(struct evaluator_state *state, TypedValue a, TypedVal
 			case OP_GREATER_TOK: return VAL_BOOL(get_number(&a) > get_number(&b));
 			case OP_LESSEQ_TOK: return VAL_BOOL(get_number(&a) <= get_number(&b));
 			case OP_GREATEREQ_TOK: return VAL_BOOL(get_number(&a) >= get_number(&b));
-			case OP_EQ_TOK: return VAL_BOOL(get_number(&a) == get_number(&b));
-			case OP_NOTEQ_TOK: return VAL_BOOL(get_number(&a) != get_number(&b));
+			case OP_EQ_TOK: return VAL_BOOL(doubles_are_equal_func(get_number(&a), get_number(&b)));
+			case OP_NOTEQ_TOK: return VAL_BOOL(!doubles_are_equal_func(get_number(&a), get_number(&b)));
 			case OP_NOT_TOK: return VAL_BOOL(!((bool) get_number(&a)));
 			case OP_NEGATE: return VAL_NUM(-1*get_number(&a));
 			case PIPE_TOK: return VAL_NUM(fabs(get_number(&a)));
@@ -144,6 +152,11 @@ TypedValue apply_binary_op(struct evaluator_state *state, TypedValue a, TypedVal
 		  && a.v.v.n == b.v.v.n)
 	{
 		// n-dimensional dot product
+		//
+		// if vector contains nested vectors, performs a 'distributed dot product'
+		// where the dot product of two vectors is calculated using the dot products
+		// of the corresponding nested vectors in each, along with the regular
+		// multiplication. (not intentionally, that's just what happens)
 		double sum = 0.0;
 		for (size_t i = 0; i < a.v.v.n; ++i)
 		{
@@ -272,7 +285,9 @@ TypedValue eval_expr(struct evaluator_state *state, const Expr *expr)
 
 undefined_func:
 		fprintf(stderr, "undefined function for %s argument in function call: '%.*s'\n",
-			(right_val.type == RealNumber_type) ? "real" : "complex",
+			(right_val.type == RealNumber_type) ? "real" :
+				(right_val.type == ComplexNumber_type) ? "complex" :
+					"vector",
 			(int)left->u.v.s.len, left->u.v.s.s);
 		return VAL_NUM(NAN);
 

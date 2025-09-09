@@ -12,17 +12,17 @@ enum {
 	DEBUG		= BIT(0),
 	PRINT		= BIT(1),
 	READ_STDIN	= BIT(2),
+	BOOLS_PRINT_NUM = BIT(3),
+	ESTIMATE_EQUALITY = BIT(4),
 };
 
-#define SET_FLAG(f) (runtime_flags |= (f))
-#define FLAG_IS_SET(f) ((runtime_flags & (f)) != 0)
-
-extern uint32_t runtime_flags;
+#define SET_FLAG(f) (global_config.runtime_flags |= (f))
+#define FLAG_IS_SET(f) ((global_config.runtime_flags & (f)) != 0)
 
 struct config {
 	char *PROG_NAME;
 	uint32_t precision;
-	bool bools_print_num;
+	uint32_t runtime_flags;
 };
 extern struct config global_config;
 typedef struct UserVars {

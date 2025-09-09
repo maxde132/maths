@@ -12,7 +12,7 @@
 struct config global_config = {
 	.PROG_NAME = NULL,
 	.precision = 6,
-	.bools_print_num = false,
+	.runtime_flags = 0,
 };
 
 char *expression = NULL;
@@ -20,8 +20,6 @@ char *expression = NULL;
 UserVar *user_vars = NULL;
 UserVar *user_vars_top = NULL;
 size_t user_vars_size = 0;
-
-uint32_t runtime_flags = 0;
 
 extern struct evaluator_state eval_state;
 
@@ -34,10 +32,18 @@ void print_usage(void)
                     "  -P, --print                        Print the result value even if `print` was not called (default OFF)\n"
                     "  -p PREC, --precision=PREC          Set the number of decimal digits to be printed when printing numbers (default 6)\n"
                     "  --bools-are-nums                   Write the number 1 or 0 to represent boolean values (default OFF)\n"
+			  "  --estimate-equality                Consider two reals equal if they are equal to 14 digits of accuracy (default OFF)\n"
 			  "  -h, --help                         Display this help message\n"
 			  "  -V, --version                      Display program information\n"
 			  "  -                                  Read expression string from stdin\n"
 			, global_config.PROG_NAME);
+	if (user_vars != NULL)
+	{
+		for (ptrdiff_t i = 0; i < (user_vars_top - user_vars); ++i)
+			free_expr(user_vars[i].e);
+		free(user_vars);
+	}
+	cleanup_evaluator(&eval_state);
 	exit(1);
 }
 
@@ -75,7 +81,9 @@ void parse_args(int32_t argc, char **argv)
 			else if (strncmp(argv[arg_n]+2, "precision=", 10) == 0)
 				global_config.precision = strtoul(argv[arg_n]+2+10, NULL, 10);
 			else if (strcmp(argv[arg_n]+2, "bools-are-nums") == 0)
-				global_config.bools_print_num = true;
+				SET_FLAG(BOOLS_PRINT_NUM);
+			else if (strcmp(argv[arg_n]+2, "estimate-equality") == 0)
+				SET_FLAG(ESTIMATE_EQUALITY);
 			else if (strncmp(argv[arg_n]+2, "set_var:", 8) == 0)
 			{
 				const char *cur = argv[arg_n]+2+8;
