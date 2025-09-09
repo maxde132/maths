@@ -180,7 +180,7 @@ Expr *parse_expr(const char **s, uint32_t max_preced, struct parser_state *state
 			{
 				fprintf(stderr, "expected closing brace for function call, got %s\n", TOK_STRINGS[close_paren_tok.type]);
 				free_expr(left);
-				return NULL;
+				return nullptr;
 			}
 		} else
 		{
@@ -196,7 +196,7 @@ Expr *parse_expr(const char **s, uint32_t max_preced, struct parser_state *state
 		{
 			fprintf(stderr, "expected close paren for parenthesis block, got %s\n", TOK_STRINGS[close_paren_tok.type]);
 			free_expr(left);
-			return NULL;
+			return nullptr;
 		}
 	} else if (tok.type == OPEN_BRACKET_TOK)
 	{
@@ -214,7 +214,7 @@ Expr *parse_expr(const char **s, uint32_t max_preced, struct parser_state *state
 						free_expr(vec.ptr[i]);
 					free(vec.ptr);
 					free_expr(left);
-					return NULL;
+					return nullptr;
 				}
 				vec.ptr = tmp;
 			} else break;
@@ -228,12 +228,12 @@ Expr *parse_expr(const char **s, uint32_t max_preced, struct parser_state *state
 		{
 			fprintf(stderr, "expected closing pipe for pipe block, got %s\n", TOK_STRINGS[close_pipe_tok.type]);
 			free_expr(left);
-			return NULL;
+			return nullptr;
 		}
 		Expr *opnode = calloc(1, sizeof(Expr));
 		opnode->type = Operation_type;
 		opnode->u.o.left = left;
-		opnode->u.o.right = NULL;
+		opnode->u.o.right = nullptr;
 		opnode->u.o.op = PIPE_TOK;
 
 		left = opnode;
@@ -248,7 +248,7 @@ Expr *parse_expr(const char **s, uint32_t max_preced, struct parser_state *state
 	{
 		fprintf(stderr, "found no valid operations/literals, returning (null)\n");
 		free_expr(left);
-		return NULL;
+		return nullptr;
 	}
 
 	for (;;)
@@ -258,7 +258,7 @@ Expr *parse_expr(const char **s, uint32_t max_preced, struct parser_state *state
 		{
 			fprintf(stderr, "invalid token found\n");
 			free_expr(left);
-			return NULL;
+			return nullptr;
 		}
 		bool do_advance = true;
 		if (op_tok.type == IDENT_TOK || op_tok.type == NUMBER_TOK)
@@ -283,12 +283,12 @@ Expr *parse_expr(const char **s, uint32_t max_preced, struct parser_state *state
 					? preced
 					: preced-1, state);
 
-		if (right == NULL)
+		if (right == nullptr)
 		{
 			fprintf(stderr, "missing right operand for operator %s\n",
 					TOK_STRINGS[op_tok.type]);
 			free_expr(left);
-			return NULL;
+			return nullptr;
 		}
 
 		Expr *opnode = calloc(1, sizeof(Expr));

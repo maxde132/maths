@@ -66,7 +66,7 @@ void print_indent(uint32_t indent)
 
 void print_typedval(TypedValue *val)
 {
-	if (val == NULL)
+	if (val == nullptr)
 	{
 		printf("(null)");
 		return;
@@ -106,7 +106,7 @@ inline void println_typedval(TypedValue *val)
 void print_expr(Expr *expr, uint32_t indent)
 {
 	print_indent(indent);
-	if (expr == NULL)
+	if (expr == nullptr)
 	{
 		printf("(null)\n");
 		return;
@@ -162,7 +162,7 @@ inline void print_exprh(Expr *expr)
 
 void free_expr(Expr *e)
 {
-	if (!e) return;
+	if (e == nullptr) return;
 	if (e->type == Operation_type)
 	{
 		free_expr(e->u.o.left);

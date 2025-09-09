@@ -18,7 +18,7 @@ struct evaluator_state {
 	bool is_init;
 };
 
-void init_evaluator(struct evaluator_state *state);
+struct evaluator_state init_evaluator(struct evaluator_state *state_out);
 void cleanup_evaluator(struct evaluator_state *state);
 int32_t set_variable(struct evaluator_state *state, strbuf name, Expr *val);
 TypedValue eval_expr(struct evaluator_state *state, const Expr *expr);
