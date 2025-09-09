@@ -8,6 +8,7 @@
 
 #include "token.h"
 #include "expr.h"
+#include "config.h"
 #include "c-hashmap/map.h"
 #include "eval_funcs_incl.c"
 
@@ -53,7 +54,7 @@ struct evaluator_state init_evaluator(struct evaluator_state *restrict state_out
 		E_M		= VAL_NUM(2.71828182845904523536),
 		PHI_M		= VAL_NUM(1.61803398874989484820),
 		I_M		= VAL_CNUM(I),
-		NAN_M		= VAL_NUM(NAN),
+		NAN_M		= VAL_INVAL,
 		INFINITY_M	= VAL_NUM(INFINITY);
 
 	hashmap_set(state.builtins, hashmap_str_lit("true"),	(uintptr_t)&TRUE_M);
@@ -87,14 +88,15 @@ void cleanup_evaluator(struct evaluator_state *restrict state)
 	hashmap_free(state->variables);
 	state->variables = nullptr;
 	for (size_t i = 0; i < state->user_vars.in_use; ++i)
-		free_expr(state->user_vars.ptr[i]);
+		free_expr((Expr *)state->user_vars.ptr[i]);
 	free(state->user_vars.ptr);
 	state->user_vars = (UserVarStack) { nullptr, 0, 0 };
 
 	state->is_init = false;
 }
 
-int32_t set_variable(struct evaluator_state *restrict state, strbuf name, Expr *val)
+int32_t set_variable(struct evaluator_state *restrict state,
+		strbuf name, const Expr *val)
 {
 	if (state->user_vars.allocd_size < state->user_vars.in_use + 1)
 	{
@@ -106,7 +108,7 @@ int32_t set_variable(struct evaluator_state *restrict state, strbuf name, Expr *
 			cleanup_evaluator(state);
 			return -1;
 		}
-		state->user_vars.ptr = tmp;
+		state->user_vars.ptr = (const Expr **)tmp;
 	}
 	state->user_vars.ptr[state->user_vars.in_use] = val;
 	return hashmap_set(state->variables, name.s, name.len, (uintptr_t)state->user_vars.in_use++);
@@ -122,7 +124,8 @@ inline bool doubles_are_equal_func(double a, double b)
 }
 bool doubles_are_equal_func(double, double);
 
-TypedValue apply_binary_op(struct evaluator_state *restrict state, TypedValue a, TypedValue b, TokenType op)
+TypedValue apply_binary_op(struct evaluator_state *restrict state,
+		TypedValue a, TypedValue b, TokenType op)
 {
 	if (VAL_IS_NUM(a) && VAL_IS_NUM(b)
 		&& a.type != ComplexNumber_type && b.type != ComplexNumber_type)
@@ -146,7 +149,7 @@ TypedValue apply_binary_op(struct evaluator_state *restrict state, TypedValue a,
 			case OP_UNARY_NOTHING: return a;
 			default:
 				fprintf(stderr, "invalid operator on real operands: %s\n", TOK_STRINGS[op]);
-				return VAL_NUM(NAN);
+				return VAL_INVAL;
 		}
 	} else if (VAL_IS_NUM(a) && VAL_IS_NUM(b))
 	{
@@ -174,12 +177,12 @@ TypedValue apply_binary_op(struct evaluator_state *restrict state, TypedValue a,
 		if (fabs(i - get_number(&b)) > EPSILON || get_number(&b) < 0)
 		{
 			fprintf(stderr, "vectors may only be indexed by a positive integer\n");
-			return VAL_NUM(NAN);
+			return VAL_INVAL;
 		}
 		if (i >= a.v.v.n)
 		{
 			fprintf(stderr, "index %zu out of range for vector of length %zu\n", i, a.v.v.n);
-			return VAL_NUM(NAN);
+			return VAL_INVAL;
 		}
 		return eval_expr(state, a.v.v.ptr[i]);
 	} else if (a.type == Vector_type && b.type == Vector_type
@@ -215,21 +218,22 @@ TypedValue apply_binary_op(struct evaluator_state *restrict state, TypedValue a,
 	}
 
 	fprintf(stderr, "invalid operator: %s\n", TOK_STRINGS[op]);
-	return VAL_NUM(NAN);
+	return VAL_INVAL;
 }
 
-TypedValue eval_expr(struct evaluator_state *state, const Expr *expr)
+TypedValue eval_expr(struct evaluator_state *state,
+		const Expr *expr)
 {
 	if (!state->is_init)
 	{
 		fprintf(stderr, "you must run `init_evaluator` before using any evaluator functions.\n");
-		return VAL_NUM(NAN);
+		return VAL_INVAL;
 	}
 
 	if (expr == nullptr)
 	{
 		fprintf(stderr, "error: NULL expression found while evaluating\n");
-		return VAL_NUM(NAN);
+		return VAL_INVAL;
 	}
 	if (expr->type == Vector_type)
 		return (TypedValue) { Vector_type, .v.v = expr->u.v.v };
@@ -239,7 +243,7 @@ TypedValue eval_expr(struct evaluator_state *state, const Expr *expr)
 		return VAL_CNUM(expr->u.v.cn);
 	if (expr->type == Boolean_type)
 		return VAL_BOOL(expr->u.v.b);
-	if (expr->type == String_type)
+	if (expr->type == Identifier_type)
 	{
 		TypedValue *val;
 		size_t out;
@@ -250,45 +254,50 @@ TypedValue eval_expr(struct evaluator_state *state, const Expr *expr)
 
 		fprintf(stderr, "undefined identifier: '%.*s'\n",
 				(int)expr->u.v.s.len, expr->u.v.s.s);
-		return VAL_NUM(NAN);
+		return VAL_INVAL;
 	}
 	const Expr *left = expr->u.o.left;
 	const Expr *right = expr->u.o.right;
+	if (left->type == Identifier_type
+			&& expr->u.o.op == OP_ASSERT_EQUAL)
+	{
+		set_variable(state, left->u.v.s, right);
+		return eval_expr(state, right);
+	}
 	if (expr->u.o.op == OP_FUNC_CALL_TOK)
 	{
 		if (left == NULL
 		 || right == NULL
-		 || left->type != String_type)
-			return VAL_NUM(NAN);
+		 || left->type != Identifier_type)
+			return VAL_INVAL;
 		TypedValue right_val = eval_expr(state, right);
-		double (*d_d_func) (double);
-		_Complex double (*cd_cd_func) (_Complex double);
-		double (*d_cd_func) (_Complex double);
-		_Complex double (*cd_d_func) (double);
-		void (*v_tv_func) (TypedValue *);
+
 		if (strncmp(left->u.v.s.s, "print", 5) == 0)
 		{
-			if (hashmap_get(state->builtins, left->u.v.s.s, left->u.v.s.len, (uintptr_t *)&v_tv_func))
+			void (*func) (TypedValue *);
+			if (hashmap_get(state->builtins, left->u.v.s.s, left->u.v.s.len, (uintptr_t *)&func))
 			{
-				(*v_tv_func)(&right_val);
-				return VAL_NUM(NAN);
+				(*func)(&right_val);
+				return VAL_INVAL;
 			}
 		}
 		if (right_val.type == RealNumber_type)
 		{
 			if (strncmp(left->u.v.s.s, "csqrt", left->u.v.s.len) == 0)
 			{
-				if (hashmap_get(state->builtins, left->u.v.s.s, left->u.v.s.len, (uintptr_t *)&cd_d_func))
+				_Complex double (*func) (double);
+				if (hashmap_get(state->builtins, left->u.v.s.s, left->u.v.s.len, (uintptr_t *)&func))
 				{
 					if (right_val.type == RealNumber_type)
-						return VAL_CNUM((*cd_d_func)(right_val.v.n));
+						return VAL_CNUM((*func)(right_val.v.n));
 				}
 				goto undefined_func;
 			}
-			if (hashmap_get(state->builtins, left->u.v.s.s, left->u.v.s.len, (uintptr_t *)&d_d_func))
+			double (*func) (double);
+			if (hashmap_get(state->builtins, left->u.v.s.s, left->u.v.s.len, (uintptr_t *)&func))
 			{
 				if (right_val.type == RealNumber_type)
-					return VAL_NUM((*d_d_func)(right_val.v.n));
+					return VAL_NUM((*func)(right_val.v.n));
 			}
 		} else if (right_val.type == ComplexNumber_type)
 		{
@@ -300,22 +309,28 @@ TypedValue eval_expr(struct evaluator_state *state, const Expr *expr)
 			 || strncmp(left->u.v.s.s, "real", left->u.v.s.len) == 0
 			 || strncmp(left->u.v.s.s, "imag", left->u.v.s.len) == 0)
 			{
-				if (hashmap_get(state->builtins, temp, left->u.v.s.len + sizeof("complex_")-1, (uintptr_t *)&d_cd_func))
+				double (*func) (_Complex double);
+				if (hashmap_get(state->builtins, temp, left->u.v.s.len + sizeof("complex_")-1, (uintptr_t *)&func))
 				{
 					free(temp);
 					if (right_val.type == ComplexNumber_type)
-						return VAL_NUM((*d_cd_func)(right_val.v.cn));
+						return VAL_NUM((*func)(right_val.v.cn));
 				}
 				goto undefined_func;
 			}
-			if (hashmap_get(state->builtins, temp, left->u.v.s.len + sizeof("complex_")-1, (uintptr_t *)&cd_cd_func))
+			_Complex double (*func) (_Complex double);
+			if (hashmap_get(state->builtins, temp, left->u.v.s.len + sizeof("complex_")-1, (uintptr_t *)&func))
 			{
 				free(temp);
 				if (right_val.type == ComplexNumber_type)
-					return VAL_CNUM((*cd_cd_func)(right_val.v.cn));
+					return VAL_CNUM((*func)(right_val.v.cn));
 			}
 			
 			free(temp);
+		} else if (right_val.type == Vector_type)
+		{
+			if (strncmp(left->u.v.s.s, "sum", left->u.v.s.len) == 0)
+				return custom_summation(right_val.v.v);
 		}
 
 undefined_func:
@@ -324,14 +339,14 @@ undefined_func:
 				(right_val.type == ComplexNumber_type) ? "complex" :
 					"vector",
 			(int)left->u.v.s.len, left->u.v.s.s);
-		return VAL_NUM(NAN);
+		return VAL_INVAL;
 
 		//fprintf(stderr, "functions with vector arguments are not yet supported\n");
-		//return VAL_NUM(NAN);
+		//return VAL_INVAL;
 	}
 
 	return apply_binary_op(state,
 			eval_expr(state, left),
-			(right) ? eval_expr(state, right) : VAL_NUM(NAN),
+			(right) ? eval_expr(state, right) : VAL_INVAL,
 			expr->u.o.op);
 }

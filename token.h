@@ -18,6 +18,8 @@ typedef enum {
 	OP_LESSEQ_TOK, OP_GREATEREQ_TOK,
 	OP_EQ_TOK, OP_NOTEQ_TOK,
 
+	OP_ASSERT_EQUAL,
+
 	OP_NOT_TOK, // this is boolean not
 	OP_NEGATE,
 	OP_UNARY_NOTHING,

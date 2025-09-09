@@ -17,14 +17,18 @@ int32_t main(int32_t argc, char **argv)
 	if (FLAG_IS_SET(READ_STDIN))
 		expression = read_string_from_stream(stdin).s;
 
-	Expr *expr = parse(expression);
-	if (FLAG_IS_SET(DEBUG)) print_exprh(expr);
+	const Expr *exprs = parse(expression);
+	if (FLAG_IS_SET(DEBUG)) print_exprh(exprs);
 
-	TypedValue val = eval_expr(&eval_state, expr);
-	if (FLAG_IS_SET(PRINT))
-		print_typedval(&val);
-
-	free_expr(expr);
+	TypedValue val;
+	for (size_t i = 0; i < exprs->u.v.v.n; ++i)
+	{
+		val = eval_expr(&eval_state, exprs->u.v.v.ptr[i]);
+		if (i == exprs->u.v.v.n - 1)
+			if (FLAG_IS_SET(PRINT))
+				print_typedval(&val);
+	}
+	free_expr((Expr *)exprs);
 	cleanup_evaluator(&eval_state);
 
 	return 0;

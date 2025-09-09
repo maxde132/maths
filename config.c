@@ -36,7 +36,7 @@ void print_usage(void)
 	if (eval_state.user_vars.ptr != NULL)
 	{
 		for (size_t i = 0; i < eval_state.user_vars.in_use; ++i)
-			free_expr(eval_state.user_vars.ptr[i]);
+			free_expr((Expr *)eval_state.user_vars.ptr[i]);
 		free(eval_state.user_vars.ptr);
 	}
 	cleanup_evaluator(&eval_state);
@@ -91,8 +91,7 @@ void parse_args(int32_t argc, char **argv)
 					exit(1);
 				}
 				strbuf name = { argv[arg_n]+2+8, cur - (argv[arg_n]+2+8) - 1, false };
-				Expr *expr = parse(cur);
-				set_variable(&eval_state, name, expr);
+				set_variable(&eval_state, name, parse(cur));
 			} else
 			{
 				fprintf(stderr, "argument error: unknown option '%s'\n", argv[arg_n]);

@@ -19,6 +19,8 @@ constexpr const uint8_t PRECEDENCE[] = {
 	6, 6, 6, 6,
 	7, 7,
 
+	14,
+
 	2, 2, 2,
 };
 constexpr const TokenType TOK_BY_CHAR[] = { // starts at 0x21
@@ -133,8 +135,9 @@ typedef enum ExprType {
 	RealNumber_type,
 	ComplexNumber_type,
 	Boolean_type,
-	String_type,
+	Identifier_type,
 	Vector_type,
+	Invalid_type,
 } ExprType;
 
 typedef struct VecN {
@@ -165,6 +168,7 @@ typedef struct Expr {
 
 #define EXPR_NUM(num) ((Expr) { RealNumber_type, .u.v.n = (num) })
 #define VAL_NUM(num) ((TypedValue) { RealNumber_type, .v.n = (num) })
+#define VAL_INVAL ((TypedValue) { Invalid_type, .v.n = NAN })
 #define VAL_CNUM(num) ((TypedValue) { ComplexNumber_type, .v.cn = (num) })
 #define VAL_BOOL(bl) ((TypedValue) { Boolean_type, .v.b = (bl) })
 #define VAL2EXPRP(val) (&(Expr) { .type = (val).type, .u.v = (val).v })
@@ -175,9 +179,9 @@ typedef struct Expr {
  || (v).type == Boolean_type)
 
 void print_indent(uint32_t indent);
-void print_typedval(TypedValue *val);
-void println_typedval(TypedValue *val);
-void print_exprh(Expr *expr);
+void print_typedval(const TypedValue *val);
+void println_typedval(const TypedValue *val);
+void print_exprh(const Expr *expr);
 
 void free_expr(Expr *e);
 

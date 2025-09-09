@@ -9,6 +9,7 @@ struct parser_state {
 	Token peeked_tok;
 	bool has_peeked;
 	bool looking_for_int;
+	bool end_parse_current_expr;
 };
 
 Token get_next_token(const char **s, struct parser_state *state);
@@ -16,6 +17,9 @@ Token get_next_token(const char **s, struct parser_state *state);
 Token peek_token(const char **s, struct parser_state *state);
 [[nodiscard("you really need to make sure you keep this `Expr *`, "
 		"otherwise severe memory leaks will ensue...")]]
-Expr *parse(const char *s);
+/* returns a VecN wrapped as Expr,
+ * representing the vector of statements
+ * parsed by the parser. */
+const Expr *parse(const char *s);
 
 #endif /* PARSER_H */

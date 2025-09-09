@@ -38,6 +38,7 @@ Token get_next_token(const char **s, struct parser_state *state)
 	case CLOSE_BRACKET_TOK:
 	case COMMA_TOK:
 	case PIPE_TOK:
+	case SEMICOLON_TOK:
 		ret = nToken(type, *s, 1);
 		++*s;
 		break;
@@ -62,8 +63,8 @@ Token get_next_token(const char **s, struct parser_state *state)
 	case OP_EQ_TOK:
 		if ((*s)[1] != '=')
 		{
-			fprintf(stderr, "assignment operator is not yet supported. "
-					"'==' is the equality operator\n");
+			ret = nToken(OP_ASSERT_EQUAL, *s, 1);
+			++*s;
 			break;
 		}
 		ret = nToken(OP_EQ_TOK, *s, 2);
@@ -130,7 +131,8 @@ bool op_is_unary(TokenType op)
 
 bool op_is_right_associative(TokenType op)
 {
-	return op == OP_POW_TOK || op_is_unary(op);
+	return op == OP_ASSERT_EQUAL
+	    || op == OP_POW_TOK || op_is_unary(op);
 }
 
 Expr *parse_expr(const char **s, uint32_t max_preced, struct parser_state *state)
@@ -142,8 +144,6 @@ Expr *parse_expr(const char **s, uint32_t max_preced, struct parser_state *state
 	if (tok.type == OP_SUB_TOK || tok.type == OP_ADD_TOK
 			|| op_is_unary(tok.type))
 	{
-	//	get_next_token(s, state);
-
 		TokenType new_token_type = tok.type;
 		if (new_token_type == OP_ADD_TOK)
 			new_token_type = OP_UNARY_NOTHING;
@@ -165,7 +165,7 @@ Expr *parse_expr(const char **s, uint32_t max_preced, struct parser_state *state
 		{
 			//printf("calling function: '%.*s'\n", (int)ident.buf.len, ident.buf.s);
 			Expr *name = calloc(1, sizeof(Expr));
-			name->type = String_type;
+			name->type = Identifier_type;
 			name->u.v.s = ident.buf;
 
 			left->type = Operation_type;
@@ -184,7 +184,7 @@ Expr *parse_expr(const char **s, uint32_t max_preced, struct parser_state *state
 			}
 		} else
 		{
-			left->type = String_type;
+			left->type = Identifier_type;
 			left->u.v.s = ident.buf;
 		}
 	} else if (tok.type == OPEN_PAREN_TOK)
@@ -251,7 +251,7 @@ Expr *parse_expr(const char **s, uint32_t max_preced, struct parser_state *state
 		return nullptr;
 	}
 
-	for (;;)
+	while (true)
 	{
 		Token op_tok = peek_token(s, state);
 		if (op_tok.type == INVALID_TOK)
@@ -261,7 +261,9 @@ Expr *parse_expr(const char **s, uint32_t max_preced, struct parser_state *state
 			return nullptr;
 		}
 		bool do_advance = true;
-		if (op_tok.type == IDENT_TOK || op_tok.type == NUMBER_TOK)
+		if (op_tok.type > NOT_OP_TOK
+				&& op_tok.type != EOF_TOK
+				&& op_tok.type != SEMICOLON_TOK)
 		{
 			op_tok.type = OP_MUL_TOK;
 			do_advance = false;
@@ -303,8 +305,33 @@ Expr *parse_expr(const char **s, uint32_t max_preced, struct parser_state *state
 	return left;
 }
 
-inline Expr *parse(const char *s)
+inline const Expr *parse(const char *s)
 {
 	struct parser_state state = {0};
-	return parse_expr(&s, PARSER_MAX_PRECED, &state);
+	Expr *ret = calloc(1, sizeof(Expr *));
+	ret->type = Vector_type;
+	ret->u.v.v = (VecN) { calloc(1, sizeof(Expr *)), 0 };
+	size_t n_allocd = 1;
+	Token expr_end_tok;
+	while (true)
+	{
+		ret->u.v.v.ptr[ret->u.v.v.n++] = parse_expr(&s, PARSER_MAX_PRECED, &state);
+		if ((expr_end_tok = peek_token(&s, &state)).type != SEMICOLON_TOK)
+			break;
+
+		get_next_token(&s, &state);
+		if (n_allocd < (ret->u.v.v.n+1))
+		{
+			Expr **tmp = realloc(ret->u.v.v.ptr, (n_allocd *= 2) * sizeof(Expr *));
+			if (tmp == NULL)
+			{
+				fprintf(stderr, "unable to expand memory for vector\n");
+				free_expr(ret);
+				return nullptr;
+			}
+			ret->u.v.v.ptr = tmp;
+		}
+	}
+
+	return ret;
 }

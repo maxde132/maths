@@ -18,6 +18,8 @@ const char *const TOK_STRINGS[] = {
 	"OP_LESS", "OP_GREATER",
 	"OP_LESSEQ", "OP_GREATEREQ",
 	"OP_EQ", "OP_NOTEQ",
+
+	"OP_ASSERT_EQUAL",
 	
 	"OP_NOT",
 	"OP_NEGATE",
@@ -56,6 +58,7 @@ const char *const TOK_STRINGS[] = {
 
 	"INVALID_TOK",
 	"EOF_TOK",
+	"END_OF_EXPR_TOK",
 };
 
 
@@ -64,7 +67,7 @@ void print_indent(uint32_t indent)
 	printf("%*s", indent, "");
 }
 
-void print_typedval(TypedValue *val)
+void print_typedval(const TypedValue *val)
 {
 	if (val == nullptr)
 	{
@@ -87,7 +90,7 @@ void print_typedval(TypedValue *val)
 		else
 			printf("%s", (val->v.b) ? "true" : "false");
 		break;
-	case String_type:
+	case Identifier_type:
 		printf("%.*s", (int)val->v.s.len, val->v.s.s);
 		break;
 	case Vector_type:
@@ -97,13 +100,13 @@ void print_typedval(TypedValue *val)
 		break;
 	}
 }
-inline void println_typedval(TypedValue *val)
+inline void println_typedval(const TypedValue *val)
 {
 	print_typedval(val);
 	fputc('\n', stdout);
 }
 
-void print_expr(Expr *expr, uint32_t indent)
+void print_expr(const Expr *expr, uint32_t indent)
 {
 	print_indent(indent);
 	if (expr == nullptr)
@@ -141,8 +144,8 @@ void print_expr(Expr *expr, uint32_t indent)
 		else
 			printf("Boolean(%s)", (expr->u.v.b) ? "true" : "false");
 		break;
-	case String_type:
-		printf("String('%.*s')", (int)expr->u.v.s.len, expr->u.v.s.s);
+	case Identifier_type:
+		printf("Identifier('%.*s')", (int)expr->u.v.s.len, expr->u.v.s.s);
 		break;
 	case Vector_type:
 		printf("Vector(n=%zu):\n", expr->u.v.v.n);
@@ -154,7 +157,7 @@ void print_expr(Expr *expr, uint32_t indent)
 	}
 }
 
-inline void print_exprh(Expr *expr)
+inline void print_exprh(const Expr *expr)
 {
 	print_expr(expr, 0);
 	fputc('\n', stdout);
@@ -167,7 +170,7 @@ void free_expr(Expr *e)
 	{
 		free_expr(e->u.o.left);
 		free_expr(e->u.o.right);
-	} else if (e->type == String_type)
+	} else if (e->type == Identifier_type)
 	{
 		if (e->u.v.s.allocd) free((void *)e->u.v.s.s);
 	} else if (e->type == Vector_type)
