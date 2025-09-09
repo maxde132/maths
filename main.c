@@ -1,4 +1,3 @@
-#include <stdbool.h>
 #include <stddef.h>
 #include <stdlib.h>
 #include <inttypes.h>
@@ -25,12 +24,6 @@ int32_t main(int32_t argc, char **argv)
 	if (FLAG_IS_SET(PRINT))
 		print_typedval(&val);
 
-	if (eval_state.user_vars.ptr != NULL)
-	{
-		for (size_t i = 0; i < eval_state.user_vars.in_use; ++i)
-			free_expr(eval_state.user_vars.ptr[i]);
-		free(eval_state.user_vars.ptr);
-	}
 	free_expr(expr);
 	cleanup_evaluator(&eval_state);
 

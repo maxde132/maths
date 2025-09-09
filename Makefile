@@ -5,10 +5,12 @@ CC := gcc
 
 EXEC := mml
 
-CFLAGS := -Wall -Wextra -O3
+CFLAGS := -Wall -Wextra -std=c23 -O3
 LDFLAGS := $(CFLAGS) -lm
 
 .PHONY: clean
+
+all: $(EXEC)
 
 $(EXEC): obj Makefile $(OBJ_FILES)
 	$(CC) $(OBJ_FILES) -o $(EXEC) $(LDFLAGS)

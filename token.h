@@ -2,7 +2,6 @@
 #define TOKEN_H
 
 #include <stddef.h>
-#include <stdbool.h>
 
 typedef enum {
 	// operator tokens

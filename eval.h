@@ -20,7 +20,7 @@ struct evaluator_state {
 
 void init_evaluator(struct evaluator_state *state);
 void cleanup_evaluator(struct evaluator_state *state);
-int32_t set_variable(struct evaluator_state *state, strbuf name, size_t index);
+int32_t set_variable(struct evaluator_state *state, strbuf name, Expr *val);
 TypedValue eval_expr(struct evaluator_state *state, const Expr *expr);
 
 #endif /* EVAL_H */

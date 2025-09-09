@@ -2,7 +2,6 @@
 
 #include <complex.h>
 #include <math.h>
-#include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
@@ -25,7 +24,7 @@ void init_evaluator(struct evaluator_state *state)
 	hashmap_set(state->builtins, hashmap_str_lit("asin"),			(uintptr_t)asin);
 	hashmap_set(state->builtins, hashmap_str_lit("acos"),			(uintptr_t)acos);
 	hashmap_set(state->builtins, hashmap_str_lit("atan"),			(uintptr_t)atan);
-	hashmap_set(state->builtins, hashmap_str_lit("log"),			(uintptr_t)log);
+	hashmap_set(state->builtins, hashmap_str_lit("ln"),			(uintptr_t)log);
 	hashmap_set(state->builtins, hashmap_str_lit("log2"),			(uintptr_t)log2);
 	hashmap_set(state->builtins, hashmap_str_lit("sqrt"),			(uintptr_t)sqrt);
 
@@ -35,35 +34,41 @@ void init_evaluator(struct evaluator_state *state)
 	hashmap_set(state->builtins, hashmap_str_lit("complex_asin"),	(uintptr_t)casin);
 	hashmap_set(state->builtins, hashmap_str_lit("complex_acos"),	(uintptr_t)cacos);
 	hashmap_set(state->builtins, hashmap_str_lit("complex_atan"),	(uintptr_t)catan);
-	hashmap_set(state->builtins, hashmap_str_lit("complex_log"),	(uintptr_t)clog);
+	hashmap_set(state->builtins, hashmap_str_lit("complex_ln"),		(uintptr_t)clog);
 	hashmap_set(state->builtins, hashmap_str_lit("complex_log2"),	(uintptr_t)custom_clog2);
 	hashmap_set(state->builtins, hashmap_str_lit("complex_sqrt"),	(uintptr_t)csqrt);
+	hashmap_set(state->builtins, hashmap_str_lit("complex_csqrt"),	(uintptr_t)csqrt);
 	hashmap_set(state->builtins, hashmap_str_lit("csqrt"),		(uintptr_t)custom_sqrt);
 	hashmap_set(state->builtins, hashmap_str_lit("complex_conj"),	(uintptr_t)conj);
 	hashmap_set(state->builtins, hashmap_str_lit("complex_phase"),	(uintptr_t)carg);
 	hashmap_set(state->builtins, hashmap_str_lit("complex_real"),	(uintptr_t)creal);
 	hashmap_set(state->builtins, hashmap_str_lit("complex_imag"),	(uintptr_t)cimag);
 
-	static TypedValue constant_structs[] = {
-		VAL_BOOL(true),
-		VAL_BOOL(false),
-		VAL_NUM(PI_M),
-		VAL_NUM(E_M),
-		VAL_NUM(PHI_M),
-		VAL_CNUM(I),
-		VAL_NUM(NAN),
-		VAL_NUM(INFINITY),
-	};
-	hashmap_set(state->builtins, hashmap_str_lit("true"),	(uintptr_t)&constant_structs[0]);
-	hashmap_set(state->builtins, hashmap_str_lit("false"),(uintptr_t)&constant_structs[1]);
-	hashmap_set(state->builtins, hashmap_str_lit("pi"),	(uintptr_t)&constant_structs[2]);
-	hashmap_set(state->builtins, hashmap_str_lit("e"),	(uintptr_t)&constant_structs[3]);
-	hashmap_set(state->builtins, hashmap_str_lit("phi"),	(uintptr_t)&constant_structs[4]);
-	hashmap_set(state->builtins, hashmap_str_lit("i"),	(uintptr_t)&constant_structs[5]);
-	hashmap_set(state->builtins, hashmap_str_lit("nan"),	(uintptr_t)&constant_structs[6]);
-	hashmap_set(state->builtins, hashmap_str_lit("inf"),	(uintptr_t)&constant_structs[7]);
+	static constexpr TypedValue
+		TRUE_M	= VAL_BOOL(true),
+		FALSE_M	= VAL_BOOL(false),
+		PI_M		= VAL_NUM(3.14159265358979323846),
+		E_M		= VAL_NUM(2.71828182845904523536),
+		PHI_M		= VAL_NUM(1.61803398874989484820),
+		I_M		= VAL_CNUM(I),
+		NAN_M		= VAL_NUM(NAN),
+		INFINITY_M	= VAL_NUM(INFINITY);
+
+	hashmap_set(state->builtins, hashmap_str_lit("true"),	(uintptr_t)&TRUE_M);
+	hashmap_set(state->builtins, hashmap_str_lit("false"),(uintptr_t)&FALSE_M);
+	hashmap_set(state->builtins, hashmap_str_lit("pi"),	(uintptr_t)&PI_M);
+	hashmap_set(state->builtins, hashmap_str_lit("e"),	(uintptr_t)&E_M);
+	hashmap_set(state->builtins, hashmap_str_lit("phi"),	(uintptr_t)&PHI_M);
+	static_assert(I_M.v.cn == I, "how on earth does I != I\n");
+	hashmap_set(state->builtins, hashmap_str_lit("i"),	(uintptr_t)&I_M);
+	hashmap_set(state->builtins, hashmap_str_lit("nan"),	(uintptr_t)&NAN_M);
+	hashmap_set(state->builtins, hashmap_str_lit("inf"),	(uintptr_t)&INFINITY_M);
 
 	state->variables = hashmap_create();
+
+	state->user_vars.ptr = calloc(1, sizeof(Expr *));
+	state->user_vars.allocd_size = 1;
+	state->user_vars.in_use = 0;
 
 	state->is_init = true;
 }
@@ -72,13 +77,29 @@ void cleanup_evaluator(struct evaluator_state *state)
 {
 	hashmap_free(state->builtins);
 	hashmap_free(state->variables);
+	for (size_t i = 0; i < state->user_vars.in_use; ++i)
+		free_expr(state->user_vars.ptr[i]);
+	free(state->user_vars.ptr);
 
 	state->is_init = false;
 }
 
-int32_t set_variable(struct evaluator_state *state, strbuf name, size_t index)
+int32_t set_variable(struct evaluator_state *state, strbuf name, Expr *val)
 {
-	return hashmap_set(state->variables, name.s, name.len, (uintptr_t)index);
+	if (state->user_vars.allocd_size < state->user_vars.in_use + 1)
+	{
+		Expr **tmp = realloc(state->user_vars.ptr,
+				(state->user_vars.allocd_size = state->user_vars.in_use*2) * sizeof(Expr *));
+		if (tmp == NULL)
+		{
+			fprintf(stderr, "could not resize user variable memory\n");
+			cleanup_evaluator(state);
+			return -1;
+		}
+		state->user_vars.ptr = tmp;
+	}
+	state->user_vars.ptr[state->user_vars.in_use] = val;
+	return hashmap_set(state->variables, name.s, name.len, (uintptr_t)state->user_vars.in_use++);
 }
 
 #define EPSILON 1e-15
@@ -262,8 +283,8 @@ TypedValue eval_expr(struct evaluator_state *state, const Expr *expr)
 		} else if (right_val.type == ComplexNumber_type)
 		{
 			char *temp = calloc(left->u.v.s.len + sizeof("complex_")-1, sizeof(char));
-			strncpy(temp, "complex_", sizeof("complex_")-1);
-			strncpy(temp+8, left->u.v.s.s, left->u.v.s.len);
+			memccpy(temp, "complex_", '_', sizeof("complex_")-1);
+			memcpy(temp+8, left->u.v.s.s, left->u.v.s.len);
 
 			if (strncmp(left->u.v.s.s, "phase", left->u.v.s.len) == 0
 			 || strncmp(left->u.v.s.s, "real", left->u.v.s.len) == 0

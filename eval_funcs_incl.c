@@ -1,6 +1,5 @@
 #include <complex.h>
 #include <stdio.h>
-#include "config.h"
 
 _Complex double custom_clog2(_Complex double a)
 {

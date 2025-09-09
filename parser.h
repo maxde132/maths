@@ -12,7 +12,10 @@ struct parser_state {
 };
 
 Token get_next_token(const char **s, struct parser_state *state);
+[[nodiscard("why are you peeking if you aren't checking the return value?")]]
 Token peek_token(const char **s, struct parser_state *state);
+[[nodiscard("you really need to make sure you keep this `Expr *`, "
+		"otherwise severe memory leaks will ensue...")]]
 Expr *parse(const char *s);
 
 #endif /* PARSER_H */

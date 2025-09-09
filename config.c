@@ -83,9 +83,8 @@ void parse_args(int32_t argc, char **argv)
 			else if (strncmp(argv[arg_n]+2, "set_var:", 8) == 0)
 			{
 				const char *cur = argv[arg_n]+2+8;
-				while (*cur != '=' && *cur)
-					++cur;
-				if (*cur++ == '\0')
+				cur = strchr(argv[arg_n]+2+8, '=');
+				if (cur++ == NULL)
 				{
 					fprintf(stderr, "argument error: expected expression following command-line variable definition\n");
 					cleanup_evaluator(&eval_state);
@@ -93,32 +92,7 @@ void parse_args(int32_t argc, char **argv)
 				}
 				strbuf name = { argv[arg_n]+2+8, cur - (argv[arg_n]+2+8) - 1, false };
 				Expr *expr = parse(cur);
-				if (eval_state.user_vars.ptr == NULL)
-				{
-					eval_state.user_vars.ptr = calloc(eval_state.user_vars.allocd_size = 1, sizeof(Expr *));
-					if (eval_state.user_vars.ptr == NULL)
-					{
-						fprintf(stderr, "failed to allocate user variable memory\n");
-						cleanup_evaluator(&eval_state);
-						exit(1);
-					}
-					eval_state.user_vars.in_use = 0;
-				} else if (eval_state.user_vars.allocd_size < (size_t)(eval_state.user_vars.in_use+1))
-				{
-					Expr **tmp = realloc(
-							eval_state.user_vars.ptr,
-							(eval_state.user_vars.allocd_size = eval_state.user_vars.in_use*2) * sizeof(Expr *));
-					if (tmp == NULL)
-					{
-						fprintf(stderr, "could not resize user variable memory\n");
-						free(eval_state.user_vars.ptr);
-						cleanup_evaluator(&eval_state);
-						exit(1);
-					}
-					eval_state.user_vars.ptr = tmp;
-				}
-				eval_state.user_vars.ptr[eval_state.user_vars.in_use] = expr;
-				set_variable(&eval_state, name, eval_state.user_vars.in_use++);
+				set_variable(&eval_state, name, expr);
 			} else
 			{
 				fprintf(stderr, "argument error: unknown option '%s'\n", argv[arg_n]);
