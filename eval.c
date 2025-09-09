@@ -40,20 +40,24 @@ void init_evaluator(struct evaluator_state *state)
 	hashmap_set(state->builtins, hashmap_str_lit("complex_sqrt"),	(uintptr_t)csqrt);
 	hashmap_set(state->builtins, hashmap_str_lit("csqrt"),		(uintptr_t)custom_sqrt);
 	hashmap_set(state->builtins, hashmap_str_lit("complex_conj"),	(uintptr_t)conj);
-	hashmap_set(state->builtins, hashmap_str_lit("complex_arg"),	(uintptr_t)carg);
+	hashmap_set(state->builtins, hashmap_str_lit("complex_phase"),	(uintptr_t)carg);
 	hashmap_set(state->builtins, hashmap_str_lit("complex_real"),	(uintptr_t)creal);
 	hashmap_set(state->builtins, hashmap_str_lit("complex_imag"),	(uintptr_t)cimag);
 
 	static TypedValue constant_structs[] = {
+		VAL_BOOL(true),
+		VAL_BOOL(false),
 		VAL_NUM(PI_M),
 		VAL_NUM(E_M),
 		VAL_NUM(PHI_M),
 		VAL_CNUM(I),
 	};
-	hashmap_set(state->builtins, hashmap_str_lit("pi"),	(uintptr_t)&constant_structs[0]);
-	hashmap_set(state->builtins, hashmap_str_lit("e"),	(uintptr_t)&constant_structs[1]);
-	hashmap_set(state->builtins, hashmap_str_lit("phi"),	(uintptr_t)&constant_structs[2]);
-	hashmap_set(state->builtins, hashmap_str_lit("i"),	(uintptr_t)&constant_structs[3]);
+	hashmap_set(state->builtins, hashmap_str_lit("true"),	(uintptr_t)&constant_structs[0]);
+	hashmap_set(state->builtins, hashmap_str_lit("false"),(uintptr_t)&constant_structs[1]);
+	hashmap_set(state->builtins, hashmap_str_lit("pi"),	(uintptr_t)&constant_structs[2]);
+	hashmap_set(state->builtins, hashmap_str_lit("e"),	(uintptr_t)&constant_structs[3]);
+	hashmap_set(state->builtins, hashmap_str_lit("phi"),	(uintptr_t)&constant_structs[4]);
+	hashmap_set(state->builtins, hashmap_str_lit("i"),	(uintptr_t)&constant_structs[5]);
 
 	state->variables = hashmap_create();
 
@@ -93,7 +97,10 @@ TypedValue apply_binary_op(struct evaluator_state *state, TypedValue a, TypedVal
 			case OP_GREATEREQ_TOK: return VAL_BOOL(get_number(&a) >= get_number(&b));
 			case OP_EQ_TOK: return VAL_BOOL(get_number(&a) == get_number(&b));
 			case OP_NOTEQ_TOK: return VAL_BOOL(get_number(&a) != get_number(&b));
+			case OP_NOT_TOK: return VAL_BOOL(!((bool) get_number(&a)));
+			case OP_NEGATE: return VAL_NUM(-1*get_number(&a));
 			case PIPE_TOK: return VAL_NUM(fabs(get_number(&a)));
+			case OP_UNARY_NOTHING: return a;
 			default:
 				fprintf(stderr, "invalid operator on real operands: %s\n", TOK_STRINGS[op]);
 				return VAL_NUM(NAN);
@@ -108,7 +115,9 @@ TypedValue apply_binary_op(struct evaluator_state *state, TypedValue a, TypedVal
 			case OP_SUB_TOK: return VAL_CNUM(get_complex(&a) - get_complex(&b));
 			case OP_EQ_TOK: return VAL_BOOL(get_complex(&a) == get_complex(&b));
 			case OP_NOTEQ_TOK: return VAL_BOOL(get_complex(&a) != get_complex(&b));
+			case OP_NEGATE: return VAL_CNUM((-1.0 + 0.0*I) * get_complex(&a));
 			case PIPE_TOK: return VAL_CNUM(cabs(get_complex(&a)));
+			case OP_UNARY_NOTHING: return a;
 			default:
 				fprintf(stderr, "invalid operator on complex operands: %s\n", TOK_STRINGS[op]);
 				return VAL_CNUM(NAN);
@@ -239,7 +248,7 @@ TypedValue eval_expr(struct evaluator_state *state, const Expr *expr)
 			strncpy(temp, "complex_", sizeof("complex_")-1);
 			strncpy(temp+8, left->u.v.s.s, left->u.v.s.len);
 
-			if (strncmp(left->u.v.s.s, "arg", left->u.v.s.len) == 0
+			if (strncmp(left->u.v.s.s, "phase", left->u.v.s.len) == 0
 			 || strncmp(left->u.v.s.s, "real", left->u.v.s.len) == 0
 			 || strncmp(left->u.v.s.s, "imag", left->u.v.s.len) == 0)
 			{

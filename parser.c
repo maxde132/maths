@@ -71,14 +71,14 @@ Token get_next_token(const char **s, struct parser_state *state)
 		*s += 2;
 		break;
 	case OP_NOT_TOK:
-		if ((*s)[1] != '=')
+		if ((*s)[1] == '=')
 		{
-			fprintf(stderr, "boolean NOT operator is not yet supported. "
-					"'!=' is the inequality operator\n");
+			ret = nToken(OP_NOTEQ_TOK, *s, 2);
+			*s += 2;
 			break;
 		}
-		ret = nToken(OP_NOTEQ_TOK, *s, 2);
-		*s += 2;
+		ret = nToken(OP_NOT_TOK, *s, 1);
+		++*s;
 		break;
 	case DIGIT_TOK:
 		ret.buf.s = (char *)*s;
@@ -124,9 +124,14 @@ Token peek_token(const char **s, struct parser_state *state)
 
 #define PARSER_MAX_PRECED 15
 
+bool op_is_unary(TokenType op)
+{
+	return (op >= OP_NOT_TOK && op <= OP_UNARY_NOTHING);
+}
+
 bool op_is_right_associative(TokenType op)
 {
-	return op == OP_POW_TOK;
+	return op == OP_POW_TOK || op_is_unary(op);
 }
 
 Expr *parse_expr(const char **s, uint32_t max_preced, struct parser_state *state)
@@ -135,7 +140,24 @@ Expr *parse_expr(const char **s, uint32_t max_preced, struct parser_state *state
 
 	Expr *left = calloc(1, sizeof(Expr));
 
-	if (tok.type == IDENT_TOK)
+	if (tok.type == OP_SUB_TOK || tok.type == OP_ADD_TOK
+			|| op_is_unary(tok.type))
+	{
+	//	get_next_token(s, state);
+
+		TokenType new_token_type = tok.type;
+		if (new_token_type == OP_ADD_TOK)
+			new_token_type = OP_UNARY_NOTHING;
+		else if (new_token_type == OP_SUB_TOK)
+			new_token_type = OP_NEGATE;
+		
+		Expr *operand = parse_expr(s, PRECEDENCE[new_token_type], state);
+
+		left->type = Operation_type;
+		left->u.o.left = operand;
+		left->u.o.right = NULL;
+		left->u.o.op = new_token_type;
+	} else if (tok.type == IDENT_TOK)
 	{
 		Token ident = tok;
 		Token next_tok = peek_token(s, state);
@@ -239,6 +261,12 @@ Expr *parse_expr(const char **s, uint32_t max_preced, struct parser_state *state
 			free_expr(left);
 			return NULL;
 		}
+		bool do_advance = true;
+		if (op_tok.type == IDENT_TOK || op_tok.type == NUMBER_TOK)
+		{
+			op_tok.type = OP_MUL_TOK;
+			do_advance = false;
+		}
 		if (op_tok.type > NOT_OP_TOK)
 			break;
 
@@ -246,7 +274,7 @@ Expr *parse_expr(const char **s, uint32_t max_preced, struct parser_state *state
 		if (preced > max_preced)
 			break;
 
-		get_next_token(s, state);
+		if (do_advance) get_next_token(s, state);
 
 		if (op_tok.type == OP_DOT_TOK)
 			state->looking_for_int = true;

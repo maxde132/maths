@@ -17,6 +17,8 @@ const uint8_t PRECEDENCE[] = {
 
 	6, 6, 6, 6,
 	7, 7,
+
+	2, 2, 2,
 };
 
 const TokenType TOK_BY_CHAR[] = { // starts at 0x21
@@ -134,6 +136,8 @@ const char *TOK_STRINGS[] = {
 	"OP_EQ", "OP_NOTEQ",
 	
 	"OP_NOT",
+	"OP_NEGATE",
+	"OP_UNARY_NOTHING",
 	"NOT_OP",
 
 
