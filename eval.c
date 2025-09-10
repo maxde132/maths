@@ -239,7 +239,7 @@ TypedValue eval_expr(struct evaluator_state *state, const Expr *expr)
 		return VAL_CNUM(expr->u.v.cn);
 	if (expr->type == Boolean_type)
 		return VAL_BOOL(expr->u.v.b);
-	if (expr->type == String_type)
+	if (expr->type == Identifier_type)
 	{
 		TypedValue *val;
 		size_t out;
@@ -258,7 +258,7 @@ TypedValue eval_expr(struct evaluator_state *state, const Expr *expr)
 	{
 		if (left == NULL
 		 || right == NULL
-		 || left->type != String_type)
+		 || left->type != Identifier_type)
 			return VAL_NUM(NAN);
 		TypedValue right_val = eval_expr(state, right);
 		double (*d_d_func) (double);

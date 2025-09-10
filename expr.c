@@ -35,6 +35,9 @@ const char *const TOK_STRINGS[] = {
 	"OPEN_PAREN_TOK",
 	"CLOSE_PAREN_TOK",
 
+	"OPEN_BRAC_TOK",
+	"CLOSE_BRAC_TOK",
+
 	"OPEN_BRACKET_TOK",
 	"CLOSE_BRACKET_TOK",
 
@@ -87,7 +90,7 @@ void print_typedval(TypedValue *val)
 		else
 			printf("%s", (val->v.b) ? "true" : "false");
 		break;
-	case String_type:
+	case Identifier_type:
 		printf("%.*s", (int)val->v.s.len, val->v.s.s);
 		break;
 	case Vector_type:
@@ -141,8 +144,8 @@ void print_expr(Expr *expr, uint32_t indent)
 		else
 			printf("Boolean(%s)", (expr->u.v.b) ? "true" : "false");
 		break;
-	case String_type:
-		printf("String('%.*s')", (int)expr->u.v.s.len, expr->u.v.s.s);
+	case Identifier_type:
+		printf("Identifier('%.*s')", (int)expr->u.v.s.len, expr->u.v.s.s);
 		break;
 	case Vector_type:
 		printf("Vector(n=%zu):\n", expr->u.v.v.n);
@@ -167,7 +170,7 @@ void free_expr(Expr *e)
 	{
 		free_expr(e->u.o.left);
 		free_expr(e->u.o.right);
-	} else if (e->type == String_type)
+	} else if (e->type == Identifier_type)
 	{
 		if (e->u.v.s.allocd) free((void *)e->u.v.s.s);
 	} else if (e->type == Vector_type)

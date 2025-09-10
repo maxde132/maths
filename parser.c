@@ -165,7 +165,7 @@ Expr *parse_expr(const char **s, uint32_t max_preced, struct parser_state *state
 		{
 			//printf("calling function: '%.*s'\n", (int)ident.buf.len, ident.buf.s);
 			Expr *name = calloc(1, sizeof(Expr));
-			name->type = String_type;
+			name->type = Identifier_type;
 			name->u.v.s = ident.buf;
 
 			left->type = Operation_type;
@@ -184,7 +184,7 @@ Expr *parse_expr(const char **s, uint32_t max_preced, struct parser_state *state
 			}
 		} else
 		{
-			left->type = String_type;
+			left->type = Identifier_type;
 			left->u.v.s = ident.buf;
 		}
 	} else if (tok.type == OPEN_PAREN_TOK)
@@ -222,6 +222,7 @@ Expr *parse_expr(const char **s, uint32_t max_preced, struct parser_state *state
 		*left = (Expr) { Vector_type, .u.v.v = vec };
 	} else if (tok.type == PIPE_TOK)
 	{
+		free(left);
 		left = parse_expr(s, PARSER_MAX_PRECED, state);
 		Token close_pipe_tok = get_next_token(s, state);
 		if (close_pipe_tok.type != PIPE_TOK)
@@ -246,7 +247,7 @@ Expr *parse_expr(const char **s, uint32_t max_preced, struct parser_state *state
 		state->looking_for_int = false;
 	} else
 	{
-		fprintf(stderr, "found no valid operations/literals, returning (null)\n");
+		//fprintf(stderr, "found no valid operations/literals, returning (null)\n");
 		free_expr(left);
 		return nullptr;
 	}
@@ -285,7 +286,7 @@ Expr *parse_expr(const char **s, uint32_t max_preced, struct parser_state *state
 
 		if (right == nullptr)
 		{
-			fprintf(stderr, "missing right operand for operator %s\n",
+			fprintf(stderr, "expected expression after operator %s\n",
 					TOK_STRINGS[op_tok.type]);
 			free_expr(left);
 			return nullptr;

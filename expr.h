@@ -133,7 +133,7 @@ typedef enum ExprType {
 	RealNumber_type,
 	ComplexNumber_type,
 	Boolean_type,
-	String_type,
+	Identifier_type,
 	Vector_type,
 } ExprType;
 
