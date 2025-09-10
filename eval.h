@@ -1,7 +1,6 @@
 #ifndef EVAL_H
 #define EVAL_H
 
-#include "config.h"
 #include "expr.h"
 #include "c-hashmap/map.h"
 

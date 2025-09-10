@@ -26,6 +26,7 @@ void print_usage(void)
                     "options:\n"
                     "  -d, --debug                        Enable debug output\n"
                     "  -P, --print                        Print the result value even if `print` was not called (default OFF)\n"
+			  "  -E EXPR, --expr=EXPR               Alternate way to specify the expression to be evaluated\n"
                     "  -p PREC, --precision=PREC          Set the number of decimal digits to be printed when printing numbers (default 6)\n"
                     "  --bools-are-nums                   Write the number 1 or 0 to represent boolean values (default OFF)\n"
 			  "  --estimate-equality                Consider two reals equal if they are equal to 14 digits of accuracy (default OFF)\n"
@@ -33,12 +34,6 @@ void print_usage(void)
 			  "  -V, --version                      Display program information\n"
 			  "  -                                  Read expression string from stdin\n"
 			, global_config.PROG_NAME);
-	if (eval_state.user_vars.ptr != NULL)
-	{
-		for (size_t i = 0; i < eval_state.user_vars.in_use; ++i)
-			free_expr(eval_state.user_vars.ptr[i]);
-		free(eval_state.user_vars.ptr);
-	}
 	cleanup_evaluator(&eval_state);
 	exit(1);
 }
@@ -76,6 +71,8 @@ void parse_args(int32_t argc, char **argv)
 				print_info();
 			else if (strncmp(argv[arg_n]+2, "precision=", 10) == 0)
 				global_config.precision = strtoul(argv[arg_n]+2+10, NULL, 10);
+			else if (strncmp(argv[arg_n]+2, "expr=", 5) == 0)
+				expression = argv[arg_n]+2+5;
 			else if (strcmp(argv[arg_n]+2, "bools-are-nums") == 0)
 				SET_FLAG(BOOLS_PRINT_NUM);
 			else if (strcmp(argv[arg_n]+2, "estimate-equality") == 0)
@@ -115,6 +112,15 @@ void parse_args(int32_t argc, char **argv)
 					break;
 				case 'P':
 					SET_FLAG(PRINT);
+					break;
+				case 'E':
+					if (argv[arg_n+1] == NULL)
+					{
+						fprintf(stderr, "argument error: expression is required following "
+								"'-E' argument to specify an expression to evaluate.\n");
+						print_usage();
+					}
+					expression = argv[++arg_n];
 					break;
 				case 'p':
 					if (cur[1] != '\0')

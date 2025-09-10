@@ -8,6 +8,7 @@
 
 #include "token.h"
 #include "expr.h"
+#include "config.h"
 #include "c-hashmap/map.h"
 #include "eval_funcs_incl.c"
 
@@ -86,6 +87,7 @@ void cleanup_evaluator(struct evaluator_state *restrict state)
 	state->builtins = nullptr;
 	hashmap_free(state->variables);
 	state->variables = nullptr;
+
 	for (size_t i = 0; i < state->user_vars.in_use; ++i)
 		free_expr(state->user_vars.ptr[i]);
 	free(state->user_vars.ptr);
