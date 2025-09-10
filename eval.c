@@ -47,15 +47,14 @@ struct evaluator_state init_evaluator(struct evaluator_state *restrict state_out
 	hashmap_set(state.builtins, hashmap_str_lit("complex_real"),	(uintptr_t)creal);
 	hashmap_set(state.builtins, hashmap_str_lit("complex_imag"),	(uintptr_t)cimag);
 
-	static constexpr TypedValue
-		TRUE_M	= VAL_BOOL(true),
-		FALSE_M	= VAL_BOOL(false),
-		PI_M		= VAL_NUM(3.14159265358979323846),
-		E_M		= VAL_NUM(2.71828182845904523536),
-		PHI_M		= VAL_NUM(1.61803398874989484820),
-		I_M		= VAL_CNUM(I),
-		NAN_M		= VAL_NUM(NAN),
-		INFINITY_M	= VAL_NUM(INFINITY);
+	static constexpr TypedValue TRUE_M		= VAL_BOOL(true);
+	static constexpr TypedValue FALSE_M		= VAL_BOOL(false);
+	static constexpr TypedValue PI_M		= VAL_NUM(3.14159265358979323846);
+	static constexpr TypedValue E_M		= VAL_NUM(2.71828182845904523536);
+	static constexpr TypedValue PHI_M		= VAL_NUM(1.61803398874989484820);
+	static constexpr TypedValue I_M		= VAL_CNUM(I);
+	static constexpr TypedValue NAN_M		= VAL_NUM(NAN);
+	static constexpr TypedValue INFINITY_M	= VAL_NUM(INFINITY);
 
 	hashmap_set(state.builtins, hashmap_str_lit("true"),	(uintptr_t)&TRUE_M);
 	hashmap_set(state.builtins, hashmap_str_lit("false"),	(uintptr_t)&FALSE_M);
