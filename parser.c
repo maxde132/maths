@@ -179,7 +179,7 @@ Expr *parse_expr(const char **s, uint32_t max_preced, struct parser_state *state
 			if (close_paren_tok.type != CLOSE_BRAC_TOK)
 			{
 				fprintf(stderr, "expected closing brace for function call, got %s\n", TOK_STRINGS[close_paren_tok.type]);
-				free_expr(left);
+				free_expr(&left);
 				return nullptr;
 			}
 		} else
@@ -195,7 +195,7 @@ Expr *parse_expr(const char **s, uint32_t max_preced, struct parser_state *state
 		if (close_paren_tok.type != CLOSE_PAREN_TOK)
 		{
 			fprintf(stderr, "expected close paren for parenthesis block, got %s\n", TOK_STRINGS[close_paren_tok.type]);
-			free_expr(left);
+			free_expr(&left);
 			return nullptr;
 		}
 	} else if (tok.type == OPEN_BRACKET_TOK)
@@ -211,9 +211,9 @@ Expr *parse_expr(const char **s, uint32_t max_preced, struct parser_state *state
 				{
 					fprintf(stderr, "unable to expand memory for vector\n");
 					for (size_t i = 0; i < vec.n; ++i)
-						free_expr(vec.ptr[i]);
+						free_expr(&vec.ptr[i]);
 					free(vec.ptr);
-					free_expr(left);
+					free_expr(&left);
 					return nullptr;
 				}
 				vec.ptr = tmp;
@@ -228,7 +228,7 @@ Expr *parse_expr(const char **s, uint32_t max_preced, struct parser_state *state
 		if (close_pipe_tok.type != PIPE_TOK)
 		{
 			fprintf(stderr, "expected closing pipe for pipe block, got %s\n", TOK_STRINGS[close_pipe_tok.type]);
-			free_expr(left);
+			free_expr(&left);
 			return nullptr;
 		}
 		Expr *opnode = calloc(1, sizeof(Expr));
@@ -248,7 +248,7 @@ Expr *parse_expr(const char **s, uint32_t max_preced, struct parser_state *state
 	} else
 	{
 		//fprintf(stderr, "found no valid operations/literals, returning (null)\n");
-		free_expr(left);
+		free_expr(&left);
 		return nullptr;
 	}
 
@@ -258,7 +258,7 @@ Expr *parse_expr(const char **s, uint32_t max_preced, struct parser_state *state
 		if (op_tok.type == INVALID_TOK)
 		{
 			fprintf(stderr, "invalid token found\n");
-			free_expr(left);
+			free_expr(&left);
 			return nullptr;
 		}
 		bool do_advance = true;
@@ -288,7 +288,7 @@ Expr *parse_expr(const char **s, uint32_t max_preced, struct parser_state *state
 		{
 			fprintf(stderr, "expected expression after operator %s\n",
 					TOK_STRINGS[op_tok.type]);
-			free_expr(left);
+			free_expr(&left);
 			return nullptr;
 		}
 

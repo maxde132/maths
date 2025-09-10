@@ -89,9 +89,9 @@ void cleanup_evaluator(struct evaluator_state *restrict state)
 	state->variables = nullptr;
 
 	for (size_t i = 0; i < state->user_vars.in_use; ++i)
-		free_expr(state->user_vars.ptr[i]);
+		free_expr(&state->user_vars.ptr[i]);
 	free(state->user_vars.ptr);
-	state->user_vars = (UserVarStack) { nullptr, 0, 0 };
+	state->user_vars = (struct user_var_storage) { nullptr, 0, 0 };
 
 	state->is_init = false;
 }

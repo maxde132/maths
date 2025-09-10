@@ -163,24 +163,25 @@ inline void print_exprh(Expr *expr)
 	fputc('\n', stdout);
 }
 
-void free_expr(Expr *e)
+void free_expr(Expr **e)
 {
-	if (e == nullptr) return;
-	if (e->type == Operation_type)
+	if (*e == nullptr) return;
+	if ((*e)->type == Operation_type)
 	{
-		free_expr(e->u.o.left);
-		free_expr(e->u.o.right);
-	} else if (e->type == Identifier_type)
+		free_expr(&(*e)->u.o.left);
+		free_expr(&(*e)->u.o.right);
+	} else if ((*e)->type == Identifier_type)
 	{
-		if (e->u.v.s.allocd) free((void *)e->u.v.s.s);
-	} else if (e->type == Vector_type)
+		if ((*e)->u.v.s.allocd) free((*e)->u.v.s.s);
+	} else if ((*e)->type == Vector_type)
 	{
-		for (size_t i = 0; i < e->u.v.v.n; ++i)
-			free_expr(e->u.v.v.ptr[i]);
-		free(e->u.v.v.ptr);
+		for (size_t i = 0; i < (*e)->u.v.v.n; ++i)
+			free_expr(&(*e)->u.v.v.ptr[i]);
+		free((*e)->u.v.v.ptr);
 	}
 
-	free(e);
+	free(*e);
+	*e = nullptr;
 }
 
 TypedValue *construct_vec(size_t n, ...)

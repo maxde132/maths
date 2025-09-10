@@ -4,16 +4,16 @@
 #include "expr.h"
 #include "c-hashmap/map.h"
 
-typedef struct UserVarStack {
+struct user_var_storage {
 	Expr **ptr;
 	size_t in_use;
 	size_t allocd_size;
-} UserVarStack;
+};
 
 struct evaluator_state {
 	hashmap *builtins;
 	hashmap *variables;
-	UserVarStack user_vars;
+	struct user_var_storage user_vars;
 	bool is_init;
 };
 

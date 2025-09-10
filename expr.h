@@ -179,7 +179,7 @@ void print_typedval(TypedValue *val);
 void println_typedval(TypedValue *val);
 void print_exprh(Expr *expr);
 
-void free_expr(Expr *e);
+void free_expr(Expr **e);
 
 TypedValue *construct_vec(size_t n, ...);
 

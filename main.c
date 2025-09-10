@@ -24,7 +24,7 @@ int32_t main(int32_t argc, char **argv)
 	if (FLAG_IS_SET(PRINT))
 		print_typedval(&val);
 
-	free_expr(expr);
+	free_expr(&expr);
 	cleanup_evaluator(&eval_state);
 
 	return 0;
