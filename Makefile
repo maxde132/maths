@@ -15,6 +15,9 @@ all: $(EXEC)
 $(EXEC): obj Makefile $(OBJ_FILES)
 	$(CC) $(OBJ_FILES) -o $(EXEC) $(LDFLAGS)
 
+lib$(EXEC).so: obj Makefile $(OBJ_FILES) forbidden_realm/python_interface.c
+	$(CC) $(OBJ_FILES) -o lib$(EXEC).so $(LDFLAGS) -I. forbidden_realm/python_interface.c -shared
+
 obj/expr.o: Makefile expr.c expr.h
 	$(CC) expr.c -c -o obj/expr.o $(CFLAGS)
 

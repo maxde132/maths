@@ -45,29 +45,29 @@ class TypedValue(ctypes.Structure):
             ('v', EvalValue),
     ]
 
-lib = ctypes.CDLL('./libmml.so')
+mml = ctypes.CDLL('./libmml.so')
 
-lib.parse_eval.argtypes = [ctypes.c_char_p]
-lib.parse_eval.restype = TypedValue
+mml.parse_eval.argtypes = [ctypes.c_char_p]
+mml.parse_eval.restype = TypedValue
 
-lib.parse.argtypes = [ctypes.c_char_p]
-lib.parse.restype = ctypes.POINTER(Expr)
+mml.parse.argtypes = [ctypes.c_char_p]
+mml.parse.restype = ctypes.POINTER(Expr)
 
-lib.eval_mml.argtypes = [ctypes.POINTER(Expr)]
-lib.eval_mml.restype = TypedValue
+mml.eval_mml.argtypes = [ctypes.POINTER(Expr)]
+mml.eval_mml.restype = TypedValue
 
-lib.print_val.argtypes = [TypedValue]
-lib.print_val.restype = None
+mml.print_val.argtypes = [TypedValue]
+mml.print_val.restype = None
 
-lib.assign_var.argtypes = [ctypes.c_char_p, ctypes.POINTER(Expr)]
-lib.assign_var.restype = None
+mml.assign_var.argtypes = [ctypes.c_char_p, ctypes.POINTER(Expr)]
+mml.assign_var.restype = None
 
-lib.free_expr.argtypes = [ctypes.POINTER(Expr)]
-lib.free_expr.restype = None
+mml.free_expr.argtypes = [ctypes.POINTER(Expr)]
+mml.free_expr.restype = None
 
 
-lib.init_eval.argtypes = None
-lib.init_eval.restype = None
+mml.init_eval.argtypes = None
+mml.init_eval.restype = None
 
-lib.cleanup_eval.argtypes = None
-lib.cleanup_eval.restype = None
+mml.cleanup_eval.argtypes = None
+mml.cleanup_eval.restype = None

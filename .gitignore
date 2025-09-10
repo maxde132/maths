@@ -4,3 +4,4 @@ vgcore*
 
 obj/*
 mml
+*.so

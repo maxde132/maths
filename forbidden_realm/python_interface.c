@@ -1,6 +1,8 @@
+#include <string.h>
+#include <stdio.h>
+
 #include "eval.h"
 #include "parser.h"
-#include <string.h>
 
 struct evaluator_state state = {0};
 void init_eval(void)
@@ -24,7 +26,9 @@ void assign_var(const char *name, Expr *val)
 TypedValue parse_eval(const char *s)
 {
 	const Expr *expr = parse(s);
-	return eval_expr(&state, expr);
+	TypedValue ret = eval_expr(&state, expr);
+	fflush(stdout);
+	return ret;
 }
 TypedValue eval_mml(const Expr *expr)
 {
