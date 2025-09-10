@@ -33,12 +33,6 @@ void print_usage(void)
 			  "  -V, --version                      Display program information\n"
 			  "  -                                  Read expression string from stdin\n"
 			, global_config.PROG_NAME);
-	if (eval_state.user_vars.ptr != NULL)
-	{
-		for (size_t i = 0; i < eval_state.user_vars.in_use; ++i)
-			free_expr((Expr *)eval_state.user_vars.ptr[i]);
-		free(eval_state.user_vars.ptr);
-	}
 	cleanup_evaluator(&eval_state);
 	exit(1);
 }
@@ -90,7 +84,7 @@ void parse_args(int32_t argc, char **argv)
 					cleanup_evaluator(&eval_state);
 					exit(1);
 				}
-				strbuf name = { argv[arg_n]+2+8, cur - (argv[arg_n]+2+8) - 1, false };
+				strbuf name = { argv[arg_n]+2+8, cur - (argv[arg_n]+2+8) - 1 };
 				set_variable(&eval_state, name, parse(cur));
 			} else
 			{
@@ -155,7 +149,7 @@ strbuf read_string_from_stream(FILE *stream)
 	if (ret_buf.s == NULL)
 	{
 		fprintf(stderr, "failed to allocate the initial buffer size\n");
-		return (strbuf) { NULL, 0, 0 };
+		return (strbuf) { nullptr, 0 };
 	}
 
 	size_t cur_chunk_read;
@@ -171,7 +165,7 @@ strbuf read_string_from_stream(FILE *stream)
 			{
 				free(ret_buf.s);
 				fprintf(stderr, "failed to reallocate buffer with size %zu\n", buf_size);
-				return (strbuf) { NULL, 0, 0 };
+				return (strbuf) { nullptr, 0 };
 			}
 			ret_buf.s = temp_buf;
 		}

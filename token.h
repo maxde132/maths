@@ -65,16 +65,15 @@ typedef enum {
 typedef struct strbuf {
 	char *s;
 	size_t len;
-	bool allocd;
 } strbuf;
 
-#define str_lit(s) ((strbuf) { (s), sizeof(s)-1, false })
+#define str_lit(s) ((strbuf) { (s), sizeof(s)-1 })
 
 typedef struct Token {
 	strbuf buf;
 	TokenType type;
 } Token;
 
-#define nToken(type, buf, len) ((Token) { { (char *)(buf), (len), false }, (type) })
+#define nToken(type, buf, len) ((Token) { { (char *)(buf), (len) }, (type) })
 
 #endif /* TOKEN_H */

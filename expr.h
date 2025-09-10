@@ -160,18 +160,20 @@ typedef struct TypedValue {
 
 typedef struct Expr {
 	ExprType type;
+	bool should_free;
+	uint16_t refcount;
 	union {
 		Operation o;
 		EvalValue v;
 	} u;
 } Expr;
 
-#define EXPR_NUM(num) ((Expr) { RealNumber_type, .u.v.n = (num) })
+#define EXPR_NUM(num) ((Expr) { RealNumber_type, .should_free = true, .u.v.n = (num) })
 #define VAL_NUM(num) ((TypedValue) { RealNumber_type, .v.n = (num) })
 #define VAL_INVAL ((TypedValue) { Invalid_type, .v.n = NAN })
 #define VAL_CNUM(num) ((TypedValue) { ComplexNumber_type, .v.cn = (num) })
 #define VAL_BOOL(bl) ((TypedValue) { Boolean_type, .v.b = (bl) })
-#define VAL2EXPRP(val) (&(Expr) { .type = (val).type, .u.v = (val).v })
+#define VAL2EXPRP(val) (&(Expr) { .type = (val).type, .should_free = false, .u.v = (val).v })
 
 #define VAL_IS_NUM(v) (\
     (v).type == RealNumber_type \
@@ -183,7 +185,7 @@ void print_typedval(const TypedValue *val);
 void println_typedval(const TypedValue *val);
 void print_exprh(const Expr *expr);
 
-void free_expr(Expr *e);
+void free_expr(Expr **e);
 
 TypedValue *construct_vec(size_t n, ...);
 

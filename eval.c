@@ -47,33 +47,34 @@ struct evaluator_state init_evaluator(struct evaluator_state *restrict state_out
 	hashmap_set(state.builtins, hashmap_str_lit("complex_real"),	(uintptr_t)creal);
 	hashmap_set(state.builtins, hashmap_str_lit("complex_imag"),	(uintptr_t)cimag);
 
-	static constexpr TypedValue
-		TRUE_M	= VAL_BOOL(true),
-		FALSE_M	= VAL_BOOL(false),
-		PI_M		= VAL_NUM(3.14159265358979323846),
-		E_M		= VAL_NUM(2.71828182845904523536),
-		PHI_M		= VAL_NUM(1.61803398874989484820),
-		I_M		= VAL_CNUM(I),
-		NAN_M		= VAL_INVAL,
-		INFINITY_M	= VAL_NUM(INFINITY);
+	static constexpr TypedValue TRUE_M		= VAL_BOOL(true);
+	static constexpr TypedValue FALSE_M		= VAL_BOOL(false);
+	static constexpr TypedValue PI_M		= VAL_NUM(3.14159265358979323846);
+	static constexpr TypedValue E_M		= VAL_NUM(2.71828182845904523536);
+	static constexpr TypedValue PHI_M		= VAL_NUM(1.61803398874989484820);
+	static constexpr TypedValue I_M		= VAL_CNUM(I);
+	static constexpr TypedValue NAN_M		= VAL_INVAL;
+	static constexpr TypedValue INFINITY_M	= VAL_NUM(INFINITY);
 
 	hashmap_set(state.builtins, hashmap_str_lit("true"),	(uintptr_t)&TRUE_M);
 	hashmap_set(state.builtins, hashmap_str_lit("false"),	(uintptr_t)&FALSE_M);
 	hashmap_set(state.builtins, hashmap_str_lit("pi"),	(uintptr_t)&PI_M);
 	hashmap_set(state.builtins, hashmap_str_lit("e"),	(uintptr_t)&E_M);
 	hashmap_set(state.builtins, hashmap_str_lit("phi"),	(uintptr_t)&PHI_M);
-	static_assert(I_M.v.cn == I, "how on earth does I != I\n");
+	static_assert(I_M.v.cn == I, "how on earth does I != I. i think your computer is officially borked\n");
 	hashmap_set(state.builtins, hashmap_str_lit("i"),	(uintptr_t)&I_M);
 	hashmap_set(state.builtins, hashmap_str_lit("nan"),	(uintptr_t)&NAN_M);
 	hashmap_set(state.builtins, hashmap_str_lit("inf"),	(uintptr_t)&INFINITY_M);
 
 	state.variables = hashmap_create();
 
-	state.user_vars.ptr = calloc(1, sizeof(Expr *));
+	state.user_vars.vars.ptr = calloc(1, sizeof(Expr *));
+	state.user_vars.vars.n = 0;
 	state.user_vars.allocd_size = 1;
-	state.user_vars.in_use = 0;
 
 	state.is_init = true;
+
+	state.expr_to_eval = nullptr;
 
 	if (state_out != nullptr)
 		*state_out = state;
@@ -87,31 +88,36 @@ void cleanup_evaluator(struct evaluator_state *restrict state)
 	state->builtins = nullptr;
 	hashmap_free(state->variables);
 	state->variables = nullptr;
-	for (size_t i = 0; i < state->user_vars.in_use; ++i)
-		free_expr((Expr *)state->user_vars.ptr[i]);
-	free(state->user_vars.ptr);
-	state->user_vars = (UserVarStack) { nullptr, 0, 0 };
+
+	free_expr((Expr **)&state->expr_to_eval);
+
+	for (size_t i = 0; i < state->user_vars.vars.n; ++i)
+		free_expr(&state->user_vars.vars.ptr[i]);
+	free(state->user_vars.vars.ptr);
+	state->user_vars.vars.ptr = nullptr;
+	state->user_vars.vars.n = 0;
 
 	state->is_init = false;
 }
 
 int32_t set_variable(struct evaluator_state *restrict state,
-		strbuf name, const Expr *val)
+		strbuf name, Expr *val)
 {
-	if (state->user_vars.allocd_size < state->user_vars.in_use + 1)
+	if (state->user_vars.allocd_size < state->user_vars.vars.n + 1)
 	{
-		Expr **tmp = realloc(state->user_vars.ptr,
-				(state->user_vars.allocd_size = state->user_vars.in_use*2) * sizeof(Expr *));
+		Expr **tmp = realloc(state->user_vars.vars.ptr,
+				(state->user_vars.allocd_size = state->user_vars.vars.n*2) * sizeof(Expr *));
 		if (tmp == NULL)
 		{
 			fprintf(stderr, "could not resize user variable memory\n");
 			cleanup_evaluator(state);
 			return -1;
 		}
-		state->user_vars.ptr = (const Expr **)tmp;
+		state->user_vars.vars.ptr = tmp;
 	}
-	state->user_vars.ptr[state->user_vars.in_use] = val;
-	return hashmap_set(state->variables, name.s, name.len, (uintptr_t)state->user_vars.in_use++);
+	++val->refcount;
+	state->user_vars.vars.ptr[state->user_vars.vars.n] = (Expr *)val;
+	return hashmap_set(state->variables, name.s, name.len, (uintptr_t)state->user_vars.vars.n++);
 }
 
 #define EPSILON 1e-15
@@ -250,14 +256,14 @@ TypedValue eval_expr(struct evaluator_state *state,
 		if (hashmap_get(state->builtins, expr->u.v.s.s, expr->u.v.s.len, (uintptr_t *)&val))
 			return *val;
 		else if (hashmap_get(state->variables, expr->u.v.s.s, expr->u.v.s.len, (uintptr_t *)&out))
-			return eval_expr(state, state->user_vars.ptr[out]);
+			return eval_expr(state, state->user_vars.vars.ptr[out]);
 
 		fprintf(stderr, "undefined identifier: '%.*s'\n",
 				(int)expr->u.v.s.len, expr->u.v.s.s);
 		return VAL_INVAL;
 	}
 	const Expr *left = expr->u.o.left;
-	const Expr *right = expr->u.o.right;
+	Expr *right = expr->u.o.right;
 	if (left->type == Identifier_type
 			&& expr->u.o.op == OP_ASSERT_EQUAL)
 	{
@@ -349,4 +355,14 @@ undefined_func:
 			eval_expr(state, left),
 			(right) ? eval_expr(state, right) : VAL_INVAL,
 			expr->u.o.op);
+}
+
+inline TypedValue evaluate(struct evaluator_state *state)
+{
+	return eval_expr(state, state->expr_to_eval);
+}
+
+inline TypedValue eval_stmt_n(struct evaluator_state *state, size_t n)
+{
+	return eval_expr(state, state->expr_to_eval->u.v.v.ptr[n]);
 }

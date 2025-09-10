@@ -3,6 +3,7 @@
 
 #include "token.h"
 #include "expr.h"
+#include "eval.h"
 
 struct parser_state {
 	const char *saved_s;
@@ -20,6 +21,7 @@ Token peek_token(const char **s, struct parser_state *state);
 /* returns a VecN wrapped as Expr,
  * representing the vector of statements
  * parsed by the parser. */
-const Expr *parse(const char *s);
+Expr *parse(const char *s);
+void parse_into(const char *s, struct evaluator_state *state);
 
 #endif /* PARSER_H */

@@ -5,7 +5,7 @@ CC := gcc
 
 EXEC := mml
 
-CFLAGS := -Wall -Wextra -std=c23 -O3
+CFLAGS := -Wall -Wextra -std=c23 -g
 LDFLAGS := $(CFLAGS) -lm
 
 .PHONY: clean
@@ -27,7 +27,7 @@ obj/eval.o: Makefile eval.c eval.h expr.h eval_funcs_incl.c
 obj/main.o: Makefile main.c expr.h token.h
 	$(CC) main.c -c -o obj/main.o $(CFLAGS)
 
-obj/config.o: Makefile config.c config.h token.h
+obj/config.o: Makefile config.c config.h eval.h expr.h token.h
 	$(CC) config.c -c -o obj/config.o $(CFLAGS)
 
 obj/map.o: Makefile c-hashmap/map.c c-hashmap/map.h

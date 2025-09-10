@@ -154,6 +154,10 @@ void print_expr(const Expr *expr, uint32_t indent)
 			print_expr(expr->u.v.v.ptr[i], indent+2);
 			if (i < expr->u.v.v.n - 1) fputc('\n', stdout);
 		}
+		break;
+	default:
+		printf("Invalid(null)");
+		break;
 	}
 }
 
@@ -163,24 +167,33 @@ inline void print_exprh(const Expr *expr)
 	fputc('\n', stdout);
 }
 
-void free_expr(Expr *e)
+void free_expr(Expr **e)
 {
-	if (e == nullptr) return;
-	if (e->type == Operation_type)
+	if (*e == nullptr || !(*e)->should_free) return;
+	if (--((*e)->refcount) > 0)
 	{
-		free_expr(e->u.o.left);
-		free_expr(e->u.o.right);
-	} else if (e->type == Identifier_type)
-	{
-		if (e->u.v.s.allocd) free((void *)e->u.v.s.s);
-	} else if (e->type == Vector_type)
-	{
-		for (size_t i = 0; i < e->u.v.v.n; ++i)
-			free_expr(e->u.v.v.ptr[i]);
-		free(e->u.v.v.ptr);
+		*e = nullptr;
+		return;
 	}
 
-	free(e);
+	if ((*e)->type == Operation_type)
+	{
+		free_expr(&(*e)->u.o.left);
+		free_expr(&(*e)->u.o.right);
+	} else if ((*e)->type == Identifier_type)
+	{
+		free((*e)->u.v.s.s);
+		(*e)->u.v.s.s = nullptr;
+	} else if ((*e)->type == Vector_type)
+	{
+		for (size_t i = 0; i < (*e)->u.v.v.n; ++i)
+			free_expr(&(*e)->u.v.v.ptr[i]);
+		free((*e)->u.v.v.ptr);
+		(*e)->u.v.v.ptr = nullptr;
+	}
+
+	free(*e);
+	*e = nullptr;
 }
 
 TypedValue *construct_vec(size_t n, ...)
@@ -198,6 +211,8 @@ TypedValue *construct_vec(size_t n, ...)
 		ret->v.v.ptr[i] = calloc(1, sizeof(Expr));
 		ret->v.v.ptr[i]->type = cur.type;
 		ret->v.v.ptr[i]->u.v = cur.v;
+		ret->v.v.ptr[i]->refcount = 1;
+		ret->v.v.ptr[i]->should_free = true;
 	}
 
 	va_end(args);

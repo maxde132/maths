@@ -4,24 +4,26 @@
 #include "expr.h"
 #include "c-hashmap/map.h"
 
-typedef struct UserVarStack {
-	const Expr **ptr;
-	size_t in_use;
+struct user_var_arr {
+	VecN vars;
 	size_t allocd_size;
-} UserVarStack;
+};
 
 struct evaluator_state {
 	hashmap *builtins;
 	hashmap *variables;
-	UserVarStack user_vars;
+	struct user_var_arr user_vars;
+	const Expr *expr_to_eval;
 	bool is_init;
 };
 
 struct evaluator_state init_evaluator(struct evaluator_state *state_out);
 void cleanup_evaluator(struct evaluator_state *state);
 int32_t set_variable(struct evaluator_state *state,
-		strbuf name, const Expr *val);
+		strbuf name, Expr *val);
 TypedValue eval_expr(struct evaluator_state *state,
 		const Expr *expr);
+TypedValue evaluate(struct evaluator_state *state);
+TypedValue eval_stmt_n(struct evaluator_state *state, size_t n);
 
 #endif /* EVAL_H */
