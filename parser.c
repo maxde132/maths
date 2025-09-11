@@ -40,6 +40,7 @@ Token get_next_token(const char **s, struct parser_state *state)
 	case COMMA_TOK:
 	case PIPE_TOK:
 	case SEMICOLON_TOK:
+	case TILDE_TOK:
 		ret = nToken(type, *s, 1);
 		++*s;
 		break;
@@ -130,7 +131,7 @@ Token peek_token(const char **s, struct parser_state *state)
 
 bool op_is_unary(TokenType op)
 {
-	return (op >= OP_NOT_TOK && op <= OP_UNARY_NOTHING);
+	return (op == TILDE_TOK || (op >= OP_NOT_TOK && op <= OP_UNARY_NOTHING));
 }
 
 bool op_is_right_associative(TokenType op)

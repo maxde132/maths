@@ -194,7 +194,14 @@ void free_expr(Expr **e)
 			free((*e)->u.v.s.s);
 	} else if ((*e)->type == Vector_type)
 	{
-		free_vec(&(*e)->u.v.v);
+		if (!(*e)->should_free_vec_block)
+			free_vec(&(*e)->u.v.v);
+		else
+		{
+			free((*e)->u.v.v.ptr[0]);
+			free((*e)->u.v.v.ptr);
+			(*e)->u.v.v.ptr = nullptr;
+		}
 	}
 
 	free(*e);

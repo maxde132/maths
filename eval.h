@@ -9,6 +9,7 @@ struct evaluator_state {
 	hashmap *inserted_vars;
 	VecN vars_storage;
 	VecN exprs;
+	VecN allocd_vecs;
 	bool is_init;
 };
 

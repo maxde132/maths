@@ -162,7 +162,8 @@ typedef struct TypedValue {
 
 typedef struct Expr {
 	ExprType type;
-	uint32_t num_refs;
+	uint16_t num_refs;
+	bool should_free_vec_block;
 	union {
 		Operation o;
 		EvalValue v;
