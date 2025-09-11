@@ -23,8 +23,8 @@ struct evaluator_state eval_init(struct evaluator_state *restrict state_out)
 	if (eval_builtins != nullptr)
 		goto skip_builtins_init;
 	eval_builtins = hashmap_create();
-	hashmap_set(eval_builtins, hashmap_str_lit("print"),			(uintptr_t)print_typedval);
-	hashmap_set(eval_builtins, hashmap_str_lit("println"),		(uintptr_t)println_typedval);
+	hashmap_set(eval_builtins, hashmap_str_lit("print"),		(uintptr_t)print_typedval);
+	hashmap_set(eval_builtins, hashmap_str_lit("println"),	(uintptr_t)println_typedval);
 
 	hashmap_set(eval_builtins, hashmap_str_lit("sin"),			(uintptr_t)sin);
 	hashmap_set(eval_builtins, hashmap_str_lit("cos"),			(uintptr_t)cos);
@@ -142,6 +142,75 @@ inline bool doubles_are_equal_func(double a, double b)
 }
 bool doubles_are_equal_func(double, double);
 
+TypedValue apply_func(strbuf ident, TypedValue right)
+{
+	if (strncmp(ident.s, "print", 5) == 0)
+	{
+		void (*func) (TypedValue *);
+		if (hashmap_get(eval_builtins, ident.s, ident.len, (uintptr_t *)&func))
+		{
+			(*func)(&right);
+			return VAL_INVAL;
+		}
+	}
+	if (right.type == RealNumber_type)
+	{
+		if (strncmp(ident.s, "csqrt", ident.len) == 0)
+		{
+			_Complex double (*func) (double);
+			if (hashmap_get(eval_builtins, ident.s, ident.len, (uintptr_t *)&func))
+			{
+				if (right.type == RealNumber_type)
+					return VAL_CNUM((*func)(right.v.n));
+			}
+			goto undefined_func;
+		}
+		double (*func) (double);
+		if (hashmap_get(eval_builtins, ident.s, ident.len, (uintptr_t *)&func))
+		{
+			if (right.type == RealNumber_type)
+				return VAL_NUM((*func)(right.v.n));
+		}
+	} else if (right.type == ComplexNumber_type)
+	{
+		char *temp = calloc(ident.len + sizeof("complex_")-1, sizeof(char));
+		memccpy(temp, "complex_", '_', sizeof("complex_")-1);
+		memcpy(temp+8, ident.s, ident.len);
+
+		if (strncmp(ident.s, "phase", ident.len) == 0
+		 || strncmp(ident.s, "real", ident.len) == 0
+		 || strncmp(ident.s, "imag", ident.len) == 0)
+		{
+			double (*func) (_Complex double);
+			if (hashmap_get(eval_builtins, temp, ident.len + sizeof("complex_")-1, (uintptr_t *)&func))
+			{
+				free(temp);
+				if (right.type == ComplexNumber_type)
+					return VAL_NUM((*func)(right.v.cn));
+			}
+			goto undefined_func;
+		}
+		_Complex double (*func) (_Complex double);
+		if (hashmap_get(eval_builtins, temp, ident.len + sizeof("complex_")-1, (uintptr_t *)&func))
+		{
+			free(temp);
+			if (right.type == ComplexNumber_type)
+				return VAL_CNUM((*func)(right.v.cn));
+		}
+		
+		free(temp);
+	}
+
+undefined_func:
+	fprintf(stderr, "undefined function for %s argument in function call: '%.*s'\n",
+		(right.type == RealNumber_type) ? "real" :
+			(right.type == ComplexNumber_type) ? "complex" :
+				"vector",
+		(int)ident.len, ident.s);
+
+	return VAL_INVAL;
+}
+
 TypedValue apply_binary_op(struct evaluator_state *restrict state, TypedValue a, TypedValue b, TokenType op)
 {
 	if (VAL_IS_NUM(a) && VAL_IS_NUM(b)
@@ -160,13 +229,13 @@ TypedValue apply_binary_op(struct evaluator_state *restrict state, TypedValue a,
 			case OP_GREATEREQ_TOK: return VAL_BOOL(get_number(&a) >= get_number(&b));
 			case OP_EQ_TOK: return VAL_BOOL(doubles_are_equal_func(get_number(&a), get_number(&b)));
 			case OP_NOTEQ_TOK: return VAL_BOOL(!doubles_are_equal_func(get_number(&a), get_number(&b)));
-			case OP_NOT_TOK: return VAL_BOOL(!((bool) get_number(&a)));
+			case OP_NOT_TOK: return VAL_BOOL(get_number(&a) == 0);
 			case OP_NEGATE: return VAL_NUM(-1*get_number(&a));
 			case PIPE_TOK: return VAL_NUM(fabs(get_number(&a)));
 			case OP_UNARY_NOTHING: return a;
 			default:
 				fprintf(stderr, "invalid operator on real operands: %s\n", TOK_STRINGS[op]);
-				return VAL_NUM(NAN);
+				return VAL_INVAL;
 		}
 	} else if (VAL_IS_NUM(a) && VAL_IS_NUM(b))
 	{
@@ -183,7 +252,7 @@ TypedValue apply_binary_op(struct evaluator_state *restrict state, TypedValue a,
 			case OP_UNARY_NOTHING: return a;
 			default:
 				fprintf(stderr, "invalid operator on complex operands: %s\n", TOK_STRINGS[op]);
-				return VAL_CNUM(NAN);
+				return VAL_INVAL;
 		}
 	} else if (a.type == Vector_type
 		  && b.type == RealNumber_type
@@ -194,12 +263,12 @@ TypedValue apply_binary_op(struct evaluator_state *restrict state, TypedValue a,
 		if (fabs(i - get_number(&b)) > EPSILON || get_number(&b) < 0)
 		{
 			fprintf(stderr, "vectors may only be indexed by a positive integer\n");
-			return VAL_NUM(NAN);
+			return VAL_INVAL;
 		}
 		if (i >= a.v.v.n)
 		{
 			fprintf(stderr, "index %zu out of range for vector of length %zu\n", i, a.v.v.n);
-			return VAL_NUM(NAN);
+			return VAL_INVAL;
 		}
 		return eval_expr(state, a.v.v.ptr[i]);
 	} else if (a.type == Vector_type && b.type == Vector_type
@@ -236,7 +305,7 @@ TypedValue apply_binary_op(struct evaluator_state *restrict state, TypedValue a,
 	}
 
 	fprintf(stderr, "invalid operator: %s\n", TOK_STRINGS[op]);
-	return VAL_NUM(NAN);
+	return VAL_INVAL;
 }
 
 TypedValue eval_expr(struct evaluator_state *state, const Expr *expr)
@@ -244,23 +313,20 @@ TypedValue eval_expr(struct evaluator_state *state, const Expr *expr)
 	if (!state->is_init)
 	{
 		fprintf(stderr, "you must run `init_evaluator` before using any evaluator functions.\n");
-		return VAL_NUM(NAN);
+		return VAL_INVAL;
 	}
 
 	if (expr == nullptr)
-	{
-		//fprintf(stderr, "error: NULL expression found while evaluating\n");
-		return VAL_NUM(NAN);
-	}
-	if (expr->type == Vector_type)
+		return VAL_INVAL;
+	else if (expr->type == Vector_type)
 		return (TypedValue) { Vector_type, .v.v = expr->u.v.v };
-	if (expr->type == RealNumber_type)
+	else if (expr->type == RealNumber_type)
 		return VAL_NUM(expr->u.v.n);
-	if (expr->type == ComplexNumber_type)
+	else if (expr->type == ComplexNumber_type)
 		return VAL_CNUM(expr->u.v.cn);
-	if (expr->type == Boolean_type)
+	else if (expr->type == Boolean_type)
 		return VAL_BOOL(expr->u.v.b);
-	if (expr->type == Identifier_type)
+	else if (expr->type == Identifier_type)
 	{
 		TypedValue *val;
 		size_t out;
@@ -271,99 +337,42 @@ TypedValue eval_expr(struct evaluator_state *state, const Expr *expr)
 
 		fprintf(stderr, "undefined identifier in user-defined variable namespace: '%.*s'\n",
 				(int)expr->u.v.s.len, expr->u.v.s.s);
-		return VAL_NUM(NAN);
-	}
-	if (expr->type == InsertedIdentifier_type)
+		return VAL_INVAL;
+	} else if (expr->type == InsertedIdentifier_type)
 	{
 		size_t out;
-		if (hashmap_get(state->inserted_vars, expr->u.v.s.s, expr->u.v.s.len, (uintptr_t *)&out))
+		if (state->inserted_vars != nullptr
+				&& hashmap_get(state->inserted_vars, expr->u.v.s.s, expr->u.v.s.len, (uintptr_t *)&out))
 			return eval_expr(state, state->vars_storage.ptr[out]);
 
 		fprintf(stderr, "undefined identifier in inserted variable namespace: '$%.*s'\n",
 				(int)expr->u.v.s.len, expr->u.v.s.s);
-		return VAL_NUM(NAN);
+		return VAL_INVAL;
 	}
+
 	const Expr *left = expr->u.o.left;
 	const Expr *right = expr->u.o.right;
-	if (expr->u.o.op == OP_FUNC_CALL_TOK)
+
+	if (expr->u.o.op == OP_ASSERT_EQUAL
+			&& (left->type == Identifier_type || left->type == InsertedIdentifier_type))
+	{
+		eval_set_variable(state, left->u.v.s,
+				(Expr *)right,
+				left->type == InsertedIdentifier_type);
+		return eval_expr(state, right);
+	} else if (expr->u.o.op == OP_FUNC_CALL_TOK)
 	{
 		if (left == NULL
 		 || right == NULL
 		 || left->type != Identifier_type)
-			return VAL_NUM(NAN);
+			return VAL_INVAL;
 		TypedValue right_val = eval_expr(state, right);
-		if (strncmp(left->u.v.s.s, "print", 5) == 0)
-		{
-			void (*func) (TypedValue *);
-			if (hashmap_get(eval_builtins, left->u.v.s.s, left->u.v.s.len, (uintptr_t *)&func))
-			{
-				(*func)(&right_val);
-				return VAL_NUM(NAN);
-			}
-		}
-		if (right_val.type == RealNumber_type)
-		{
-			if (strncmp(left->u.v.s.s, "csqrt", left->u.v.s.len) == 0)
-			{
-				_Complex double (*func) (double);
-				if (hashmap_get(eval_builtins, left->u.v.s.s, left->u.v.s.len, (uintptr_t *)&func))
-				{
-					if (right_val.type == RealNumber_type)
-						return VAL_CNUM((*func)(right_val.v.n));
-				}
-				goto undefined_func;
-			}
-			double (*func) (double);
-			if (hashmap_get(eval_builtins, left->u.v.s.s, left->u.v.s.len, (uintptr_t *)&func))
-			{
-				if (right_val.type == RealNumber_type)
-					return VAL_NUM((*func)(right_val.v.n));
-			}
-		} else if (right_val.type == ComplexNumber_type)
-		{
-			char *temp = calloc(left->u.v.s.len + sizeof("complex_")-1, sizeof(char));
-			memccpy(temp, "complex_", '_', sizeof("complex_")-1);
-			memcpy(temp+8, left->u.v.s.s, left->u.v.s.len);
-
-			if (strncmp(left->u.v.s.s, "phase", left->u.v.s.len) == 0
-			 || strncmp(left->u.v.s.s, "real", left->u.v.s.len) == 0
-			 || strncmp(left->u.v.s.s, "imag", left->u.v.s.len) == 0)
-			{
-				double (*func) (_Complex double);
-				if (hashmap_get(eval_builtins, temp, left->u.v.s.len + sizeof("complex_")-1, (uintptr_t *)&func))
-				{
-					free(temp);
-					if (right_val.type == ComplexNumber_type)
-						return VAL_NUM((*func)(right_val.v.cn));
-				}
-				goto undefined_func;
-			}
-			_Complex double (*func) (_Complex double);
-			if (hashmap_get(eval_builtins, temp, left->u.v.s.len + sizeof("complex_")-1, (uintptr_t *)&func))
-			{
-				free(temp);
-				if (right_val.type == ComplexNumber_type)
-					return VAL_CNUM((*func)(right_val.v.cn));
-			}
-			
-			free(temp);
-		}
-
-undefined_func:
-		fprintf(stderr, "undefined function for %s argument in function call: '%.*s'\n",
-			(right_val.type == RealNumber_type) ? "real" :
-				(right_val.type == ComplexNumber_type) ? "complex" :
-					"vector",
-			(int)left->u.v.s.len, left->u.v.s.s);
-		return VAL_NUM(NAN);
-
-		//fprintf(stderr, "functions with vector arguments are not yet supported\n");
-		//return VAL_NUM(NAN);
+		return apply_func(left->u.v.s, right_val);
 	}
 
 	return apply_binary_op(state,
 			eval_expr(state, left),
-			(right) ? eval_expr(state, right) : VAL_NUM(NAN),
+			(right) ? eval_expr(state, right) : VAL_INVAL,
 			expr->u.o.op);
 }
 inline int32_t eval_push_expr(struct evaluator_state *state, Expr *expr)

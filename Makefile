@@ -5,7 +5,7 @@ CC := gcc
 
 EXEC := mml
 
-CFLAGS := -Wall -Wextra -std=c23 -DNDEBUG -g
+CFLAGS := -Wall -Wextra -std=c23 -g
 LDFLAGS := $(CFLAGS) -lm
 
 .PHONY: clean

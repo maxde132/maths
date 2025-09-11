@@ -19,6 +19,8 @@ constexpr const uint8_t PRECEDENCE[] = {
 	6, 6, 6, 6,
 	7, 7,
 
+	14,
+
 	2, 2, 2,
 };
 constexpr const TokenType TOK_BY_CHAR[] = { // starts at 0x21
@@ -136,6 +138,7 @@ typedef enum ExprType {
 	Identifier_type,
 	InsertedIdentifier_type,
 	Vector_type,
+	Invalid_type,
 } ExprType;
 
 typedef struct VecN {
@@ -171,6 +174,8 @@ typedef struct Expr {
 #define VAL_CNUM(num) ((TypedValue) { ComplexNumber_type, .v.cn = (num) })
 #define VAL_BOOL(bl) ((TypedValue) { Boolean_type, .v.b = (bl) })
 #define VAL2EXPRP(val) (&(Expr) { .type = (val).type, .u.v = (val).v })
+
+#define VAL_INVAL ((TypedValue) { Invalid_type, .v.n = NAN })
 
 #define VAL_IS_NUM(v) (\
     (v).type == RealNumber_type \

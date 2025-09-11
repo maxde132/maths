@@ -19,6 +19,8 @@ const char *const TOK_STRINGS[] = {
 	"OP_LESSEQ", "OP_GREATEREQ",
 	"OP_EQ", "OP_NOTEQ",
 	
+	"OP_ASSERT_EQUAL",
+	
 	"OP_NOT",
 	"OP_NEGATE",
 	"OP_UNARY_NOTHING",
@@ -99,6 +101,7 @@ void print_typedval(TypedValue *val)
 		print_vec(&val->v.v);
 		break;
 	default:
+		printf("(null)");
 		break;
 	}
 }
@@ -159,6 +162,10 @@ void print_expr(Expr *expr, uint32_t indent)
 			print_expr(expr->u.v.v.ptr[i], indent+2);
 			if (i < expr->u.v.v.n - 1) fputc('\n', stdout);
 		}
+		break;
+	default:
+		printf("Invalid()");
+		break;
 	}
 }
 

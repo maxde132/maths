@@ -64,8 +64,8 @@ Token get_next_token(const char **s, struct parser_state *state)
 	case OP_EQ_TOK:
 		if ((*s)[1] != '=')
 		{
-			fprintf(stderr, "assignment operator is not yet supported. "
-					"'==' is the equality operator\n");
+			ret = nToken(OP_ASSERT_EQUAL, *s, 1);
+			++*s;
 			break;
 		}
 		ret = nToken(OP_EQ_TOK, *s, 2);
@@ -176,13 +176,16 @@ Expr *parse_expr(const char **s, uint32_t max_preced, struct parser_state *state
 			left->u.o.left = name;
 			left->u.o.op = OP_FUNC_CALL_TOK;
 
-			get_next_token(s, state);
-			left->u.o.right = parse_expr(s, PARSER_MAX_PRECED, state);
+			Token next_tok = get_next_token(s, state);
+			if (next_tok.type != CLOSE_BRAC_TOK)
+				left->u.o.right = parse_expr(s, PARSER_MAX_PRECED, state);
+			else
+				left->u.o.right = nullptr;
 
-			Token close_paren_tok = get_next_token(s, state);
-			if (close_paren_tok.type != CLOSE_BRAC_TOK)
+			if (left->u.o.right != nullptr && (next_tok = get_next_token(s, state)).type != CLOSE_BRAC_TOK)
 			{
-				fprintf(stderr, "expected closing brace for function call, got %s\n", TOK_STRINGS[close_paren_tok.type]);
+				fprintf(stderr, "expected closing brace for function call, got %s\n",
+						TOK_STRINGS[next_tok.type]);
 				free_expr(&left);
 				return nullptr;
 			}
@@ -214,8 +217,8 @@ Expr *parse_expr(const char **s, uint32_t max_preced, struct parser_state *state
 			if (tok.type != CLOSE_BRACKET_TOK
 			 && tok.type != COMMA_TOK)
 			{
-				fprintf(stderr, "unexpected token %s found after element in vector literal "
-						"(expected CLOSE_BRACKET_TOK or COMMA_TOK)\n",
+				fprintf(stderr, "unexpected token %s found after element"
+						" in vector literal (expected CLOSE_BRACKET_TOK or COMMA_TOK)\n",
 					 TOK_STRINGS[tok.type]);
 				free_expr(&left);
 				free_vec(&vec);
@@ -226,11 +229,19 @@ Expr *parse_expr(const char **s, uint32_t max_preced, struct parser_state *state
 	} else if (tok.type == PIPE_TOK)
 	{
 		free(left);
+		left = nullptr;
+		tok = peek_token(s, state);
+		if (tok.type == PIPE_TOK)
+		{
+			fprintf(stderr, "expected expression in pipe block\n");
+			return nullptr;
+		}
 		left = parse_expr(s, PARSER_MAX_PRECED, state);
 		Token close_pipe_tok = get_next_token(s, state);
 		if (close_pipe_tok.type != PIPE_TOK)
 		{
-			fprintf(stderr, "expected closing pipe for pipe block, got %s\n", TOK_STRINGS[close_pipe_tok.type]);
+			fprintf(stderr, "expected closing pipe for pipe block, got %s\n",
+					TOK_STRINGS[close_pipe_tok.type]);
 			free_expr(&left);
 			return nullptr;
 		}
