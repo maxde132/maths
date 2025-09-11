@@ -193,13 +193,19 @@ void free_expr(Expr **e)
 	*e = nullptr;
 }
 
+#ifndef NDEBUG
 VecN new_vec_debug(size_t n, struct call_info call)
+#else
+VecN new_vec(size_t n)
+#endif
 {
+#ifndef NDEBUG
 	static size_t n_vecs_allocd = 0;
 	if (call.filename != nullptr)
 		printf("alloc'd vector #%zu (%s:%zu)\n",
 			++n_vecs_allocd,
 			call.filename, call.line_n);
+#endif
 	return (VecN) {
 		.ptr = calloc(n, sizeof(Expr *)),
 		.n = 0,
@@ -207,16 +213,22 @@ VecN new_vec_debug(size_t n, struct call_info call)
 	};
 }
 
+#ifndef NDEBUG
 void free_vec_debug(VecN *vec, struct call_info call)
+#else
+void free_vec(VecN *vec)
+#endif
 {
-	static size_t vector_free_count = 0;
 	for (size_t i = 0; i < vec->n; ++i)
 		free_expr(&vec->ptr[i]);
 	free(vec->ptr);
+#ifndef NDEBUG
+	static size_t vector_free_count = 0;
 	if (call.filename != nullptr)
 		printf("freed vector #%zu (%s:%zu)\n",
 			++vector_free_count,
 			call.filename, call.line_n);
+#endif
 }
 
 VecN construct_vec(size_t n, ...)

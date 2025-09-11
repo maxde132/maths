@@ -184,6 +184,7 @@ void print_exprh(Expr *expr);
 
 void free_expr(Expr **e);
 
+#ifndef NDEBUG
 struct call_info {
 	size_t line_n;
 	const char *filename;
@@ -191,12 +192,11 @@ struct call_info {
 
 VecN new_vec_debug(size_t n, struct call_info call);
 void free_vec_debug(VecN *vec, struct call_info call);
-#ifndef NDEBUG
 #define new_vec(n) (new_vec_debug(n, (struct call_info) {__LINE__, __FILE_NAME__}))
 #define free_vec(vec) (free_vec_debug(vec, (struct call_info) {__LINE__, __FILE_NAME__}))
 #else
-#define new_vec(n) (new_vec_debug(n, (struct call_info) {0, nullptr}))
-#define free_vec(n) (free_vec_debug(n, (struct call_info) {0, nullptr}))
+VecN new_vec(size_t n);
+void free_vec(VecN *vec);
 #endif
 VecN construct_vec(size_t n, ...);
 int32_t push_to_vec(VecN *vec, Expr *val);
