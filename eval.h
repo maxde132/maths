@@ -13,6 +13,9 @@ struct evaluator_state {
 	bool is_init;
 };
 
+TypedValue apply_binary_op(struct evaluator_state *restrict state,
+		TypedValue a, TypedValue b, TokenType op);
+
 /* Returns a valid, initialized evaluator state, a pointer to which should be
  * passed to any function that takes `struct evaluator_state *` as an argument.
  * Additionally, if STATE_OUT is not NULL, the state is written to that pointer

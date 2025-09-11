@@ -37,7 +37,7 @@ int32_t main(int32_t argc, char **argv)
 		{
 			TypedValue val = eval_expr(&eval_state, eval_state.exprs.ptr[i]);
 			if (i == eval_state.exprs.n-1 && FLAG_IS_SET(PRINT))
-				print_typedval(&val);
+				print_typedval(&eval_state, &val);
 		}
 	}
 

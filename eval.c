@@ -25,6 +25,8 @@ struct evaluator_state eval_init(struct evaluator_state *restrict state_out)
 	eval_builtins = hashmap_create();
 	hashmap_set(eval_builtins, hashmap_str_lit("print"),		(uintptr_t)print_typedval);
 	hashmap_set(eval_builtins, hashmap_str_lit("println"),	(uintptr_t)println_typedval);
+	hashmap_set(eval_builtins, hashmap_str_lit("max"),		(uintptr_t)custom_max);
+	hashmap_set(eval_builtins, hashmap_str_lit("min"),		(uintptr_t)custom_min);
 
 	hashmap_set(eval_builtins, hashmap_str_lit("sin"),			(uintptr_t)sin);
 	hashmap_set(eval_builtins, hashmap_str_lit("cos"),			(uintptr_t)cos);
@@ -150,17 +152,12 @@ inline bool doubles_are_equal_func(double a, double b)
 }
 bool doubles_are_equal_func(double, double);
 
-TypedValue apply_func(strbuf ident, TypedValue right)
+TypedValue apply_func(struct evaluator_state *state,
+		strbuf ident, TypedValue right)
 {
-	if (strncmp(ident.s, "print", 5) == 0)
-	{
-		void (*func) (TypedValue *);
-		if (hashmap_get(eval_builtins, ident.s, ident.len, (uintptr_t *)&func))
-		{
-			(*func)(&right);
-			return VAL_INVAL;
-		}
-	}
+	TypedValue (*vec_args_func) (struct evaluator_state *, TypedValue *);
+	if (hashmap_get(eval_builtins, ident.s, ident.len, (uintptr_t *)&vec_args_func))
+		return ((*vec_args_func)(state, &right));
 	if (right.type == RealNumber_type)
 	{
 		if (strncmp(ident.s, "csqrt", ident.len) == 0)
@@ -483,7 +480,7 @@ TypedValue eval_expr(struct evaluator_state *state, const Expr *expr)
 		 || left->type != Identifier_type)
 			return VAL_INVAL;
 		TypedValue right_val = eval_expr(state, right);
-		return apply_func(left->u.v.s, right_val);
+		return apply_func(state, left->u.v.s, right_val);
 	}
 
 	return apply_binary_op(state,

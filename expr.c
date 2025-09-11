@@ -3,6 +3,7 @@
 #include <math.h>
 #include <stdlib.h>
 
+#include "eval.h"
 #include "expr.h"
 #include "config.h"
 
@@ -71,12 +72,12 @@ void print_indent(uint32_t indent)
 	printf("%*s", indent, "");
 }
 
-void print_typedval(TypedValue *val)
+TypedValue print_typedval(struct evaluator_state *, TypedValue *val)
 {
 	if (val == nullptr)
 	{
 		printf("(null)");
-		return;
+		return VAL_INVAL;
 	}
 	switch (val->type) {
 	case RealNumber_type:
@@ -105,11 +106,15 @@ void print_typedval(TypedValue *val)
 		printf("(null)");
 		break;
 	}
+
+	return VAL_NUM(NAN);
 }
-inline void println_typedval(TypedValue *val)
+
+inline TypedValue println_typedval(struct evaluator_state *state, TypedValue *val)
 {
-	print_typedval(val);
+	print_typedval(state, val);
 	fputc('\n', stdout);
+	return VAL_NUM(NAN);
 }
 
 void print_expr(Expr *expr, uint32_t indent)

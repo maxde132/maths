@@ -155,6 +155,11 @@ typedef union EvalValue {
 	VecN v;
 } EvalValue;
 
+#define VALTYPE_IS_ORDERED(v) \
+	((v).type != ComplexNumber_type && \
+	 (v).type != Vector_type && \
+	 (v).type != Invalid_type)
+
 typedef struct TypedValue {
 	ExprType type;
 	EvalValue v;
@@ -183,9 +188,10 @@ typedef struct Expr {
  || (v).type == ComplexNumber_type \
  || (v).type == Boolean_type)
 
+struct evaluator_state;
 void print_indent(uint32_t indent);
-void print_typedval(TypedValue *val);
-void println_typedval(TypedValue *val);
+TypedValue print_typedval(struct evaluator_state *, TypedValue *val);
+TypedValue println_typedval(struct evaluator_state *, TypedValue *val);
 void print_exprh(Expr *expr);
 
 void free_expr(Expr **e);
