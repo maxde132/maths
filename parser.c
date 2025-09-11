@@ -212,7 +212,14 @@ Expr *parse_expr(const char **s, uint32_t max_preced, struct parser_state *state
 		VecN vec = new_vec(1);
 		while (tok.type != CLOSE_BRACKET_TOK)
 		{
-			push_to_vec(&vec, parse_expr(s, PARSER_MAX_PRECED, state));
+			tok = peek_token(s, state);
+			if (tok.type == CLOSE_BRACKET_TOK)
+				break;
+
+			Expr *e = parse_expr(s, PARSER_MAX_PRECED, state);
+			push_to_vec(&vec, e);
+			--e->num_refs;
+
 			tok = get_next_token(s, state);
 			if (tok.type != CLOSE_BRACKET_TOK
 			 && tok.type != COMMA_TOK)

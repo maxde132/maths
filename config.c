@@ -91,7 +91,9 @@ void parse_args(int32_t argc, char **argv)
 					exit(1);
 				}
 				strbuf name = { argv[arg_n]+2+8, cur - (argv[arg_n]+2+8) - 1, false };
-				eval_set_variable(&eval_state, name, parse(cur), true);
+				Expr *e = parse(cur);
+				eval_set_variable(&eval_state, name, e, true);
+				--e->num_refs;
 			} else
 			{
 				fprintf(stderr, "argument error: unknown option '%s'\n", argv[arg_n]);

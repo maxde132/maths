@@ -1,5 +1,6 @@
 #include <stdarg.h>
 #include <stdio.h>
+#include <math.h>
 #include <stdlib.h>
 
 #include "expr.h"
@@ -276,6 +277,7 @@ int32_t push_to_vec(VecN *vec, Expr *elem)
 		vec->ptr = tmp;
 	}
 	vec->ptr[vec->n++] = elem;
+	++elem->num_refs;
 	return 0;
 }
 
@@ -303,12 +305,16 @@ inline void println_vec(VecN *vec)
 
 inline double get_number(TypedValue *v)
 {
+	if (!VAL_IS_NUM(*v) || v->type == ComplexNumber_type)
+		return NAN;
 	return (v->type == RealNumber_type)
 		? v->v.n
 		: ((v->v.b) ? 1.0 : 0.0);
 }
 inline _Complex double get_complex(TypedValue *v)
 {
+	if (!VAL_IS_NUM(*v))
+		return NAN;
 	return (v->type == ComplexNumber_type)
 		? v->v.cn
 		: get_number(v) + 0.0*I;

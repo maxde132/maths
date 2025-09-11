@@ -213,6 +213,7 @@ undefined_func:
 
 TypedValue apply_binary_op(struct evaluator_state *restrict state, TypedValue a, TypedValue b, TokenType op)
 {
+	/* TODO: FIX UNARY OPERATORS BEING SKIPPED BECAUSE VAL_IS_NUM(b) IS FALSE */
 	if (VAL_IS_NUM(a) && VAL_IS_NUM(b)
 		&& a.type != ComplexNumber_type && b.type != ComplexNumber_type)
 	{
