@@ -15,7 +15,7 @@ struct config global_config = {
 	.runtime_flags = 0,
 };
 
-char *expression = NULL;
+strbuf expression = { NULL, 0, false };
 
 extern struct evaluator_state eval_state;
 
@@ -28,13 +28,14 @@ void print_usage(void)
                     "  -P, --print                        Print the result value even if `print` was not called (default OFF)\n"
 			  "  -E EXPR, --expr=EXPR               Alternate way to specify the expression to be evaluated\n"
                     "  -p PREC, --precision=PREC          Set the number of decimal digits to be printed when printing numbers (default 6)\n"
+			  "  --no-eval                          Only parse the expression; don't evaluate it (default OFF)\n"
                     "  --bools-are-nums                   Write the number 1 or 0 to represent boolean values (default OFF)\n"
 			  "  --estimate-equality                Consider two reals equal if they are equal to 14 digits of accuracy (default OFF)\n"
 			  "  -h, --help                         Display this help message\n"
 			  "  -V, --version                      Display program information\n"
 			  "  -                                  Read expression string from stdin\n"
 			, global_config.PROG_NAME);
-	cleanup_evaluator(&eval_state);
+	eval_cleanup(&eval_state);
 	exit(1);
 }
 
@@ -72,11 +73,13 @@ void parse_args(int32_t argc, char **argv)
 			else if (strncmp(argv[arg_n]+2, "precision=", 10) == 0)
 				global_config.precision = strtoul(argv[arg_n]+2+10, NULL, 10);
 			else if (strncmp(argv[arg_n]+2, "expr=", 5) == 0)
-				expression = argv[arg_n]+2+5;
+				expression.s = argv[arg_n]+2+5;
 			else if (strcmp(argv[arg_n]+2, "bools-are-nums") == 0)
 				SET_FLAG(BOOLS_PRINT_NUM);
 			else if (strcmp(argv[arg_n]+2, "estimate-equality") == 0)
 				SET_FLAG(ESTIMATE_EQUALITY);
+			else if (strcmp(argv[arg_n]+2, "no-eval") == 0)
+				SET_FLAG(NO_EVAL);
 			else if (strncmp(argv[arg_n]+2, "set_var:", 8) == 0)
 			{
 				const char *cur = argv[arg_n]+2+8;
@@ -84,12 +87,11 @@ void parse_args(int32_t argc, char **argv)
 				if (cur++ == NULL)
 				{
 					fprintf(stderr, "argument error: expected expression following command-line variable definition\n");
-					cleanup_evaluator(&eval_state);
+					eval_cleanup(&eval_state);
 					exit(1);
 				}
 				strbuf name = { argv[arg_n]+2+8, cur - (argv[arg_n]+2+8) - 1, false };
-				Expr *expr = parse(cur);
-				set_variable(&eval_state, name, expr);
+				eval_set_variable(&eval_state, name, parse(cur), true);
 			} else
 			{
 				fprintf(stderr, "argument error: unknown option '%s'\n", argv[arg_n]);
@@ -120,7 +122,7 @@ void parse_args(int32_t argc, char **argv)
 								"'-E' argument to specify an expression to evaluate.\n");
 						print_usage();
 					}
-					expression = argv[++arg_n];
+					expression.s = argv[++arg_n];
 					break;
 				case 'p':
 					if (cur[1] != '\0')
@@ -135,7 +137,15 @@ void parse_args(int32_t argc, char **argv)
 								"'-p' argument to specify precision.\n");
 						print_usage();
 					}
-					global_config.precision = strtoul(argv[++arg_n], NULL, 10);
+					char *conv_end = NULL;
+					uint32_t prec = strtoul(argv[++arg_n], &conv_end, 10);
+					if (conv_end == argv[arg_n])
+					{
+						fprintf(stderr, "argument error: integer is required following "
+								"'-p' argument to specify precision.\n");
+						print_usage();
+					}
+					global_config.precision = prec;
 					break;
 				default:
 					fprintf(stderr, "argument error: unknown option '-%c'\n", *cur);
@@ -144,20 +154,20 @@ void parse_args(int32_t argc, char **argv)
 			}
 			if (cur == argv[arg_n]+1)
 				SET_FLAG(READ_STDIN);
-		} else if (expression == NULL)
+		} else if (expression.s == NULL)
 		{
-			expression = argv[arg_n];
+			expression.s = argv[arg_n];
 		}
 	}
 
-	if (expression == NULL)
+	if (expression.s == NULL)
 		SET_FLAG(READ_STDIN);
 }
 
 strbuf read_string_from_stream(FILE *stream)
 {
 	size_t buf_size = 2048;
-	strbuf ret_buf = {0};
+	strbuf ret_buf = { NULL, 0, true };
 	ret_buf.s = malloc(buf_size);
 	if (ret_buf.s == NULL)
 	{

@@ -14,6 +14,7 @@ enum {
 	READ_STDIN	= BIT(2),
 	BOOLS_PRINT_NUM = BIT(3),
 	ESTIMATE_EQUALITY = BIT(4),
+	NO_EVAL	= BIT(5),
 };
 
 #define SET_FLAG(f) (global_config.runtime_flags |= (f))

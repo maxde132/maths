@@ -26,6 +26,7 @@ const char *const TOK_STRINGS[] = {
 
 
 	"IDENT_TOK",
+	"INSERTED_IDENT_TOK",
 	"NUMBER_TOK",
 
 	"DIGIT_TOK",
@@ -91,6 +92,7 @@ void print_typedval(TypedValue *val)
 			printf("%s", (val->v.b) ? "true" : "false");
 		break;
 	case Identifier_type:
+	case InsertedIdentifier_type:
 		printf("%.*s", (int)val->v.s.len, val->v.s.s);
 		break;
 	case Vector_type:
@@ -147,6 +149,9 @@ void print_expr(Expr *expr, uint32_t indent)
 	case Identifier_type:
 		printf("Identifier('%.*s')", (int)expr->u.v.s.len, expr->u.v.s.s);
 		break;
+	case InsertedIdentifier_type:
+		printf("InsertedIdentifier('%.*s')", (int)expr->u.v.s.len, expr->u.v.s.s);
+		break;
 	case Vector_type:
 		printf("Vector(n=%zu):\n", expr->u.v.v.n);
 		for (size_t i = 0; i < expr->u.v.v.n; ++i)
@@ -166,44 +171,105 @@ inline void print_exprh(Expr *expr)
 void free_expr(Expr **e)
 {
 	if (*e == nullptr) return;
+	if (--(*e)->num_refs > 0)
+	{
+		*e = nullptr;
+		return;
+	}
 	if ((*e)->type == Operation_type)
 	{
 		free_expr(&(*e)->u.o.left);
 		free_expr(&(*e)->u.o.right);
 	} else if ((*e)->type == Identifier_type)
 	{
-		if ((*e)->u.v.s.allocd) free((*e)->u.v.s.s);
+		if ((*e)->u.v.s.allocd)
+			free((*e)->u.v.s.s);
 	} else if ((*e)->type == Vector_type)
 	{
-		for (size_t i = 0; i < (*e)->u.v.v.n; ++i)
-			free_expr(&(*e)->u.v.v.ptr[i]);
-		free((*e)->u.v.v.ptr);
+		free_vec(&(*e)->u.v.v);
 	}
 
 	free(*e);
 	*e = nullptr;
 }
 
-TypedValue *construct_vec(size_t n, ...)
+VecN new_vec_debug(size_t n, struct call_info call)
 {
-	TypedValue *ret = calloc(1, sizeof(TypedValue));
-	ret->type = Vector_type;
-	ret->v.v.n = n;
-	ret->v.v.ptr = calloc(n, sizeof(Expr *));
+	static size_t n_vecs_allocd = 0;
+	if (call.filename != nullptr)
+		printf("alloc'd vector #%zu (%s:%zu)\n",
+			++n_vecs_allocd,
+			call.filename, call.line_n);
+	return (VecN) {
+		.ptr = calloc(n, sizeof(Expr *)),
+		.n = 0,
+		.allocd_size = n,
+	};
+}
+
+void free_vec_debug(VecN *vec, struct call_info call)
+{
+	static size_t vector_free_count = 0;
+	for (size_t i = 0; i < vec->n; ++i)
+		free_expr(&vec->ptr[i]);
+	free(vec->ptr);
+	if (call.filename != nullptr)
+		printf("freed vector #%zu (%s:%zu)\n",
+			++vector_free_count,
+			call.filename, call.line_n);
+}
+
+VecN construct_vec(size_t n, ...)
+{
+	VecN ret = {
+		.ptr = calloc(n, sizeof(Expr *)),
+		.n = n,
+		.allocd_size = n
+	};
 	TypedValue cur;
 	va_list args;
 	va_start(args, n);
 	for (size_t i = 0; i < n; ++i)
 	{
 		cur = va_arg(args, TypedValue);
-		ret->v.v.ptr[i] = calloc(1, sizeof(Expr));
-		ret->v.v.ptr[i]->type = cur.type;
-		ret->v.v.ptr[i]->u.v = cur.v;
+		ret.ptr[i] = calloc(1, sizeof(Expr));
+		ret.ptr[i]->type = cur.type;
+		ret.ptr[i]->u.v = cur.v;
 	}
 
 	va_end(args);
 
 	return ret;
+}
+
+int32_t push_to_vec(VecN *vec, Expr *elem)
+{
+	if (vec->allocd_size < (vec->n + 1))
+	{
+		Expr **tmp = realloc(vec->ptr,
+				(vec->allocd_size*=2) * sizeof(Expr *));
+		if (tmp == NULL)
+		{
+			fprintf(stderr, "could not resize vector memory\n");
+			free_vec(vec);
+			return 1;
+		}
+		vec->ptr = tmp;
+	}
+	vec->ptr[vec->n++] = elem;
+	return 0;
+}
+
+inline Expr **peek_top_vec(VecN *vec)
+{
+	Expr **ret = &vec->ptr[vec->n-1];
+	++(*ret)->num_refs;
+	return ret;
+}
+
+inline Expr *pop_from_vec(VecN *vec)
+{
+	return vec->ptr[--vec->n];
 }
 
 inline double get_number(TypedValue *v)

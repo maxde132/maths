@@ -25,6 +25,7 @@ typedef enum {
 
 	// non-operator tokens
 	IDENT_TOK,
+	INSERTED_IDENT_TOK,
 	NUMBER_TOK,
 
 	DIGIT_TOK, // not really used

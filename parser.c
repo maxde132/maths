@@ -1,9 +1,9 @@
 #include <stdlib.h>
-#include <string.h>
 #include <ctype.h>
 #include <stdio.h>
 
 #include "parser.h"
+#include "token.h"
 
 // Gets the next token and advances the string pointer.
 Token get_next_token(const char **s, struct parser_state *state)
@@ -90,6 +90,9 @@ Token get_next_token(const char **s, struct parser_state *state)
 		*s = end;
 		ret.type = NUMBER_TOK;
 		break;
+	case DOLLAR_TOK:
+		++*s;
+		[[fallthrough]];
 	case LETTER_TOK:
 	case UNDERSCORE_TOK:
 		ret.buf.s = (char *)*s;
@@ -97,7 +100,7 @@ Token get_next_token(const char **s, struct parser_state *state)
 			++*s;
 		} while (isalnum(**s) || **s == '_');
 		ret.buf.len = *s - ret.buf.s;
-		ret.type = IDENT_TOK;
+		ret.type = (type == DOLLAR_TOK) ? INSERTED_IDENT_TOK : IDENT_TOK;
 		ret.buf.allocd = false;
 		break;
 	default:
@@ -138,12 +141,11 @@ Expr *parse_expr(const char **s, uint32_t max_preced, struct parser_state *state
 	Token tok = get_next_token(s, state);
 
 	Expr *left = calloc(1, sizeof(Expr));
+	left->num_refs = 1;
 
 	if (tok.type == OP_SUB_TOK || tok.type == OP_ADD_TOK
 			|| op_is_unary(tok.type))
 	{
-	//	get_next_token(s, state);
-
 		TokenType new_token_type = tok.type;
 		if (new_token_type == OP_ADD_TOK)
 			new_token_type = OP_UNARY_NOTHING;
@@ -156,16 +158,16 @@ Expr *parse_expr(const char **s, uint32_t max_preced, struct parser_state *state
 		left->u.o.left = operand;
 		left->u.o.right = NULL;
 		left->u.o.op = new_token_type;
-	} else if (tok.type == IDENT_TOK)
+	} else if (tok.type == IDENT_TOK || tok.type == INSERTED_IDENT_TOK)
 	{
 		Token ident = tok;
 		Token next_tok = peek_token(s, state);
 
-		if (next_tok.type == OPEN_BRAC_TOK)
+		if (tok.type == IDENT_TOK && next_tok.type == OPEN_BRAC_TOK)
 		{
-			//printf("calling function: '%.*s'\n", (int)ident.buf.len, ident.buf.s);
 			Expr *name = calloc(1, sizeof(Expr));
 			name->type = Identifier_type;
+			name->num_refs = 1;
 			name->u.v.s = ident.buf;
 
 			left->type = Operation_type;
@@ -184,7 +186,9 @@ Expr *parse_expr(const char **s, uint32_t max_preced, struct parser_state *state
 			}
 		} else
 		{
-			left->type = Identifier_type;
+			left->type = (tok.type == IDENT_TOK)
+				? Identifier_type
+				: InsertedIdentifier_type;
 			left->u.v.s = ident.buf;
 		}
 	} else if (tok.type == OPEN_PAREN_TOK)
@@ -200,26 +204,23 @@ Expr *parse_expr(const char **s, uint32_t max_preced, struct parser_state *state
 		}
 	} else if (tok.type == OPEN_BRACKET_TOK)
 	{
-		VecN vec = { calloc(1, sizeof(Expr *)), 0 };
+		VecN vec = new_vec(1);
 		while (tok.type != CLOSE_BRACKET_TOK)
 		{
-			vec.ptr[vec.n++] = parse_expr(s, PARSER_MAX_PRECED, state);
-			if ((tok = get_next_token(s, state)).type == COMMA_TOK)
+			push_to_vec(&vec, parse_expr(s, PARSER_MAX_PRECED, state));
+			tok = get_next_token(s, state);
+			if (tok.type != CLOSE_BRACKET_TOK
+			 && tok.type != COMMA_TOK)
 			{
-				Expr **tmp = realloc(vec.ptr, 2*vec.n * sizeof(Expr *));
-				if (tmp == NULL)
-				{
-					fprintf(stderr, "unable to expand memory for vector\n");
-					for (size_t i = 0; i < vec.n; ++i)
-						free_expr(&vec.ptr[i]);
-					free(vec.ptr);
-					free_expr(&left);
-					return nullptr;
-				}
-				vec.ptr = tmp;
-			} else break;
+				fprintf(stderr, "unexpected token %s found after element in vector literal "
+						"(expected CLOSE_BRACKET_TOK or COMMA_TOK)\n",
+					 TOK_STRINGS[tok.type]);
+				free_expr(&left);
+				free_vec(&vec);
+				return nullptr;
+			}
 		}
-		*left = (Expr) { Vector_type, .u.v.v = vec };
+		*left = (Expr) { Vector_type, 1, .u.v.v = vec };
 	} else if (tok.type == PIPE_TOK)
 	{
 		free(left);
@@ -233,6 +234,7 @@ Expr *parse_expr(const char **s, uint32_t max_preced, struct parser_state *state
 		}
 		Expr *opnode = calloc(1, sizeof(Expr));
 		opnode->type = Operation_type;
+		opnode->num_refs = 1;
 		opnode->u.o.left = left;
 		opnode->u.o.right = nullptr;
 		opnode->u.o.op = PIPE_TOK;
@@ -244,6 +246,7 @@ Expr *parse_expr(const char **s, uint32_t max_preced, struct parser_state *state
 			*left = EXPR_NUM((double)strtoll(tok.buf.s, NULL, 10));
 		else
 			*left = EXPR_NUM(strtod(tok.buf.s, NULL)); 
+		left->num_refs = 1;
 		state->looking_for_int = false;
 	} else
 	{
@@ -262,7 +265,8 @@ Expr *parse_expr(const char **s, uint32_t max_preced, struct parser_state *state
 			return nullptr;
 		}
 		bool do_advance = true;
-		if (op_tok.type == IDENT_TOK || op_tok.type == NUMBER_TOK)
+		if (op_tok.type == INSERTED_IDENT_TOK
+		 || op_tok.type == IDENT_TOK || op_tok.type == NUMBER_TOK)
 		{
 			op_tok.type = OP_MUL_TOK;
 			do_advance = false;
@@ -294,6 +298,7 @@ Expr *parse_expr(const char **s, uint32_t max_preced, struct parser_state *state
 
 		Expr *opnode = calloc(1, sizeof(Expr));
 		opnode->type = Operation_type;
+		opnode->num_refs = 1;
 		opnode->u.o.left = left;
 		opnode->u.o.right = right;
 		opnode->u.o.op = op_tok.type;

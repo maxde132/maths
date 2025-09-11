@@ -134,12 +134,14 @@ typedef enum ExprType {
 	ComplexNumber_type,
 	Boolean_type,
 	Identifier_type,
+	InsertedIdentifier_type,
 	Vector_type,
 } ExprType;
 
 typedef struct VecN {
 	Expr **ptr;
 	size_t n;
+	size_t allocd_size;
 } VecN;
 
 typedef union EvalValue {
@@ -157,6 +159,7 @@ typedef struct TypedValue {
 
 typedef struct Expr {
 	ExprType type;
+	uint32_t num_refs;
 	union {
 		Operation o;
 		EvalValue v;
@@ -181,7 +184,24 @@ void print_exprh(Expr *expr);
 
 void free_expr(Expr **e);
 
-TypedValue *construct_vec(size_t n, ...);
+struct call_info {
+	size_t line_n;
+	const char *filename;
+};
+
+VecN new_vec_debug(size_t n, struct call_info call);
+void free_vec_debug(VecN *vec, struct call_info call);
+#ifndef NDEBUG
+#define new_vec(n) (new_vec_debug(n, (struct call_info) {__LINE__, __FILE_NAME__}))
+#define free_vec(vec) (free_vec_debug(vec, (struct call_info) {__LINE__, __FILE_NAME__}))
+#else
+#define new_vec(n) (new_vec_debug(n, (struct call_info) {0, nullptr}))
+#define free_vec(n) (free_vec_debug(n, (struct call_info) {0, nullptr}))
+#endif
+VecN construct_vec(size_t n, ...);
+int32_t push_to_vec(VecN *vec, Expr *val);
+Expr **peek_top_vec(VecN *vec);
+Expr *pop_from_vec(VecN *vec);
 
 double get_number(TypedValue *v);
 _Complex double get_complex(TypedValue *v);
