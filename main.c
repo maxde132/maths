@@ -26,15 +26,19 @@ int32_t main(int32_t argc, char **argv)
 	if (FLAG_IS_SET(READ_STDIN))
 		expression = read_string_from_stream(stdin);
 
-	Expr *expr = parse(expression.s);
-	eval_push_expr(&eval_state, expr);
-	if (FLAG_IS_SET(DEBUG)) print_exprh(expr);
+	//Expr *expr = parse(expression.s);
+	//eval_push_expr(&eval_state, expr);
+	parse_stmts_to_evaluator(expression.s, &eval_state);
+	if (FLAG_IS_SET(DEBUG)) println_vec(&eval_state.exprs);
 
 	if (!FLAG_IS_SET(NO_EVAL))
 	{
-		TypedValue val = eval_top_expr(&eval_state);
-		if (FLAG_IS_SET(PRINT))
-			print_typedval(&val);
+		for (size_t i = 0; i < eval_state.exprs.n; ++i)
+		{
+			TypedValue val = eval_expr(&eval_state, eval_state.exprs.ptr[i]);
+			if (i == eval_state.exprs.n-1 && FLAG_IS_SET(PRINT))
+				print_typedval(&val);
+		}
 	}
 
 	if (expression.allocd)

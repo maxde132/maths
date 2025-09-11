@@ -199,9 +199,14 @@ VecN new_vec(size_t n);
 void free_vec(VecN *vec);
 #endif
 VecN construct_vec(size_t n, ...);
+/* does a push-move (pushes VAL to vector, "moves" VAL to vector).
+ * "move" means it doesn't increment the reference count, so you might get
+ * memory leaks if you try to use/free VAL after calling this. */
 int32_t push_to_vec(VecN *vec, Expr *val);
 Expr **peek_top_vec(VecN *vec);
 Expr *pop_from_vec(VecN *vec);
+void print_vec(VecN *vec);
+void println_vec(VecN *vec);
 
 double get_number(TypedValue *v);
 _Complex double get_complex(TypedValue *v);

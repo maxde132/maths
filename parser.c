@@ -3,6 +3,7 @@
 #include <stdio.h>
 
 #include "parser.h"
+#include "eval.h"
 #include "token.h"
 
 // Gets the next token and advances the string pointer.
@@ -38,6 +39,7 @@ Token get_next_token(const char **s, struct parser_state *state)
 	case CLOSE_BRACKET_TOK:
 	case COMMA_TOK:
 	case PIPE_TOK:
+	case SEMICOLON_TOK:
 		ret = nToken(type, *s, 1);
 		++*s;
 		break;
@@ -313,4 +315,26 @@ inline Expr *parse(const char *s)
 {
 	struct parser_state state = {0};
 	return parse_expr(&s, PARSER_MAX_PRECED, &state);
+}
+VecN parse_stmts(const char *s)
+{
+	VecN ret = new_vec(1);
+	struct parser_state state = {0};
+	do
+	{
+		push_to_vec(&ret, parse_expr(&s, PARSER_MAX_PRECED, &state));
+	} while (get_next_token(&s, &state).type == SEMICOLON_TOK);
+
+	return ret;
+}
+
+void parse_stmts_to_evaluator(const char *s, struct evaluator_state *eval_state)
+{
+	struct parser_state state = {0};
+	do
+	{
+		Expr *cur_expr = parse_expr(&s, PARSER_MAX_PRECED, &state);
+		if (cur_expr != nullptr)
+			eval_push_expr(eval_state, cur_expr);
+	} while (get_next_token(&s, &state).type == SEMICOLON_TOK);
 }

@@ -96,7 +96,7 @@ void print_typedval(TypedValue *val)
 		printf("%.*s", (int)val->v.s.len, val->v.s.s);
 		break;
 	case Vector_type:
-		print_exprh(VAL2EXPRP(*val));
+		print_vec(&val->v.v);
 		break;
 	default:
 		break;
@@ -282,6 +282,16 @@ inline Expr **peek_top_vec(VecN *vec)
 inline Expr *pop_from_vec(VecN *vec)
 {
 	return vec->ptr[--vec->n];
+}
+
+inline void print_vec(VecN *vec)
+{
+	print_expr(&(Expr) { Vector_type, 0, .u.v.v = *vec }, 0);
+}
+inline void println_vec(VecN *vec)
+{
+	print_expr(&(Expr) { Vector_type, 0, .u.v.v = *vec }, 0);
+	fputc('\n', stdout);
 }
 
 inline double get_number(TypedValue *v)
