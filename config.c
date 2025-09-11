@@ -13,11 +13,10 @@ struct config global_config = {
 	.PROG_NAME = NULL,
 	.precision = 6,
 	.runtime_flags = 0,
+	.eval_state = {0},
 };
 
 strbuf expression = { NULL, 0, false };
-
-extern struct evaluator_state eval_state;
 
 void print_usage(void)
 {
@@ -35,7 +34,7 @@ void print_usage(void)
 			  "  -V, --version                      Display program information\n"
 			  "  -                                  Read expression string from stdin\n"
 			, global_config.PROG_NAME);
-	eval_cleanup(&eval_state);
+	eval_cleanup(&global_config.eval_state);
 	exit(1);
 }
 
@@ -87,12 +86,12 @@ void parse_args(int32_t argc, char **argv)
 				if (cur++ == NULL)
 				{
 					fprintf(stderr, "argument error: expected expression following command-line variable definition\n");
-					eval_cleanup(&eval_state);
+					eval_cleanup(&global_config.eval_state);
 					exit(1);
 				}
 				strbuf name = { argv[arg_n]+2+8, cur - (argv[arg_n]+2+8) - 1, false };
 				Expr *e = parse(cur);
-				eval_set_variable(&eval_state, name, e, true);
+				eval_set_variable(&global_config.eval_state, name, e, true);
 				--e->num_refs;
 			} else
 			{

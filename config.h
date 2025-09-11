@@ -4,8 +4,8 @@
 #include <inttypes.h>
 #include <stdio.h>
 
+#include "eval.h"
 #include "token.h"
-#include "expr.h"
 
 #define BIT(n) (1<<n)
 enum {
@@ -24,6 +24,7 @@ struct config {
 	char *PROG_NAME;
 	uint32_t precision;
 	uint32_t runtime_flags;
+	struct evaluator_state eval_state;
 };
 extern struct config global_config;
 

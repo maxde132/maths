@@ -4,6 +4,6 @@
 [X] variable assignment (statements?) <br />
 [X] fix memory leaks caused by adding variable assignment (memory leaks for literally everything?), then rebase dev back into main
 [ ] add syntax & capability for using _Decimal128 to store a higher-precision number
-[ ] library-capability (parse with a string with "$ident" variables whose values are inserted at some point later on) <br />
+~~[ ] library-capability (parse with a string with "$ident" variables whose values are inserted at some point later on)~~ actually this is kind of a garbage idea that makes very little sense<br />
 [ ] syntax guide and other documentation <br />
 [ ] interactive prompt (like python's IDLE) <br />

@@ -40,4 +40,4 @@ obj:
 	mkdir obj
 
 clean:
-	rm -f $(EXEC) $(OBJ_FILES)
+	rm -f $(EXEC) obj/*
