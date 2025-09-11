@@ -218,46 +218,55 @@ undefined_func:
 
 TypedValue apply_binary_op(struct evaluator_state *restrict state, TypedValue a, TypedValue b, TokenType op)
 {
-	/* TODO: FIX UNARY OPERATORS BEING SKIPPED BECAUSE VAL_IS_NUM(b) IS FALSE */
-	if (VAL_IS_NUM(a) && (VAL_IS_NUM(b) || b.type == Invalid_type)
+	if (VAL_IS_NUM(a) && b.type == Invalid_type)
+	{
+		switch (op) {
+		case OP_NOT_TOK:
+			if (a.type != ComplexNumber_type)
+				return VAL_BOOL(get_number(&a) == 0);
+
+			fprintf(stderr, "invalid unary operator on complex operand: %s\n", TOK_STRINGS[OP_NOT_TOK]);	
+			return VAL_INVAL;
+		case OP_NEGATE: return (a.type == ComplexNumber_type)
+				? VAL_CNUM((-1.0 + 0.0*I) * get_complex(&a))
+				: VAL_NUM(-1*get_number(&a));
+		case PIPE_TOK: return (a.type == ComplexNumber_type)
+				? VAL_CNUM(cabs(get_complex(&a)))
+				: VAL_NUM(fabs(get_number(&a)));
+		case TILDE_TOK:
+			Expr *ret = calloc(1, sizeof(Expr));
+			ret->type = Vector_type;
+			ret->num_refs = 1;
+			ret->should_free_vec_block = true;
+			ret->u.v.v = new_vec(2);
+			ret->u.v.v.n = 2;
+
+			Expr *data = calloc(2, sizeof(Expr));
+			const TypedValue not_negated = a;
+			const TypedValue negated = apply_binary_op(state,
+					a,
+					VAL_INVAL,
+					OP_NEGATE);
+			data[0] = (Expr) {
+				not_negated.type, .num_refs=1, .u.v=not_negated.v
+			};
+			data[1] = (Expr) {
+				negated.type, .num_refs=1, .u.v=negated.v
+			};
+			ret->u.v.v.ptr[0] = &data[0];
+			ret->u.v.v.ptr[1] = &data[1];
+			push_to_vec(&state->allocd_vecs, ret);
+			return (TypedValue) { Vector_type, .v = ret->u.v };
+		case OP_UNARY_NOTHING: return a;
+		default:
+			fprintf(stderr, "invalid unary operator on %s operand: %s\n",
+					(a.type == ComplexNumber_type) ? "complex" : "real",
+					TOK_STRINGS[op]);
+			return VAL_INVAL;
+		}
+	} else if (VAL_IS_NUM(a) && VAL_IS_NUM(b)
 		&& a.type != ComplexNumber_type && b.type != ComplexNumber_type)
 	{
-		if (b.type == Invalid_type)
-		{
-			switch (op) {
-			case OP_NOT_TOK: return VAL_BOOL(get_number(&a) == 0);
-			case OP_NEGATE: return VAL_NUM(-1*get_number(&a));
-			case PIPE_TOK: return VAL_NUM(fabs(get_number(&a)));
-			case TILDE_TOK:
-				Expr *ret = calloc(1, sizeof(Expr));
-				ret->type = Vector_type;
-				ret->num_refs = 1;
-				ret->should_free_vec_block = true;
-				ret->u.v.v = new_vec(2);
-				ret->u.v.v.n = 2;
-
-				Expr *data = calloc(2, sizeof(Expr));
-				const TypedValue not_negated = a;
-				const TypedValue negated = apply_binary_op(state,
-						a,
-						VAL_INVAL,
-						OP_NEGATE);
-				data[0] = (Expr) {
-					not_negated.type, .num_refs=1, .u.v=not_negated.v
-				};
-				data[1] = (Expr) {
-					negated.type, .num_refs=1, .u.v=negated.v
-				};
-				ret->u.v.v.ptr[0] = &data[0];
-				ret->u.v.v.ptr[1] = &data[1];
-				push_to_vec(&state->allocd_vecs, ret);
-				return (TypedValue) { Vector_type, .v = ret->u.v };
-			case OP_UNARY_NOTHING: return a;
-			default:
-				fprintf(stderr, "invalid unary operator on real operand: %s\n", TOK_STRINGS[op]);
-				return VAL_INVAL;
-			}
-		}
 		switch (op) {
 			case OP_POW_TOK: return VAL_NUM(pow(get_number(&a), get_number(&b)));
 			case OP_MUL_TOK: return VAL_NUM(get_number(&a) * get_number(&b));
@@ -277,41 +286,6 @@ TypedValue apply_binary_op(struct evaluator_state *restrict state, TypedValue a,
 		}
 	} else if (VAL_IS_NUM(a) && (VAL_IS_NUM(b) || b.type == Invalid_type))
 	{
-		if (b.type == Invalid_type)
-		{
-			switch (op) {
-			case OP_NEGATE: return VAL_CNUM((-1.0 + 0.0*I) * get_complex(&a));
-			case PIPE_TOK: return VAL_CNUM(cabs(get_complex(&a)));
-			case TILDE_TOK:
-				Expr *ret = calloc(1, sizeof(Expr));
-				ret->type = Vector_type;
-				ret->num_refs = 1;
-				ret->should_free_vec_block = true;
-				ret->u.v.v = new_vec(2);
-				ret->u.v.v.n = 2;
-
-				Expr *data = calloc(2, sizeof(Expr));
-				const TypedValue not_negated = a;
-				const TypedValue negated = apply_binary_op(state,
-						a,
-						VAL_INVAL,
-						OP_NEGATE);
-				data[0] = (Expr) {
-					not_negated.type, .num_refs=1, .u.v=not_negated.v
-				};
-				data[1] = (Expr) {
-					negated.type, .num_refs=1, .u.v=negated.v
-				};
-				ret->u.v.v.ptr[0] = &data[0];
-				ret->u.v.v.ptr[1] = &data[1];
-				push_to_vec(&state->allocd_vecs, ret);
-				return (TypedValue) { Vector_type, .v = ret->u.v };
-			case OP_UNARY_NOTHING: return a;
-			default:
-				fprintf(stderr, "invalid unary operator on complex operand: %s\n", TOK_STRINGS[op]);
-				return VAL_INVAL;
-			}
-		}
 		switch (op) {
 			case OP_POW_TOK: return VAL_CNUM(cpow(get_complex(&a), get_complex(&b)));
 			case OP_MUL_TOK: return VAL_CNUM(get_complex(&a) * get_complex(&b));
@@ -488,6 +462,7 @@ TypedValue eval_expr(struct evaluator_state *state, const Expr *expr)
 			(right) ? eval_expr(state, right) : VAL_INVAL,
 			expr->u.o.op);
 }
+
 inline int32_t eval_push_expr(struct evaluator_state *state, Expr *expr)
 {
 	--expr->num_refs;

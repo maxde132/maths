@@ -127,7 +127,7 @@ void print_expr(Expr *expr, uint32_t indent)
 	}
 	switch (expr->type) {
 	case Operation_type:
-		printf("Expr(op=%s):\n", TOK_STRINGS[expr->u.o.op]);
+		printf("Operation(%s):\n", TOK_STRINGS[expr->u.o.op]);
 		print_indent(indent+2);
 
 		printf("Left:\n");
