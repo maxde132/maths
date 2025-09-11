@@ -39,18 +39,18 @@ struct evaluator_state eval_init(struct evaluator_state *restrict state_out)
 	hashmap_set(eval_builtins, hashmap_str_lit("complex_sin"),		(uintptr_t)csin);
 	hashmap_set(eval_builtins, hashmap_str_lit("complex_cos"),		(uintptr_t)ccos);
 	hashmap_set(eval_builtins, hashmap_str_lit("complex_tan"),		(uintptr_t)ctan);
-	hashmap_set(eval_builtins, hashmap_str_lit("complex_asin"),	(uintptr_t)casin);
-	hashmap_set(eval_builtins, hashmap_str_lit("complex_acos"),	(uintptr_t)cacos);
-	hashmap_set(eval_builtins, hashmap_str_lit("complex_atan"),	(uintptr_t)catan);
+	hashmap_set(eval_builtins, hashmap_str_lit("complex_asin"),		(uintptr_t)casin);
+	hashmap_set(eval_builtins, hashmap_str_lit("complex_acos"),		(uintptr_t)cacos);
+	hashmap_set(eval_builtins, hashmap_str_lit("complex_atan"),		(uintptr_t)catan);
 	hashmap_set(eval_builtins, hashmap_str_lit("complex_ln"),		(uintptr_t)clog);
-	hashmap_set(eval_builtins, hashmap_str_lit("complex_log2"),	(uintptr_t)custom_clog2);
-	hashmap_set(eval_builtins, hashmap_str_lit("complex_sqrt"),	(uintptr_t)csqrt);
+	hashmap_set(eval_builtins, hashmap_str_lit("complex_log2"),		(uintptr_t)custom_clog2);
+	hashmap_set(eval_builtins, hashmap_str_lit("complex_sqrt"),		(uintptr_t)csqrt);
 	hashmap_set(eval_builtins, hashmap_str_lit("complex_csqrt"),	(uintptr_t)csqrt);
 	hashmap_set(eval_builtins, hashmap_str_lit("csqrt"),			(uintptr_t)custom_sqrt);
-	hashmap_set(eval_builtins, hashmap_str_lit("complex_conj"),	(uintptr_t)conj);
+	hashmap_set(eval_builtins, hashmap_str_lit("complex_conj"),		(uintptr_t)conj);
 	hashmap_set(eval_builtins, hashmap_str_lit("complex_phase"),	(uintptr_t)carg);
-	hashmap_set(eval_builtins, hashmap_str_lit("complex_real"),	(uintptr_t)creal);
-	hashmap_set(eval_builtins, hashmap_str_lit("complex_imag"),	(uintptr_t)cimag);
+	hashmap_set(eval_builtins, hashmap_str_lit("complex_real"),		(uintptr_t)creal);
+	hashmap_set(eval_builtins, hashmap_str_lit("complex_imag"),		(uintptr_t)cimag);
 
 	static constexpr TypedValue TRUE_M		= VAL_BOOL(true);
 	static constexpr TypedValue FALSE_M		= VAL_BOOL(false);
@@ -224,14 +224,15 @@ TypedValue apply_binary_op(struct evaluator_state *restrict state, TypedValue a,
 	} else if (a.type == Vector_type && op == PIPE_TOK)
 	{
 		// compute vector magnitude
-		double sum = 0.0;
+		_Complex double sum = 0.0;
 		TypedValue cur_elem;
 		for (size_t i = 0; i < a.v.v.n; ++i)
 		{
 			cur_elem = eval_expr(state, a.v.v.ptr[i]);
 			sum += apply_binary_op(state, cur_elem, cur_elem, OP_MUL_TOK).v.n;
 		}
-		return VAL_NUM(sqrt(sum));
+		_Complex double ret = csqrt(sum);
+		return (cimag(ret) == 0.0) ? VAL_NUM(creal(ret)) : VAL_CNUM(ret);
 	}
 
 	fprintf(stderr, "invalid operator: %s\n", TOK_STRINGS[op]);
