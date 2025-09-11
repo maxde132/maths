@@ -214,9 +214,21 @@ undefined_func:
 TypedValue apply_binary_op(struct evaluator_state *restrict state, TypedValue a, TypedValue b, TokenType op)
 {
 	/* TODO: FIX UNARY OPERATORS BEING SKIPPED BECAUSE VAL_IS_NUM(b) IS FALSE */
-	if (VAL_IS_NUM(a) && VAL_IS_NUM(b)
+	if (VAL_IS_NUM(a) && (VAL_IS_NUM(b) || b.type == Invalid_type)
 		&& a.type != ComplexNumber_type && b.type != ComplexNumber_type)
 	{
+		if (b.type == Invalid_type)
+		{
+			switch (op) {
+			case OP_NOT_TOK: return VAL_BOOL(get_number(&a) == 0);
+			case OP_NEGATE: return VAL_NUM(-1*get_number(&a));
+			case PIPE_TOK: return VAL_NUM(fabs(get_number(&a)));
+			case OP_UNARY_NOTHING: return a;
+			default:
+				fprintf(stderr, "invalid unary operator on real operand: %s\n", TOK_STRINGS[op]);
+				return VAL_INVAL;
+			}
+		}
 		switch (op) {
 			case OP_POW_TOK: return VAL_NUM(pow(get_number(&a), get_number(&b)));
 			case OP_MUL_TOK: return VAL_NUM(get_number(&a) * get_number(&b));
@@ -230,16 +242,23 @@ TypedValue apply_binary_op(struct evaluator_state *restrict state, TypedValue a,
 			case OP_GREATEREQ_TOK: return VAL_BOOL(get_number(&a) >= get_number(&b));
 			case OP_EQ_TOK: return VAL_BOOL(doubles_are_equal_func(get_number(&a), get_number(&b)));
 			case OP_NOTEQ_TOK: return VAL_BOOL(!doubles_are_equal_func(get_number(&a), get_number(&b)));
-			case OP_NOT_TOK: return VAL_BOOL(get_number(&a) == 0);
-			case OP_NEGATE: return VAL_NUM(-1*get_number(&a));
-			case PIPE_TOK: return VAL_NUM(fabs(get_number(&a)));
-			case OP_UNARY_NOTHING: return a;
 			default:
-				fprintf(stderr, "invalid operator on real operands: %s\n", TOK_STRINGS[op]);
+				fprintf(stderr, "invalid binary operator on real operands: %s\n", TOK_STRINGS[op]);
 				return VAL_INVAL;
 		}
-	} else if (VAL_IS_NUM(a) && VAL_IS_NUM(b))
+	} else if (VAL_IS_NUM(a) && (VAL_IS_NUM(b) || b.type == Invalid_type))
 	{
+		if (b.type == Invalid_type)
+		{
+			switch (op) {
+			case OP_NEGATE: return VAL_CNUM((-1.0 + 0.0*I) * get_complex(&a));
+			case PIPE_TOK: return VAL_CNUM(cabs(get_complex(&a)));
+			case OP_UNARY_NOTHING: return a;
+			default:
+				fprintf(stderr, "invalid unary operator on complex operand: %s\n", TOK_STRINGS[op]);
+				return VAL_INVAL;
+			}
+		}
 		switch (op) {
 			case OP_POW_TOK: return VAL_CNUM(cpow(get_complex(&a), get_complex(&b)));
 			case OP_MUL_TOK: return VAL_CNUM(get_complex(&a) * get_complex(&b));
@@ -248,11 +267,8 @@ TypedValue apply_binary_op(struct evaluator_state *restrict state, TypedValue a,
 			case OP_SUB_TOK: return VAL_CNUM(get_complex(&a) - get_complex(&b));
 			case OP_EQ_TOK: return VAL_BOOL(get_complex(&a) == get_complex(&b));
 			case OP_NOTEQ_TOK: return VAL_BOOL(get_complex(&a) != get_complex(&b));
-			case OP_NEGATE: return VAL_CNUM((-1.0 + 0.0*I) * get_complex(&a));
-			case PIPE_TOK: return VAL_CNUM(cabs(get_complex(&a)));
-			case OP_UNARY_NOTHING: return a;
 			default:
-				fprintf(stderr, "invalid operator on complex operands: %s\n", TOK_STRINGS[op]);
+				fprintf(stderr, "invalid binary operator on complex operands: %s\n", TOK_STRINGS[op]);
 				return VAL_INVAL;
 		}
 	} else if (a.type == Vector_type
