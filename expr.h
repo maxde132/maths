@@ -220,6 +220,9 @@ Expr *pop_from_vec(VecN *vec);
 void print_vec(VecN *vec);
 void println_vec(VecN *vec);
 
+void free_pp(void *p);
+
+
 double get_number(TypedValue *v);
 _Complex double get_complex(TypedValue *v);
 

@@ -315,6 +315,11 @@ inline void println_vec(VecN *vec)
 	fputc('\n', stdout);
 }
 
+inline void free_pp(void *p)
+{
+	free(*(void **)p);
+}
+
 inline double get_number(TypedValue *v)
 {
 	if (!VAL_IS_NUM(*v) || v->type == ComplexNumber_type)

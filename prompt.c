@@ -10,9 +10,7 @@ int32_t main(void)
 	parse_stmts_to_evaluator("println{[5,2i].1^2}", &state);
 	
 	for (size_t i = 0; i < state.exprs.n; ++i)
-	{
 		eval_expr(&state, state.exprs.ptr[i]);
-	}
 
 	return 0;
 }

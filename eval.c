@@ -12,7 +12,22 @@
 #include "c-hashmap/map.h"
 #include "eval_funcs_incl.c"
 
-static hashmap *eval_builtins = nullptr;
+/* 0 constants
+ * 1 tv_tv_funcs
+ * 2 d_d_funcs
+ * 3 cd_cd_funcs
+ * 4 cd_d_funcs
+ * 5 d_cd_funcs
+ */
+static hashmap *eval_builtin_maps[] = {
+	nullptr,
+	nullptr,
+	nullptr,
+	nullptr,
+	nullptr,
+	nullptr,
+};
+static bool eval_builtins_are_initialized = false;
 static size_t initialized_evaluators_count = 0;
 
 struct evaluator_state eval_init(struct evaluator_state *restrict state_out)
@@ -20,42 +35,51 @@ struct evaluator_state eval_init(struct evaluator_state *restrict state_out)
 	/* todo: finish this! */
 	struct evaluator_state state = {0};
 
-	if (eval_builtins != nullptr)
+	if (eval_builtins_are_initialized)
 		goto skip_builtins_init;
-	eval_builtins = hashmap_create();
-	hashmap_set(eval_builtins, hashmap_str_lit("print"),		(uintptr_t)print_typedval);
-	hashmap_set(eval_builtins, hashmap_str_lit("println"),	(uintptr_t)println_typedval);
-	hashmap_set(eval_builtins, hashmap_str_lit("max"),		(uintptr_t)custom_max);
-	hashmap_set(eval_builtins, hashmap_str_lit("min"),		(uintptr_t)custom_min);
 
-	hashmap_set(eval_builtins, hashmap_str_lit("sin"),			(uintptr_t)sin);
-	hashmap_set(eval_builtins, hashmap_str_lit("cos"),			(uintptr_t)cos);
-	hashmap_set(eval_builtins, hashmap_str_lit("tan"),			(uintptr_t)tan);
-	hashmap_set(eval_builtins, hashmap_str_lit("asin"),			(uintptr_t)asin);
-	hashmap_set(eval_builtins, hashmap_str_lit("acos"),			(uintptr_t)acos);
-	hashmap_set(eval_builtins, hashmap_str_lit("atan"),			(uintptr_t)atan);
-	hashmap_set(eval_builtins, hashmap_str_lit("ln"),			(uintptr_t)log);
-	hashmap_set(eval_builtins, hashmap_str_lit("log2"),			(uintptr_t)log2);
-	hashmap_set(eval_builtins, hashmap_str_lit("sqrt"),			(uintptr_t)sqrt);
-	hashmap_set(eval_builtins, hashmap_str_lit("floor"),			(uintptr_t)floor);
-	hashmap_set(eval_builtins, hashmap_str_lit("ceil"),			(uintptr_t)ceil);
-	hashmap_set(eval_builtins, hashmap_str_lit("round"),			(uintptr_t)round);
+	/* TODO UPDATE apply_funcs TO USE THESE MAPS */
+	eval_builtin_maps[1] = hashmap_create();
+	hashmap_set(eval_builtin_maps[1], hashmap_str_lit("print"),			(uintptr_t)print_typedval);
+	hashmap_set(eval_builtin_maps[1], hashmap_str_lit("println"),		(uintptr_t)println_typedval);
+	hashmap_set(eval_builtin_maps[1], hashmap_str_lit("max"),			(uintptr_t)custom_max);
+	hashmap_set(eval_builtin_maps[1], hashmap_str_lit("min"),			(uintptr_t)custom_min);
+	/*hashmap_set(eval_builtin_maps[1], hashmap_str_lit("range"), 		(uintptr_t)custom_range);*/
 
-	hashmap_set(eval_builtins, hashmap_str_lit("complex_sin"),		(uintptr_t)csin);
-	hashmap_set(eval_builtins, hashmap_str_lit("complex_cos"),		(uintptr_t)ccos);
-	hashmap_set(eval_builtins, hashmap_str_lit("complex_tan"),		(uintptr_t)ctan);
-	hashmap_set(eval_builtins, hashmap_str_lit("complex_asin"),		(uintptr_t)casin);
-	hashmap_set(eval_builtins, hashmap_str_lit("complex_acos"),		(uintptr_t)cacos);
-	hashmap_set(eval_builtins, hashmap_str_lit("complex_atan"),		(uintptr_t)catan);
-	hashmap_set(eval_builtins, hashmap_str_lit("complex_ln"),		(uintptr_t)clog);
-	hashmap_set(eval_builtins, hashmap_str_lit("complex_log2"),		(uintptr_t)custom_clog2);
-	hashmap_set(eval_builtins, hashmap_str_lit("complex_sqrt"),		(uintptr_t)csqrt);
-	hashmap_set(eval_builtins, hashmap_str_lit("complex_csqrt"),	(uintptr_t)csqrt);
-	hashmap_set(eval_builtins, hashmap_str_lit("csqrt"),			(uintptr_t)custom_sqrt);
-	hashmap_set(eval_builtins, hashmap_str_lit("complex_conj"),		(uintptr_t)conj);
-	hashmap_set(eval_builtins, hashmap_str_lit("complex_phase"),	(uintptr_t)carg);
-	hashmap_set(eval_builtins, hashmap_str_lit("complex_real"),		(uintptr_t)creal);
-	hashmap_set(eval_builtins, hashmap_str_lit("complex_imag"),		(uintptr_t)cimag);
+	eval_builtin_maps[2] = hashmap_create();
+	hashmap_set(eval_builtin_maps[2], hashmap_str_lit("sin"),			(uintptr_t)sin);
+	hashmap_set(eval_builtin_maps[2], hashmap_str_lit("cos"),			(uintptr_t)cos);
+	hashmap_set(eval_builtin_maps[2], hashmap_str_lit("tan"),			(uintptr_t)tan);
+	hashmap_set(eval_builtin_maps[2], hashmap_str_lit("asin"),			(uintptr_t)asin);
+	hashmap_set(eval_builtin_maps[2], hashmap_str_lit("acos"),			(uintptr_t)acos);
+	hashmap_set(eval_builtin_maps[2], hashmap_str_lit("atan"),			(uintptr_t)atan);
+	hashmap_set(eval_builtin_maps[2], hashmap_str_lit("ln"),			(uintptr_t)log);
+	hashmap_set(eval_builtin_maps[2], hashmap_str_lit("log2"),			(uintptr_t)log2);
+	hashmap_set(eval_builtin_maps[2], hashmap_str_lit("sqrt"),			(uintptr_t)sqrt);
+	hashmap_set(eval_builtin_maps[2], hashmap_str_lit("floor"),			(uintptr_t)floor);
+	hashmap_set(eval_builtin_maps[2], hashmap_str_lit("ceil"),			(uintptr_t)ceil);
+	hashmap_set(eval_builtin_maps[2], hashmap_str_lit("round"),			(uintptr_t)round);
+
+	eval_builtin_maps[3] = hashmap_create();
+	hashmap_set(eval_builtin_maps[3], hashmap_str_lit("complex_sin"),		(uintptr_t)csin);
+	hashmap_set(eval_builtin_maps[3], hashmap_str_lit("complex_cos"),		(uintptr_t)ccos);
+	hashmap_set(eval_builtin_maps[3], hashmap_str_lit("complex_tan"),		(uintptr_t)ctan);
+	hashmap_set(eval_builtin_maps[3], hashmap_str_lit("complex_asin"),	(uintptr_t)casin);
+	hashmap_set(eval_builtin_maps[3], hashmap_str_lit("complex_acos"),	(uintptr_t)cacos);
+	hashmap_set(eval_builtin_maps[3], hashmap_str_lit("complex_atan"),	(uintptr_t)catan);
+	hashmap_set(eval_builtin_maps[3], hashmap_str_lit("complex_ln"),		(uintptr_t)clog);
+	hashmap_set(eval_builtin_maps[3], hashmap_str_lit("complex_log2"),	(uintptr_t)custom_clog2);
+	hashmap_set(eval_builtin_maps[3], hashmap_str_lit("complex_sqrt"),	(uintptr_t)csqrt);
+	hashmap_set(eval_builtin_maps[3], hashmap_str_lit("complex_csqrt"),	(uintptr_t)csqrt);
+
+	eval_builtin_maps[4] = hashmap_create();
+	hashmap_set(eval_builtin_maps[4], hashmap_str_lit("csqrt"),			(uintptr_t)custom_sqrt);
+
+	eval_builtin_maps[5] = hashmap_create();
+	hashmap_set(eval_builtin_maps[5], hashmap_str_lit("complex_conj"),	(uintptr_t)conj);
+	hashmap_set(eval_builtin_maps[5], hashmap_str_lit("complex_phase"),	(uintptr_t)carg);
+	hashmap_set(eval_builtin_maps[5], hashmap_str_lit("complex_real"),	(uintptr_t)creal);
+	hashmap_set(eval_builtin_maps[5], hashmap_str_lit("complex_imag"),	(uintptr_t)cimag);
 
 	static constexpr TypedValue TRUE_M		= VAL_BOOL(true);
 	static constexpr TypedValue FALSE_M		= VAL_BOOL(false);
@@ -66,16 +90,19 @@ struct evaluator_state eval_init(struct evaluator_state *restrict state_out)
 	static constexpr TypedValue NAN_M		= VAL_NUM(NAN);
 	static constexpr TypedValue INFINITY_M	= VAL_NUM(INFINITY);
 
-	hashmap_set(eval_builtins, hashmap_str_lit("true"),	(uintptr_t)&TRUE_M);
-	hashmap_set(eval_builtins, hashmap_str_lit("false"),	(uintptr_t)&FALSE_M);
-	hashmap_set(eval_builtins, hashmap_str_lit("pi"),	(uintptr_t)&PI_M);
-	hashmap_set(eval_builtins, hashmap_str_lit("e"),	(uintptr_t)&E_M);
-	hashmap_set(eval_builtins, hashmap_str_lit("phi"),	(uintptr_t)&PHI_M);
+	eval_builtin_maps[0] = hashmap_create();
+	hashmap_set(eval_builtin_maps[0], hashmap_str_lit("true"),	(uintptr_t)&TRUE_M);
+	hashmap_set(eval_builtin_maps[0], hashmap_str_lit("false"),	(uintptr_t)&FALSE_M);
+	hashmap_set(eval_builtin_maps[0], hashmap_str_lit("pi"),	(uintptr_t)&PI_M);
+	hashmap_set(eval_builtin_maps[0], hashmap_str_lit("e"),	(uintptr_t)&E_M);
+	hashmap_set(eval_builtin_maps[0], hashmap_str_lit("phi"),	(uintptr_t)&PHI_M);
 	static_assert(I_M.v.cn == I, "how on earth does I != I? i think your computer's borked\n");
-	hashmap_set(eval_builtins, hashmap_str_lit("i"),	(uintptr_t)&I_M);
-	hashmap_set(eval_builtins, hashmap_str_lit("nan"),	(uintptr_t)&NAN_M);
-	hashmap_set(eval_builtins, hashmap_str_lit("inf"),	(uintptr_t)&INFINITY_M);
+	hashmap_set(eval_builtin_maps[0], hashmap_str_lit("i"),	(uintptr_t)&I_M);
+	hashmap_set(eval_builtin_maps[0], hashmap_str_lit("nan"),	(uintptr_t)&NAN_M);
+	hashmap_set(eval_builtin_maps[0], hashmap_str_lit("inf"),	(uintptr_t)&INFINITY_M);
 
+
+	eval_builtins_are_initialized = true;
 
 skip_builtins_init:
 
@@ -122,8 +149,11 @@ void eval_cleanup(struct evaluator_state *restrict state)
 	state->is_init = false;
 	if (--initialized_evaluators_count == 0)
 	{
-		hashmap_free(eval_builtins);
-		eval_builtins = nullptr;
+		for (uint8_t i = 0; i < 6; ++i)
+		{
+			hashmap_free(eval_builtin_maps[i]);
+			eval_builtin_maps[i] = nullptr;
+		}
 	}
 }
 
@@ -156,57 +186,37 @@ TypedValue apply_func(struct evaluator_state *state,
 		strbuf ident, TypedValue right)
 {
 	TypedValue (*vec_args_func) (struct evaluator_state *, TypedValue *);
-	if (hashmap_get(eval_builtins, ident.s, ident.len, (uintptr_t *)&vec_args_func))
+	if (hashmap_get(eval_builtin_maps[1], ident.s, ident.len, (uintptr_t *)&vec_args_func))
 		return ((*vec_args_func)(state, &right));
+
+	double (*d_d_func) (double);
+	_Complex double (*cd_cd_func) (_Complex double);
+	_Complex double (*cd_d_func) (double);
+	double (*d_cd_func) (_Complex double);
 	if (right.type == RealNumber_type)
 	{
-		if (strncmp(ident.s, "csqrt", ident.len) == 0)
-		{
-			_Complex double (*func) (double);
-			if (hashmap_get(eval_builtins, ident.s, ident.len, (uintptr_t *)&func))
-			{
-				if (right.type == RealNumber_type)
-					return VAL_CNUM((*func)(right.v.n));
-			}
-			goto undefined_func;
-		}
-		double (*func) (double);
-		if (hashmap_get(eval_builtins, ident.s, ident.len, (uintptr_t *)&func))
-		{
+		if (hashmap_get(eval_builtin_maps[4], ident.s, ident.len, (uintptr_t *)&cd_d_func))
 			if (right.type == RealNumber_type)
-				return VAL_NUM((*func)(right.v.n));
-		}
+				return VAL_CNUM((*cd_d_func)(right.v.n));
+		if (hashmap_get(eval_builtin_maps[2], ident.s, ident.len, (uintptr_t *)&d_d_func))
+			if (right.type == RealNumber_type)
+				return VAL_NUM((*d_d_func)(right.v.n));
 	} else if (right.type == ComplexNumber_type)
 	{
-		char *temp = calloc(ident.len + sizeof("complex_")-1, sizeof(char));
-		memccpy(temp, "complex_", '_', sizeof("complex_")-1);
+		char *temp __attribute__((cleanup(free_pp)))
+			= calloc(ident.len + sizeof("complex_")-1, sizeof(char));
+		memcpy(temp, "complex_", sizeof("complex_")-1);
 		memcpy(temp+8, ident.s, ident.len);
 
-		if (strncmp(ident.s, "phase", ident.len) == 0
-		 || strncmp(ident.s, "real", ident.len) == 0
-		 || strncmp(ident.s, "imag", ident.len) == 0)
-		{
-			double (*func) (_Complex double);
-			if (hashmap_get(eval_builtins, temp, ident.len + sizeof("complex_")-1, (uintptr_t *)&func))
-			{
-				free(temp);
-				if (right.type == ComplexNumber_type)
-					return VAL_NUM((*func)(right.v.cn));
-			}
-			goto undefined_func;
-		}
-		_Complex double (*func) (_Complex double);
-		if (hashmap_get(eval_builtins, temp, ident.len + sizeof("complex_")-1, (uintptr_t *)&func))
-		{
-			free(temp);
+		if (hashmap_get(eval_builtin_maps[5], temp, ident.len + sizeof("complex_")-1, (uintptr_t *)&d_cd_func))
 			if (right.type == ComplexNumber_type)
-				return VAL_CNUM((*func)(right.v.cn));
-		}
-		
-		free(temp);
+				return VAL_NUM((*d_cd_func)(right.v.cn));
+
+		if (hashmap_get(eval_builtin_maps[3], temp, ident.len + sizeof("complex_")-1, (uintptr_t *)&cd_cd_func))
+			if (right.type == ComplexNumber_type)
+				return VAL_CNUM((*cd_cd_func)(right.v.cn));
 	}
 
-undefined_func:
 	fprintf(stderr, "undefined function for %s argument in function call: '%.*s'\n",
 		(right.type == RealNumber_type) ? "real" :
 			(right.type == ComplexNumber_type) ? "complex" :
@@ -284,7 +294,7 @@ TypedValue apply_binary_op(struct evaluator_state *restrict state, TypedValue a,
 				fprintf(stderr, "invalid binary operator on real operands: %s\n", TOK_STRINGS[op]);
 				return VAL_INVAL;
 		}
-	} else if (VAL_IS_NUM(a) && (VAL_IS_NUM(b) || b.type == Invalid_type))
+	} else if (VAL_IS_NUM(a) && VAL_IS_NUM(b))
 	{
 		switch (op) {
 			case OP_POW_TOK: return VAL_CNUM(cpow(get_complex(&a), get_complex(&b)));
@@ -417,7 +427,7 @@ TypedValue eval_expr(struct evaluator_state *state, const Expr *expr)
 	{
 		TypedValue *val;
 		size_t out;
-		if (hashmap_get(eval_builtins, expr->u.v.s.s, expr->u.v.s.len, (uintptr_t *)&val))
+		if (hashmap_get(eval_builtin_maps[0], expr->u.v.s.s, expr->u.v.s.len, (uintptr_t *)&val))
 			return *val;
 		else if (hashmap_get(state->variables, expr->u.v.s.s, expr->u.v.s.len, (uintptr_t *)&out))
 			return eval_expr(state, state->vars_storage.ptr[out]);

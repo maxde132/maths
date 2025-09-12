@@ -58,3 +58,24 @@ TypedValue custom_min(struct evaluator_state *state, TypedValue v)
 
 	return min;
 }
+
+/* THIS IS NOT DONE */
+/* 
+TypedValue custom_range(struct evaluator_state *state, TypedValue v)
+{
+	if (!VAL_IS_NUM(v) || v.type == ComplexNumber_type)
+	{
+	}
+}
+
+TypedValue custom_sum(struct evaluator_state *state, TypedValue v)
+{
+	if (v.type != Vector_type)
+	{
+		fprintf(stderr, "the `sum` function takes a vector for its 3 arguments\n");
+		return VAL_INVAL;
+	}
+	const Expr *init = v.v.v.ptr[0];
+	const Expr *accum = v.v.v.ptr[2];
+}
+*/
