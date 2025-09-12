@@ -106,14 +106,10 @@ struct evaluator_state eval_init(struct evaluator_state *restrict state_out)
 
 skip_builtins_init:
 
-	state.variables = hashmap_create();
-
+	state.variables = nullptr;
 	state.inserted_vars = nullptr;
-
 	state.vars_storage = new_vec(1);
-			
 	state.exprs = new_vec(1);
-
 	state.allocd_vecs = new_vec(1);
 
 
@@ -128,8 +124,11 @@ skip_builtins_init:
 
 void eval_cleanup(struct evaluator_state *restrict state)
 {
-	hashmap_free(state->variables);
-	state->variables = nullptr;
+	if (state->variables != nullptr)
+	{
+		hashmap_free(state->variables);
+		state->variables = nullptr;
+	}
 
 	if (state->inserted_vars != nullptr)
 	{
@@ -168,8 +167,12 @@ int32_t eval_set_variable(struct evaluator_state *restrict state,
 		return hashmap_set(state->inserted_vars,
 				name.s, name.len, (uintptr_t)state->vars_storage.n-1);
 	} else
+	{
+		if (state->variables == nullptr)
+			state->variables = hashmap_create();
 		return hashmap_set(state->variables,
 				name.s, name.len, (uintptr_t)state->vars_storage.n-1);
+	}
 }
 
 #define EPSILON 1e-15
@@ -246,7 +249,6 @@ TypedValue apply_binary_op(struct evaluator_state *restrict state, TypedValue a,
 		case TILDE_TOK:
 			Expr *ret = calloc(1, sizeof(Expr));
 			ret->type = Vector_type;
-			ret->num_refs = 1;
 			ret->should_free_vec_block = true;
 			ret->u.v.v = new_vec(2);
 			ret->u.v.v.n = 2;
@@ -368,12 +370,13 @@ TypedValue apply_binary_op(struct evaluator_state *restrict state, TypedValue a,
 		case OP_SUB_TOK:
 		case OP_MUL_TOK:
 		case OP_DIV_TOK:
-			const VecN *src_vec = (a.type == Vector_type) ? &a.v.v : &b.v.v;
+			const VecN *src_vec = (a.type == Vector_type)
+				? &a.v.v
+				: &b.v.v;
 			const TypedValue *scalar = (VAL_IS_NUM(a)) ? &a : &b;
 
 			Expr *ret = calloc(1, sizeof(Expr));
 			ret->type = Vector_type;
-			ret->num_refs = 1;
 			ret->should_free_vec_block = true;
 			ret->u.v.v = new_vec(src_vec->n);
 			ret->u.v.v.n = src_vec->n;
