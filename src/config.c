@@ -83,7 +83,7 @@ void parse_args(int32_t argc, char **argv)
 			{
 				const char *cur = argv[arg_n]+2+8;
 				cur = strchr(argv[arg_n]+2+8, '=');
-				if (cur++ == NULL)
+				if (cur == NULL || *++cur == '\0')
 				{
 					fprintf(stderr, "argument error: expected expression following command-line variable definition\n");
 					eval_cleanup(&global_config.eval_state);
