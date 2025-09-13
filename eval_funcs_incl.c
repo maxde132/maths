@@ -15,20 +15,35 @@ _Complex double custom_sqrt(double a)
 	return csqrt(a + 0.0*I);
 }
 
-TypedValue custom_max(struct evaluator_state *state, TypedValue v)
+TypedValue custom_atan2(struct evaluator_state *state, VecN *args)
 {
-	if (v.type != Vector_type)
+	if (args->n != 2)
+	{
+		fprintf(stderr, "`atan2` takes exactly 2 real number arguments\n");
 		return VAL_INVAL;
-	const VecN *vec = &v.v.v;
+	}
+
+	const TypedValue y = eval_expr(state, args->ptr[0]);
+	const TypedValue x = eval_expr(state, args->ptr[1]);
+	if (y.type != RealNumber_type || x.type != RealNumber_type)
+	{
+		fprintf(stderr, "`atan2` takes exactly 2 real number arguments\n");
+		return VAL_INVAL;
+	}
+	return VAL_NUM(atan2(y.v.n, x.v.n));
+}
+
+TypedValue custom_max(struct evaluator_state *state, VecN *args)
+{
 	TypedValue max = VAL_INVAL;
 
-	for (size_t i = 0; i < vec->n; ++i)
+	for (size_t i = 0; i < args->n; ++i)
 	{
 		if (max.type == Invalid_type)
-			max = eval_expr(state, vec->ptr[i]);
+			max = eval_expr(state, args->ptr[i]);
 		if (!VALTYPE_IS_ORDERED(max))
 			return VAL_INVAL;
-		TypedValue cur = eval_expr(state, vec->ptr[i]);
+		TypedValue cur = eval_expr(state, args->ptr[i]);
 		TypedValue tmp = apply_binary_op(state, cur, max, OP_GREATER_TOK);
 		if (tmp.type == Boolean_type && tmp.v.b)
 			max = cur;
@@ -37,20 +52,17 @@ TypedValue custom_max(struct evaluator_state *state, TypedValue v)
 	return max;
 }
 
-TypedValue custom_min(struct evaluator_state *state, TypedValue v)
+TypedValue custom_min(struct evaluator_state *state, VecN *args)
 {
-	if (v.type != Vector_type)
-		return VAL_INVAL;
-	const VecN *vec = &v.v.v;
 	TypedValue min = VAL_INVAL;
 
-	for (size_t i = 0; i < vec->n; ++i)
+	for (size_t i = 0; i < args->n; ++i)
 	{
 		if (min.type == Invalid_type)
-			min = eval_expr(state, vec->ptr[i]);
+			min = eval_expr(state, args->ptr[i]);
 		if (!VALTYPE_IS_ORDERED(min))
 			return VAL_INVAL;
-		TypedValue cur = eval_expr(state, vec->ptr[i]);
+		TypedValue cur = eval_expr(state, args->ptr[i]);
 		TypedValue tmp = apply_binary_op(state, cur, min, OP_LESS_TOK);
 		if (tmp.type == Boolean_type && tmp.v.b)
 			min = cur;

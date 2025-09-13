@@ -121,6 +121,7 @@ constexpr const TokenType TOK_BY_CHAR[] = { // starts at 0x21
 };
 
 extern const char *const TOK_STRINGS[];
+extern const char *const EXPR_TYPE_STRINGS[];
 
 typedef struct Expr Expr;
 
@@ -191,7 +192,9 @@ typedef struct Expr {
 struct evaluator_state;
 void print_indent(uint32_t indent);
 TypedValue print_typedval(struct evaluator_state *, TypedValue *val);
-TypedValue println_typedval(struct evaluator_state *, TypedValue *val);
+TypedValue println_typedval(struct evaluator_state *state, TypedValue *val);
+TypedValue print_typedval_multiargs(struct evaluator_state *state, VecN *args);
+TypedValue println_typedval_multiargs(struct evaluator_state *state, VecN *args);
 void print_exprh(Expr *expr);
 
 void free_expr(Expr **e);

@@ -6,6 +6,8 @@
 #include "eval.h"
 #include "token.h"
 
+static Token current_tok = nToken(INVALID_TOK, NULL, 0);
+
 // Gets the next token and advances the string pointer.
 Token get_next_token(const char **s, struct parser_state *state)
 {
@@ -111,6 +113,8 @@ Token get_next_token(const char **s, struct parser_state *state)
 		break;
 	}
 
+
+	current_tok = ret;
 	return ret;
 }
 
@@ -177,13 +181,22 @@ Expr *parse_expr(const char **s, uint32_t max_preced, struct parser_state *state
 			left->u.o.left = name;
 			left->u.o.op = OP_FUNC_CALL_TOK;
 
-			Token next_tok = get_next_token(s, state);
-			if (next_tok.type != CLOSE_BRAC_TOK)
-				left->u.o.right = parse_expr(s, PARSER_MAX_PRECED, state);
-			else
-				left->u.o.right = nullptr;
+			get_next_token(s, state);
 
-			if (left->u.o.right != nullptr && (next_tok = get_next_token(s, state)).type != CLOSE_BRAC_TOK)
+			left->u.o.right = calloc(1, sizeof(Expr));
+			left->u.o.right->type = Vector_type;
+			left->u.o.right->num_refs = 1;
+			left->u.o.right->should_free_vec_block = false;
+			left->u.o.right->u.v.v = new_vec(1);
+			do
+			{
+				if (peek_token(s, state).type == CLOSE_BRAC_TOK)
+					break;
+				push_to_vec(&left->u.o.right->u.v.v,
+						parse_expr(s, PARSER_MAX_PRECED, state));
+			} while (get_next_token(s, state).type == COMMA_TOK);
+
+			if (current_tok.type != CLOSE_BRAC_TOK)
 			{
 				fprintf(stderr, "expected closing brace for function call, got %s\n",
 						TOK_STRINGS[next_tok.type]);

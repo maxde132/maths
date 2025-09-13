@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <math.h>
@@ -66,6 +67,17 @@ const char *const TOK_STRINGS[] = {
 	"EOF_TOK",
 };
 
+const char *const EXPR_TYPE_STRINGS[] = {
+	"operation",
+	"real number",
+	"complex number",
+	"boolean",
+	"identifier",
+	"inserted identifier",
+	"vector",
+	"invalid",
+};
+
 
 void print_indent(uint32_t indent)
 {
@@ -112,8 +124,29 @@ TypedValue print_typedval(struct evaluator_state *, TypedValue *val)
 
 inline TypedValue println_typedval(struct evaluator_state *state, TypedValue *val)
 {
-	print_typedval(state, val);
+	TypedValue ret = print_typedval(state, val);
 	fputc('\n', stdout);
+	return ret;
+}
+TypedValue print_typedval_multiargs(struct evaluator_state *state, VecN *args)
+{
+	for (size_t i = 0; i < args->n; ++i)
+	{
+		TypedValue cur_val = eval_expr(state, args->ptr[i]);
+		print_typedval(state, &cur_val);
+		if (i < args->n-1) fputc(' ', stdout);
+	}
+
+	return VAL_NUM(NAN);
+}
+TypedValue println_typedval_multiargs(struct evaluator_state *state, VecN *args)
+{
+	for (size_t i = 0; i < args->n; ++i)
+	{
+		TypedValue cur_val = eval_expr(state, args->ptr[i]);
+		println_typedval(state, &cur_val);
+	}
+
 	return VAL_NUM(NAN);
 }
 

@@ -40,11 +40,12 @@ struct evaluator_state eval_init(struct evaluator_state *restrict state_out)
 
 	/* TODO UPDATE apply_funcs TO USE THESE MAPS */
 	eval_builtin_maps[1] = hashmap_create();
-	hashmap_set(eval_builtin_maps[1], hashmap_str_lit("print"),			(uintptr_t)print_typedval);
-	hashmap_set(eval_builtin_maps[1], hashmap_str_lit("println"),		(uintptr_t)println_typedval);
+	hashmap_set(eval_builtin_maps[1], hashmap_str_lit("print"),			(uintptr_t)print_typedval_multiargs);
+	hashmap_set(eval_builtin_maps[1], hashmap_str_lit("println"),		(uintptr_t)println_typedval_multiargs);
 	hashmap_set(eval_builtin_maps[1], hashmap_str_lit("max"),			(uintptr_t)custom_max);
 	hashmap_set(eval_builtin_maps[1], hashmap_str_lit("min"),			(uintptr_t)custom_min);
 	/*hashmap_set(eval_builtin_maps[1], hashmap_str_lit("range"), 		(uintptr_t)custom_range);*/
+	hashmap_set(eval_builtin_maps[1], hashmap_str_lit("atan2"),			(uintptr_t)custom_atan2);
 
 	eval_builtin_maps[2] = hashmap_create();
 	hashmap_set(eval_builtin_maps[2], hashmap_str_lit("sin"),			(uintptr_t)sin);
@@ -186,25 +187,27 @@ inline bool doubles_are_equal_func(double a, double b)
 bool doubles_are_equal_func(double, double);
 
 TypedValue apply_func(struct evaluator_state *state,
-		strbuf ident, TypedValue right)
+		strbuf ident, TypedValue right_vec)
 {
-	TypedValue (*vec_args_func) (struct evaluator_state *, TypedValue *);
+	TypedValue (*vec_args_func) (struct evaluator_state *, VecN *);
 	if (hashmap_get(eval_builtin_maps[1], ident.s, ident.len, (uintptr_t *)&vec_args_func))
-		return ((*vec_args_func)(state, &right));
+		return ((*vec_args_func)(state, &right_vec.v.v));
 
 	double (*d_d_func) (double);
 	_Complex double (*cd_cd_func) (_Complex double);
 	_Complex double (*cd_d_func) (double);
 	double (*d_cd_func) (_Complex double);
-	if (right.type == RealNumber_type)
+
+	const TypedValue first_arg_val = eval_expr(state, right_vec.v.v.ptr[0]);
+	if (first_arg_val.type == RealNumber_type)
 	{
 		if (hashmap_get(eval_builtin_maps[4], ident.s, ident.len, (uintptr_t *)&cd_d_func))
-			if (right.type == RealNumber_type)
-				return VAL_CNUM((*cd_d_func)(right.v.n));
+			if (first_arg_val.type == RealNumber_type)
+				return VAL_CNUM((*cd_d_func)(first_arg_val.v.n));
 		if (hashmap_get(eval_builtin_maps[2], ident.s, ident.len, (uintptr_t *)&d_d_func))
-			if (right.type == RealNumber_type)
-				return VAL_NUM((*d_d_func)(right.v.n));
-	} else if (right.type == ComplexNumber_type)
+			if (first_arg_val.type == RealNumber_type)
+				return VAL_NUM((*d_d_func)(first_arg_val.v.n));
+	} else if (first_arg_val.type == ComplexNumber_type)
 	{
 		char *temp __attribute__((cleanup(free_pp)))
 			= calloc(ident.len + sizeof("complex_")-1, sizeof(char));
@@ -212,20 +215,18 @@ TypedValue apply_func(struct evaluator_state *state,
 		memcpy(temp+8, ident.s, ident.len);
 
 		if (hashmap_get(eval_builtin_maps[5], temp, ident.len + sizeof("complex_")-1, (uintptr_t *)&d_cd_func))
-			if (right.type == ComplexNumber_type)
-				return VAL_NUM((*d_cd_func)(right.v.cn));
+			if (first_arg_val.type == ComplexNumber_type)
+				return VAL_NUM((*d_cd_func)(first_arg_val.v.cn));
 
 		if (hashmap_get(eval_builtin_maps[3], temp, ident.len + sizeof("complex_")-1, (uintptr_t *)&cd_cd_func))
-			if (right.type == ComplexNumber_type)
-				return VAL_CNUM((*cd_cd_func)(right.v.cn));
+			if (first_arg_val.type == ComplexNumber_type)
+				return VAL_CNUM((*cd_cd_func)(first_arg_val.v.cn));
 	}
 
-	fprintf(stderr, "undefined function for %s argument in function call: '%.*s'\n",
-		(right.type == RealNumber_type) ? "real" :
-			(right.type == ComplexNumber_type) ? "complex" :
-				"vector",
-		(int)ident.len, ident.s);
 
+	fprintf(stderr, "undefined function for %s argument in function call: '%.*s'\n",
+			EXPR_TYPE_STRINGS[first_arg_val.type],
+			(int)ident.len, ident.s);
 	return VAL_INVAL;
 }
 
@@ -432,10 +433,11 @@ TypedValue eval_expr(struct evaluator_state *state, const Expr *expr)
 		size_t out;
 		if (hashmap_get(eval_builtin_maps[0], expr->u.v.s.s, expr->u.v.s.len, (uintptr_t *)&val))
 			return *val;
-		else if (hashmap_get(state->variables, expr->u.v.s.s, expr->u.v.s.len, (uintptr_t *)&out))
+		else if (state->variables != nullptr
+				&& hashmap_get(state->variables, expr->u.v.s.s, expr->u.v.s.len, (uintptr_t *)&out))
 			return eval_expr(state, state->vars_storage.ptr[out]);
 
-		fprintf(stderr, "undefined identifier in user-defined variable namespace: '%.*s'\n",
+		fprintf(stderr, "warning: undefined identifier in user-defined variable namespace: '%.*s'\n",
 				(int)expr->u.v.s.len, expr->u.v.s.s);
 		return VAL_INVAL;
 	} else if (expr->type == InsertedIdentifier_type)
@@ -445,7 +447,7 @@ TypedValue eval_expr(struct evaluator_state *state, const Expr *expr)
 				&& hashmap_get(state->inserted_vars, expr->u.v.s.s, expr->u.v.s.len, (uintptr_t *)&out))
 			return eval_expr(state, state->vars_storage.ptr[out]);
 
-		fprintf(stderr, "undefined identifier in inserted variable namespace: '$%.*s'\n",
+		fprintf(stderr, "warning: undefined identifier in inserted variable namespace: '$%.*s'\n",
 				(int)expr->u.v.s.len, expr->u.v.s.s);
 		return VAL_INVAL;
 	}
@@ -466,8 +468,8 @@ TypedValue eval_expr(struct evaluator_state *state, const Expr *expr)
 		 || right == NULL
 		 || left->type != Identifier_type)
 			return VAL_INVAL;
-		TypedValue right_val = eval_expr(state, right);
-		return apply_func(state, left->u.v.s, right_val);
+		TypedValue right_val_vec = eval_expr(state, right);
+		return apply_func(state, left->u.v.s, right_val_vec);
 	}
 
 	return apply_binary_op(state,
