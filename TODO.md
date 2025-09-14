@@ -4,6 +4,5 @@
 - [x] variable assignment (statements?) <br />
 - [x] fix memory leaks caused by adding variable assignment (memory leaks for literally everything?), then rebase dev back into main <br />
 - [x] fix segfault when using `--set_var:` to insert a variable when the variable value string is empty (e.g. `--set_var:A=`) <br />
-- [ ] add syntax & capability for using ~~_Decimal128~~ probably `long double` to store a higher-precision number <br />
 - [x] syntax guide and other documentation <br />
 - [ ] interactive prompt (like python's IDLE) <br />

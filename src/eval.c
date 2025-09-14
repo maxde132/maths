@@ -192,18 +192,18 @@ int32_t eval_set_variable(struct evaluator_state *restrict state,
 
 #define EPSILON 1e-15
 
-inline bool doubles_are_equal_func(double a, double b)
+inline bool reals_are_equal_func(double a, double b)
 {
 	if (FLAG_IS_SET(NO_ESTIMATE_EQUALITY))
 		return a == b;
 	return fabs(a-b) < EPSILON;
 }
-bool doubles_are_equal_func(double, double);
+bool reals_are_equal_func(double, double);
 
 TypedValue apply_func(struct evaluator_state *state,
 		strbuf ident, TypedValue right_vec)
 {
-	TypedValue (*vec_args_func) (struct evaluator_state *, VecN *);
+	MML_val_func vec_args_func;
 	if (hashmap_get(eval_builtin_maps[1], ident.s, ident.len, (uintptr_t *)&vec_args_func))
 		return ((*vec_args_func)(state, &right_vec.v.v));
 
@@ -256,8 +256,8 @@ TypedValue apply_binary_op(struct evaluator_state *restrict state, TypedValue a,
 			fprintf(stderr, "invalid unary operator on complex operand: %s\n", TOK_STRINGS[OP_NOT_TOK]);	
 			return VAL_INVAL;
 		case OP_NEGATE: return (a.type == ComplexNumber_type)
-				? VAL_CNUM((-1.0 + 0.0*I) * get_complex(&a))
-				: VAL_NUM(-1*get_number(&a));
+				? VAL_CNUM(-get_complex(&a))
+				: VAL_NUM(-get_number(&a));
 		case PIPE_TOK: return (a.type == ComplexNumber_type)
 				? VAL_CNUM(cabs(get_complex(&a)))
 				: VAL_NUM(fabs(get_number(&a)));
@@ -305,8 +305,8 @@ TypedValue apply_binary_op(struct evaluator_state *restrict state, TypedValue a,
 			case OP_GREATER_TOK: return VAL_BOOL(get_number(&a) > get_number(&b));
 			case OP_LESSEQ_TOK: return VAL_BOOL(get_number(&a) <= get_number(&b));
 			case OP_GREATEREQ_TOK: return VAL_BOOL(get_number(&a) >= get_number(&b));
-			case OP_EQ_TOK: return VAL_BOOL(doubles_are_equal_func(get_number(&a), get_number(&b)));
-			case OP_NOTEQ_TOK: return VAL_BOOL(!doubles_are_equal_func(get_number(&a), get_number(&b)));
+			case OP_EQ_TOK: return VAL_BOOL(reals_are_equal_func(get_number(&a), get_number(&b)));
+			case OP_NOTEQ_TOK: return VAL_BOOL(!reals_are_equal_func(get_number(&a), get_number(&b)));
 			default:
 				fprintf(stderr, "invalid binary operator on real operands: %s\n", TOK_STRINGS[op]);
 				return VAL_INVAL;

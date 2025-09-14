@@ -13,6 +13,8 @@ struct evaluator_state {
 	bool is_init;
 };
 
+typedef TypedValue (*MML_val_func)(struct evaluator_state *state, VecN *args);
+
 TypedValue apply_binary_op(struct evaluator_state *restrict state,
 		TypedValue a, TypedValue b, TokenType op);
 
