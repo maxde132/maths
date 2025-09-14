@@ -54,8 +54,15 @@ struct evaluator_state eval_init(struct evaluator_state *restrict state_out)
 	hashmap_set(eval_builtin_maps[2], hashmap_str_lit("asin"),			(uintptr_t)asin);
 	hashmap_set(eval_builtin_maps[2], hashmap_str_lit("acos"),			(uintptr_t)acos);
 	hashmap_set(eval_builtin_maps[2], hashmap_str_lit("atan"),			(uintptr_t)atan);
+	hashmap_set(eval_builtin_maps[2], hashmap_str_lit("sinh"),			(uintptr_t)sinh);
+	hashmap_set(eval_builtin_maps[2], hashmap_str_lit("cosh"),			(uintptr_t)cosh);
+	hashmap_set(eval_builtin_maps[2], hashmap_str_lit("tanh"),			(uintptr_t)tanh);
+	hashmap_set(eval_builtin_maps[2], hashmap_str_lit("asinh"),			(uintptr_t)asinh);
+	hashmap_set(eval_builtin_maps[2], hashmap_str_lit("acosh"),			(uintptr_t)acosh);
+	hashmap_set(eval_builtin_maps[2], hashmap_str_lit("atanh"),			(uintptr_t)atanh);
 	hashmap_set(eval_builtin_maps[2], hashmap_str_lit("ln"),			(uintptr_t)log);
 	hashmap_set(eval_builtin_maps[2], hashmap_str_lit("log2"),			(uintptr_t)log2);
+	hashmap_set(eval_builtin_maps[2], hashmap_str_lit("log10"),			(uintptr_t)log10);
 	hashmap_set(eval_builtin_maps[2], hashmap_str_lit("sqrt"),			(uintptr_t)sqrt);
 	hashmap_set(eval_builtin_maps[2], hashmap_str_lit("floor"),			(uintptr_t)floor);
 	hashmap_set(eval_builtin_maps[2], hashmap_str_lit("ceil"),			(uintptr_t)ceil);
@@ -68,8 +75,15 @@ struct evaluator_state eval_init(struct evaluator_state *restrict state_out)
 	hashmap_set(eval_builtin_maps[3], hashmap_str_lit("complex_asin"),	(uintptr_t)casin);
 	hashmap_set(eval_builtin_maps[3], hashmap_str_lit("complex_acos"),	(uintptr_t)cacos);
 	hashmap_set(eval_builtin_maps[3], hashmap_str_lit("complex_atan"),	(uintptr_t)catan);
+	hashmap_set(eval_builtin_maps[3], hashmap_str_lit("complex_sinh"),	(uintptr_t)csinh);
+	hashmap_set(eval_builtin_maps[3], hashmap_str_lit("complex_cosh"),	(uintptr_t)ccosh);
+	hashmap_set(eval_builtin_maps[3], hashmap_str_lit("complex_tanh"),	(uintptr_t)ctanh);
+	hashmap_set(eval_builtin_maps[3], hashmap_str_lit("complex_asinh"),	(uintptr_t)casinh);
+	hashmap_set(eval_builtin_maps[3], hashmap_str_lit("complex_acosh"),	(uintptr_t)cacosh);
+	hashmap_set(eval_builtin_maps[3], hashmap_str_lit("complex_atanh"),	(uintptr_t)catanh);
 	hashmap_set(eval_builtin_maps[3], hashmap_str_lit("complex_ln"),		(uintptr_t)clog);
 	hashmap_set(eval_builtin_maps[3], hashmap_str_lit("complex_log2"),	(uintptr_t)custom_clog2);
+	hashmap_set(eval_builtin_maps[3], hashmap_str_lit("complex_log10"),	(uintptr_t)custom_clog10);
 	hashmap_set(eval_builtin_maps[3], hashmap_str_lit("complex_sqrt"),	(uintptr_t)csqrt);
 	hashmap_set(eval_builtin_maps[3], hashmap_str_lit("complex_csqrt"),	(uintptr_t)csqrt);
 
@@ -180,9 +194,9 @@ int32_t eval_set_variable(struct evaluator_state *restrict state,
 
 inline bool doubles_are_equal_func(double a, double b)
 {
-	if (FLAG_IS_SET(ESTIMATE_EQUALITY))
-		return fabs(a-b) < EPSILON;
-	return a == b;
+	if (FLAG_IS_SET(NO_ESTIMATE_EQUALITY))
+		return a == b;
+	return fabs(a-b) < EPSILON;
 }
 bool doubles_are_equal_func(double, double);
 

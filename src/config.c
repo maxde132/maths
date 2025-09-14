@@ -29,7 +29,7 @@ void print_usage(void)
                     "  -p PREC, --precision=PREC          Set the number of decimal digits to be printed when printing numbers (default 6)\n"
 			  "  --no-eval                          Only parse the expression; don't evaluate it (default OFF)\n"
                     "  --bools-are-nums                   Write the number 1 or 0 to represent boolean values (default OFF)\n"
-			  "  --estimate-equality                Consider two reals equal if they are equal to 14 digits of accuracy (default OFF)\n"
+			  "  --no-estimate-equality             Consider two reals equal only if they are exactly equal to the bit (default OFF)\n"
 			  "  -h, --help                         Display this help message\n"
 			  "  -V, --version                      Display program information\n"
 			  "  -                                  Read expression string from stdin\n"
@@ -75,8 +75,8 @@ void parse_args(int32_t argc, char **argv)
 				expression.s = argv[arg_n]+2+5;
 			else if (strcmp(argv[arg_n]+2, "bools-are-nums") == 0)
 				SET_FLAG(BOOLS_PRINT_NUM);
-			else if (strcmp(argv[arg_n]+2, "estimate-equality") == 0)
-				SET_FLAG(ESTIMATE_EQUALITY);
+			else if (strcmp(argv[arg_n]+2, "no-estimate-equality") == 0)
+				SET_FLAG(NO_ESTIMATE_EQUALITY);
 			else if (strcmp(argv[arg_n]+2, "no-eval") == 0)
 				SET_FLAG(NO_EVAL);
 			else if (strncmp(argv[arg_n]+2, "set_var:", 8) == 0)

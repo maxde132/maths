@@ -24,7 +24,7 @@ obj/expr.o: Makefile src/expr.c incl/expr.h
 obj/parser.o: Makefile src/parser.c incl/parser.h incl/token.h incl/expr.h
 	$(CC) src/parser.c -c -o obj/parser.o $(CFLAGS)
 
-obj/eval.o: Makefile src/eval.c incl/eval.h incl/expr.h src/eval_funcs_incl.c
+obj/eval.o: Makefile src/eval.c incl/eval.h incl/expr.h incl/config.h src/eval_funcs_incl.c
 	$(CC) src/eval.c -c -o obj/eval.o $(CFLAGS)
 
 obj/main.o: Makefile src/main.c incl/expr.h incl/token.h

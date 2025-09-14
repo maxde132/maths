@@ -51,6 +51,7 @@ Token get_next_token(const char **s, struct parser_state *state)
 		{
 			ret = nToken(OP_LESSEQ_TOK, *s, 2);
 			*s += 2;
+			break;
 		}
 		ret = nToken(OP_LESS_TOK, *s, 1);
 		++*s;
@@ -60,6 +61,7 @@ Token get_next_token(const char **s, struct parser_state *state)
 		{
 			ret = nToken(OP_GREATEREQ_TOK, *s, 2);
 			*s += 2;
+			break;
 		}
 		ret = nToken(OP_GREATER_TOK, *s, 1);
 		++*s;
