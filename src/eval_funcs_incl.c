@@ -2,8 +2,8 @@
 #include <math.h>
 #include <stdio.h>
 
-#include "eval.h"
-#include "expr.h"
+#include "mml/eval.h"
+#include "mml/expr.h"
 
 _Complex double custom_clog2(_Complex double a)
 {
@@ -20,7 +20,7 @@ _Complex double custom_sqrt(double a)
 	return csqrt(a + 0.0*I);
 }
 
-TypedValue custom_atan2(struct evaluator_state *state, VecN *args)
+MML_Value custom_atan2(struct MML_state *state, MML_VecN *args)
 {
 	if (args->n != 2)
 	{
@@ -28,8 +28,8 @@ TypedValue custom_atan2(struct evaluator_state *state, VecN *args)
 		return VAL_INVAL;
 	}
 
-	const TypedValue y = eval_expr(state, args->ptr[0]);
-	const TypedValue x = eval_expr(state, args->ptr[1]);
+	const MML_Value y = MML_eval_expr(state, args->ptr[0]);
+	const MML_Value x = MML_eval_expr(state, args->ptr[1]);
 	if (y.type != RealNumber_type || x.type != RealNumber_type)
 	{
 		fprintf(stderr, "`atan2` takes exactly 2 real number arguments\n");
@@ -38,18 +38,18 @@ TypedValue custom_atan2(struct evaluator_state *state, VecN *args)
 	return VAL_NUM(atan2(y.v.n, x.v.n));
 }
 
-TypedValue custom_max(struct evaluator_state *state, VecN *args)
+MML_Value custom_max(struct MML_state *state, MML_VecN *args)
 {
-	TypedValue max = VAL_INVAL;
+	MML_Value max = VAL_INVAL;
 
 	for (size_t i = 0; i < args->n; ++i)
 	{
 		if (max.type == Invalid_type)
-			max = eval_expr(state, args->ptr[i]);
+			max = MML_eval_expr(state, args->ptr[i]);
 		if (!VALTYPE_IS_ORDERED(max))
 			return VAL_INVAL;
-		TypedValue cur = eval_expr(state, args->ptr[i]);
-		TypedValue tmp = apply_binary_op(state, cur, max, OP_GREATER_TOK);
+		MML_Value cur = MML_eval_expr(state, args->ptr[i]);
+		MML_Value tmp = MML_apply_binary_op(state, cur, max, MML_OP_GREATER_TOK);
 		if (tmp.type == Boolean_type && tmp.v.b)
 			max = cur;
 	}
@@ -57,42 +57,21 @@ TypedValue custom_max(struct evaluator_state *state, VecN *args)
 	return max;
 }
 
-TypedValue custom_min(struct evaluator_state *state, VecN *args)
+MML_Value custom_min(struct MML_state *state, MML_VecN *args)
 {
-	TypedValue min = VAL_INVAL;
+	MML_Value min = VAL_INVAL;
 
 	for (size_t i = 0; i < args->n; ++i)
 	{
 		if (min.type == Invalid_type)
-			min = eval_expr(state, args->ptr[i]);
+			min = MML_eval_expr(state, args->ptr[i]);
 		if (!VALTYPE_IS_ORDERED(min))
 			return VAL_INVAL;
-		TypedValue cur = eval_expr(state, args->ptr[i]);
-		TypedValue tmp = apply_binary_op(state, cur, min, OP_LESS_TOK);
+		MML_Value cur = MML_eval_expr(state, args->ptr[i]);
+		MML_Value tmp = MML_apply_binary_op(state, cur, min, MML_OP_LESS_TOK);
 		if (tmp.type == Boolean_type && tmp.v.b)
 			min = cur;
 	}
 
 	return min;
 }
-
-/* THIS IS NOT DONE */
-/* 
-TypedValue custom_range(struct evaluator_state *state, TypedValue v)
-{
-	if (!VAL_IS_NUM(v) || v.type == ComplexNumber_type)
-	{
-	}
-}
-
-TypedValue custom_sum(struct evaluator_state *state, TypedValue v)
-{
-	if (v.type != Vector_type)
-	{
-		fprintf(stderr, "the `sum` function takes a vector for its 3 arguments\n");
-		return VAL_INVAL;
-	}
-	const Expr *init = v.v.v.ptr[0];
-	const Expr *accum = v.v.v.ptr[2];
-}
-*/

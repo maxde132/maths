@@ -1,15 +1,15 @@
-#include "config.h"
+#include "mml/config.h"
 
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
 #include <inttypes.h>
 
-#include "token.h"
-#include "parser.h"
-#include "eval.h"
+#include "mml/parser.h"
+#include "mml/token.h"
+#include "mml/eval.h"
 
-struct config global_config = {
+struct MML_config MML_global_config = {
 	.PROG_NAME = NULL,
 	.precision = 6,
 	.runtime_flags = 0,
@@ -18,7 +18,7 @@ struct config global_config = {
 
 strbuf expression = { NULL, 0, false };
 
-void print_usage(void)
+void MML_print_usage(void)
 {
 	fprintf(stderr, "usage: %s [options] <EXPR>\n\n"
 
@@ -30,15 +30,16 @@ void print_usage(void)
 			  "  --no-eval                          Only parse the expression; don't evaluate it (default OFF)\n"
                     "  --bools-are-nums                   Write the number 1 or 0 to represent boolean values (default OFF)\n"
 			  "  --no-estimate-equality             Consider two reals equal only if they are exactly equal to the bit (default OFF)\n"
+			  "  -I, --interactive                  Start an interactive prompt (similar to the Python IDLE)\n"
 			  "  -h, --help                         Display this help message\n"
 			  "  -V, --version                      Display program information\n"
 			  "  -                                  Read expression string from stdin\n"
-			, global_config.PROG_NAME);
-	eval_cleanup(&global_config.eval_state);
+			, MML_global_config.PROG_NAME);
+	MML_cleanup_state(&MML_global_config.eval_state);
 	exit(1);
 }
 
-void print_info(void)
+static void MML_print_info(void)
 {
 	printf("Compiled on " __DATE__ " at " __TIME__ " with "
 #ifdef __GNUC__
@@ -53,9 +54,9 @@ void print_info(void)
 	exit(1);
 }
 
-void parse_args(int32_t argc, char **argv)
+void MML_arg_parse(int32_t argc, char **argv)
 {
-	global_config.PROG_NAME = argv[0];
+	MML_global_config.PROG_NAME = argv[0];
 	int32_t arg_n = 1;
 	for (; arg_n < argc; ++arg_n)
 	{
@@ -66,11 +67,11 @@ void parse_args(int32_t argc, char **argv)
 			else if (strcmp(argv[arg_n]+2, "print") == 0)
 				SET_FLAG(PRINT);
 			else if (strcmp(argv[arg_n]+2, "help") == 0)
-				print_usage();
+				MML_print_usage();
 			else if (strcmp(argv[arg_n]+2, "version") == 0)
-				print_info();
+				MML_print_info();
 			else if (strncmp(argv[arg_n]+2, "precision=", 10) == 0)
-				global_config.precision = strtoul(argv[arg_n]+2+10, NULL, 10);
+				MML_global_config.precision = strtoul(argv[arg_n]+2+10, NULL, 10);
 			else if (strncmp(argv[arg_n]+2, "expr=", 5) == 0)
 				expression.s = argv[arg_n]+2+5;
 			else if (strcmp(argv[arg_n]+2, "bools-are-nums") == 0)
@@ -79,6 +80,8 @@ void parse_args(int32_t argc, char **argv)
 				SET_FLAG(NO_ESTIMATE_EQUALITY);
 			else if (strcmp(argv[arg_n]+2, "no-eval") == 0)
 				SET_FLAG(NO_EVAL);
+			else if (strcmp(argv[arg_n]+2, "interactive") == 0)
+				SET_FLAG(RUN_PROMPT);
 			else if (strncmp(argv[arg_n]+2, "set_var:", 8) == 0)
 			{
 				const char *cur = argv[arg_n]+2+8;
@@ -86,17 +89,17 @@ void parse_args(int32_t argc, char **argv)
 				if (cur == NULL || *++cur == '\0')
 				{
 					fprintf(stderr, "argument error: expected expression following command-line variable definition\n");
-					eval_cleanup(&global_config.eval_state);
+					MML_cleanup_state(&MML_global_config.eval_state);
 					exit(1);
 				}
 				strbuf name = { argv[arg_n]+2+8, cur - (argv[arg_n]+2+8) - 1, false };
-				Expr *e = parse(cur);
-				eval_set_variable(&global_config.eval_state, name, e, true);
+				MML_Expr *e = MML_parse(cur);
+				MML_eval_set_variable(&MML_global_config.eval_state, name, e, true);
 				--e->num_refs;
 			} else
 			{
 				fprintf(stderr, "argument error: unknown option '%s'\n", argv[arg_n]);
-				print_usage();
+				MML_print_usage();
 			}
 		} else if (argv[arg_n][0] == '-')
 		{
@@ -105,10 +108,10 @@ void parse_args(int32_t argc, char **argv)
 			{
 				switch (*cur) {
 				case 'h':
-					print_usage();
+					MML_print_usage();
 					break;
 				case 'V':
-					print_info();
+					MML_print_info();
 					break;
 				case 'd':
 					SET_FLAG(DEBUG);
@@ -116,19 +119,22 @@ void parse_args(int32_t argc, char **argv)
 				case 'P':
 					SET_FLAG(PRINT);
 					break;
+				case 'I':
+					SET_FLAG(RUN_PROMPT);
+					break;
 				case 'E':
 					if (argv[arg_n+1] == NULL)
 					{
 						fprintf(stderr, "argument error: expression is required following "
 								"'-E' argument to specify an expression to evaluate.\n");
-						print_usage();
+						MML_print_usage();
 					}
 					expression.s = argv[++arg_n];
 					break;
 				case 'p':
 					if (cur[1] != '\0')
 					{
-						global_config.precision = strtoul(cur+1, &cur, 10);
+						MML_global_config.precision = strtoul(cur+1, &cur, 10);
 						--cur;
 						break;
 					}
@@ -136,7 +142,7 @@ void parse_args(int32_t argc, char **argv)
 					{
 						fprintf(stderr, "argument error: integer is required following "
 								"'-p' argument to specify precision.\n");
-						print_usage();
+						MML_print_usage();
 					}
 					char *conv_end = NULL;
 					uint32_t prec = strtoul(argv[++arg_n], &conv_end, 10);
@@ -144,13 +150,13 @@ void parse_args(int32_t argc, char **argv)
 					{
 						fprintf(stderr, "argument error: integer is required following "
 								"'-p' argument to specify precision.\n");
-						print_usage();
+						MML_print_usage();
 					}
-					global_config.precision = prec;
+					MML_global_config.precision = prec;
 					break;
 				default:
 					fprintf(stderr, "argument error: unknown option '-%c'\n", *cur);
-					print_usage();
+					MML_print_usage();
 				}
 			}
 			if (cur == argv[arg_n]+1)
@@ -165,7 +171,7 @@ void parse_args(int32_t argc, char **argv)
 		SET_FLAG(READ_STDIN);
 }
 
-strbuf read_string_from_stream(FILE *stream)
+strbuf MML_read_string_from_stream(FILE *stream)
 {
 	size_t buf_size = 2048;
 	strbuf ret_buf = { NULL, 0, true };

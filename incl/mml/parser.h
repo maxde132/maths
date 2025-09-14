@@ -1,0 +1,142 @@
+#ifndef PARSER_H
+#define PARSER_H
+
+#include "token.h"
+#include "expr.h"
+#include "eval.h"
+
+#ifndef MML_BARE_USE
+constexpr const uint8_t PRECEDENCE[] = {
+	1,
+	1,
+	1,
+
+	2,
+
+	3, 3, 3,
+	4, 4,
+
+	6, 6, 6, 6,
+	7, 7,
+
+	14,
+
+	2, 2, 2,
+};
+constexpr const MML_TokenType TOK_BY_CHAR[] = { // starts at 0x21
+	MML_OP_NOT_TOK,		//'!'
+	MML_DQUOTE_TOK,		//'"'
+	MML_HASHTAG_TOK,	//'#'
+	MML_DOLLAR_TOK,		//'$'
+	MML_OP_MOD_TOK,		//'%'
+	MML_AMPER_TOK,		//'&'
+	MML_SQUOTE_TOK,		//'\''
+	MML_OPEN_PAREN_TOK,	//'('
+	MML_CLOSE_PAREN_TOK,	//')'
+	MML_OP_MUL_TOK,		//'*'
+	MML_OP_ADD_TOK,		//'+'
+	MML_COMMA_TOK,		//','
+	MML_OP_SUB_TOK,		//'-'
+	MML_OP_DOT_TOK,		//'.'
+	MML_OP_DIV_TOK,		//'/'
+	MML_DIGIT_TOK,		//'0'
+	MML_DIGIT_TOK,		//'1'
+	MML_DIGIT_TOK,		//'2'
+	MML_DIGIT_TOK,		//'3'
+	MML_DIGIT_TOK,		//'4'
+	MML_DIGIT_TOK,		//'5'
+	MML_DIGIT_TOK,		//'6'
+	MML_DIGIT_TOK,		//'7'
+	MML_DIGIT_TOK,		//'8'
+	MML_DIGIT_TOK,		//'9'
+	MML_COLON_TOK,		//':'
+	MML_SEMICOLON_TOK,	//';'
+	MML_OP_LESS_TOK,	//'<'
+	MML_OP_EQ_TOK,		//'='
+	MML_OP_GREATER_TOK,	//'>'
+	MML_QUESTION_TOK,	//'?'
+	MML_OP_AT_TOK,		//'@'
+	MML_LETTER_TOK,		//'A'
+	MML_LETTER_TOK,		//'B'
+	MML_LETTER_TOK,		//'C'
+	MML_LETTER_TOK,		//'D'
+	MML_LETTER_TOK,		//'E'
+	MML_LETTER_TOK,		//'F'
+	MML_LETTER_TOK,		//'G'
+	MML_LETTER_TOK,		//'H'
+	MML_LETTER_TOK,		//'I'
+	MML_LETTER_TOK,		//'J'
+	MML_LETTER_TOK,		//'K'
+	MML_LETTER_TOK,		//'L'
+	MML_LETTER_TOK,		//'M'
+	MML_LETTER_TOK,		//'N'
+	MML_LETTER_TOK,		//'O'
+	MML_LETTER_TOK,		//'P'
+	MML_LETTER_TOK,		//'Q'
+	MML_LETTER_TOK,		//'R'
+	MML_LETTER_TOK,		//'S'
+	MML_LETTER_TOK,		//'T'
+	MML_LETTER_TOK,		//'U'
+	MML_LETTER_TOK,		//'V'
+	MML_LETTER_TOK,		//'W'
+	MML_LETTER_TOK,		//'X'
+	MML_LETTER_TOK,		//'Y'
+	MML_LETTER_TOK,		//'Z'
+	MML_OPEN_BRACKET_TOK,	//'['
+	MML_BACKSLASH_TOK,	//'\\'
+	MML_CLOSE_BRACKET_TOK,//']'
+	MML_OP_POW_TOK,		//'^'
+	MML_UNDERSCORE_TOK,	//'_'
+	MML_BACKTICK_TOK,	//'`'
+	MML_LETTER_TOK,		//'a'
+	MML_LETTER_TOK,		//'b'
+	MML_LETTER_TOK,		//'c'
+	MML_LETTER_TOK,		//'d'
+	MML_LETTER_TOK,		//'e'
+	MML_LETTER_TOK,		//'f'
+	MML_LETTER_TOK,		//'g'
+	MML_LETTER_TOK,		//'h'
+	MML_LETTER_TOK,		//'i'
+	MML_LETTER_TOK,		//'j'
+	MML_LETTER_TOK,		//'k'
+	MML_LETTER_TOK,		//'l'
+	MML_LETTER_TOK,		//'m'
+	MML_LETTER_TOK,		//'n'
+	MML_LETTER_TOK,		//'o'
+	MML_LETTER_TOK,		//'p'
+	MML_LETTER_TOK,		//'q'
+	MML_LETTER_TOK,		//'r'
+	MML_LETTER_TOK,		//'s'
+	MML_LETTER_TOK,		//'t'
+	MML_LETTER_TOK,		//'u'
+	MML_LETTER_TOK,		//'v'
+	MML_LETTER_TOK,		//'w'
+	MML_LETTER_TOK,		//'x'
+	MML_LETTER_TOK,		//'y'
+	MML_LETTER_TOK,		//'z'
+	MML_OPEN_BRAC_TOK,	//'{'
+	MML_PIPE_TOK,		//'|'
+	MML_CLOSE_BRAC_TOK,	//'}'
+	MML_TILDE_TOK,		//'~'
+};
+
+extern const char *const TOK_STRINGS[];
+extern const char *const EXPR_TYPE_STRINGS[];
+
+
+struct parser_state {
+	const char *saved_s;
+	MML_Token peeked_tok;
+	bool has_peeked;
+	bool looking_for_int;
+};
+#endif
+
+[[nodiscard("you really need to make sure you keep this `MML_Expr *`, "
+		"otherwise severe memory leaks will ensue...")]]
+MML_Expr *MML_parse(const char *s);
+
+MML_VecN MML_parse_stmts_to_ret(const char *s);
+void MML_parse_stmts(const char *s, struct MML_state *state);
+
+#endif /* PARSER_H */
