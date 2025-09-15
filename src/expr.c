@@ -14,7 +14,7 @@ void MML_print_indent(uint32_t indent)
 	printf("%*s", indent, "");
 }
 
-MML_Value MML_print_typedval(MML_state *, MML_Value *val)
+MML_Value MML_print_typedval(MML_state *, const MML_Value *val)
 {
 	if (val == nullptr)
 	{
@@ -22,6 +22,9 @@ MML_Value MML_print_typedval(MML_state *, MML_Value *val)
 		return VAL_INVAL;
 	}
 	switch (val->type) {
+	case Integer_type:
+		printf("%" PRIi64, val->v.i);
+		break;
 	case RealNumber_type:
 		printf("%.*f", MML_global_config.precision, val->v.n);
 		break;
@@ -38,7 +41,6 @@ MML_Value MML_print_typedval(MML_state *, MML_Value *val)
 			printf("%s", (val->v.b) ? "true" : "false");
 		break;
 	case Identifier_type:
-	case InsertedIdentifier_type:
 		printf("%.*s", (int)val->v.s.len, val->v.s.s);
 		break;
 	case Vector_type:
@@ -53,7 +55,7 @@ MML_Value MML_print_typedval(MML_state *, MML_Value *val)
 	return (MML_Value) { Invalid_type, .v.n = NAN };
 }
 
-inline MML_Value MML_println_typedval(MML_state *state, MML_Value *val)
+inline MML_Value MML_println_typedval(MML_state *state, const MML_Value *val)
 {
 	MML_Value ret = MML_print_typedval(state, val);
 	fputc('\n', stdout);
@@ -84,7 +86,7 @@ MML_Value MML_println_typedval_multiargs(MML_state *state, MML_VecN *args)
 	return (MML_Value) { Invalid_type, .v.n = NAN };
 }
 
-void MML_print_expr(MML_Expr *expr, uint32_t indent)
+void MML_print_expr(const MML_Expr *expr, uint32_t indent)
 {
 	MML_print_indent(indent);
 	if (expr == nullptr)
@@ -107,6 +109,9 @@ void MML_print_expr(MML_Expr *expr, uint32_t indent)
 			MML_print_expr(expr->u.o.right, indent+4);
 		}
 		break;
+	case Integer_type:
+		printf("Integer(%" PRIi64 ")", expr->u.v.i);
+		break;
 	case RealNumber_type:
 		printf("RealNumber(%.*f)", MML_global_config.precision, expr->u.v.n);
 		break;
@@ -124,9 +129,6 @@ void MML_print_expr(MML_Expr *expr, uint32_t indent)
 		break;
 	case Identifier_type:
 		printf("Identifier('%.*s')", (int)expr->u.v.s.len, expr->u.v.s.s);
-		break;
-	case InsertedIdentifier_type:
-		printf("InsertedIdentifier('%.*s')", (int)expr->u.v.s.len, expr->u.v.s.s);
 		break;
 	case Vector_type:
 		printf("Vector(n=%zu):\n", expr->u.v.v.n);
@@ -284,13 +286,13 @@ inline MML_Expr *MML_pop_from_vec(MML_VecN *vec)
 	return vec->ptr[--vec->n];
 }
 
-inline void MML_print_vec(MML_VecN *vec)
+inline void MML_print_vec(const MML_VecN *vec)
 {
-	MML_print_expr(&(MML_Expr) { Vector_type, 0, .u.v.v = *vec }, 0);
+	MML_print_expr(&(const MML_Expr) { Vector_type, 0, .u.v.v = *vec }, 0);
 }
-inline void MML_println_vec(MML_VecN *vec)
+inline void MML_println_vec(const MML_VecN *vec)
 {
-	MML_print_expr(&(MML_Expr) { Vector_type, 0, .u.v.v = *vec }, 0);
+	MML_print_expr(&(const MML_Expr) { Vector_type, 0, .u.v.v = *vec }, 0);
 	fputc('\n', stdout);
 }
 

@@ -67,11 +67,11 @@ const char *const TOK_STRINGS[] = {
 const char *const EXPR_TYPE_STRINGS[] = {
 	"invalid",
 	"operation",
+	"integer",
 	"real number",
 	"complex number",
 	"boolean",
 	"identifier",
-	"inserted identifier",
 	"vector",
 };
 
@@ -278,9 +278,7 @@ static MML_Expr *parse_expr(const char **s, uint32_t max_preced, struct parser_s
 			}
 		} else
 		{
-			left->type = (tok.type == MML_IDENT_TOK)
-				? Identifier_type
-				: InsertedIdentifier_type;
+			left->type = Identifier_type;
 			left->u.v.s = ident.buf;
 		}
 	} else if (tok.type == MML_OPEN_PAREN_TOK)

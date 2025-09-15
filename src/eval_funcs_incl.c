@@ -2,8 +2,10 @@
 #include <math.h>
 #include <stdio.h>
 
+#include "mml/config.h"
 #include "mml/eval.h"
 #include "mml/expr.h"
+#include "mml/parser.h"
 
 _Complex double custom_clog2(_Complex double a)
 {
@@ -74,4 +76,12 @@ MML_Value custom_min(MML_state *state, MML_VecN *args)
 	}
 
 	return min;
+}
+
+MML_Value custom_dbg_type(MML_state *state, MML_VecN *args)
+{
+	printf("%s", EXPR_TYPE_STRINGS[MML_eval_expr(state, args->ptr[0]).type]);
+	MML_global_config.last_print_was_newline = false;
+
+	return VAL_INVAL;
 }

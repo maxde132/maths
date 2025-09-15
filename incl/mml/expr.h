@@ -17,11 +17,11 @@ typedef struct MML_Operation {
 typedef enum MML_ExprType {
 	Invalid_type,
 	Operation_type,
+	Integer_type,
 	RealNumber_type,
 	ComplexNumber_type,
 	Boolean_type,
 	Identifier_type,
-	InsertedIdentifier_type,
 	Vector_type,
 } MML_ExprType;
 
@@ -37,6 +37,7 @@ typedef union MML_EvalValue {
 	bool b;
 	strbuf s;
 	MML_VecN v;
+	int64_t i;
 } MML_EvalValue;
 
 #define VALTYPE_IS_ORDERED(v) \
@@ -68,9 +69,10 @@ typedef struct MML_Expr {
 enum INVAL_TYPES {
 	MML_ERROR_INVAL,
 	MML_QUIT_INVAL,
+	MML_CLEAR_INVAL,
 };
 
-constexpr MML_Value VAL_INVAL = { Invalid_type, .v.n = MML_ERROR_INVAL };
+constexpr MML_Value VAL_INVAL = { Invalid_type, .v.i = MML_ERROR_INVAL };
 
 #define VAL_IS_NUM(v) (\
     (v).type == RealNumber_type \
@@ -79,8 +81,8 @@ constexpr MML_Value VAL_INVAL = { Invalid_type, .v.n = MML_ERROR_INVAL };
 
 typedef struct MML_state MML_state;
 void MML_print_indent(uint32_t indent);
-MML_Value MML_print_typedval(MML_state *, MML_Value *val);
-MML_Value MML_println_typedval(MML_state *state, MML_Value *val);
+MML_Value MML_print_typedval(MML_state *, const MML_Value *val);
+MML_Value MML_println_typedval(MML_state *state, const MML_Value *val);
 MML_Value MML_print_typedval_multiargs(MML_state *state, MML_VecN *args);
 MML_Value MML_println_typedval_multiargs(MML_state *state, MML_VecN *args);
 void MML_print_exprh(MML_Expr *expr);
@@ -109,8 +111,8 @@ MML_VecN MML_construct_vec(size_t n, ...);
 int32_t MML_push_to_vec(MML_VecN *vec, MML_Expr *val);
 MML_Expr **MML_peek_top_vec(MML_VecN *vec);
 MML_Expr *MML_pop_from_vec(MML_VecN *vec);
-void MML_print_vec(MML_VecN *vec);
-void MML_println_vec(MML_VecN *vec);
+void MML_print_vec(const MML_VecN *vec);
+void MML_println_vec(const MML_VecN *vec);
 
 void MML_free_pp(void *p);
 

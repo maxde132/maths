@@ -36,7 +36,7 @@ void MML_run_prompt(MML_state *state)
 	size_t expr_n_offset = 0;
 	printf("-- MML interactive prompt --\n");
 	printf("run `exit` to quit prompt.\n");
-	while (!(cur_val.type == Invalid_type && cur_val.v.n == MML_QUIT_INVAL))
+	while (!(cur_val.type == Invalid_type && cur_val.v.i == MML_QUIT_INVAL))
 	{
 		printf("==> ");
 		size_t n = fgetsn(line_in, LINE_MAX+1, stdin);
@@ -49,7 +49,6 @@ void MML_run_prompt(MML_state *state)
 
 		while (expr_n_offset < state->exprs.n)
 		{
-			//MML_print_exprh(state->exprs.ptr[expr_n_offset]);
 			MML_Expr *cur = state->exprs.ptr[expr_n_offset++];
 			if (cur != nullptr)
 				cur_val = MML_eval_expr(state, cur);
@@ -61,5 +60,15 @@ void MML_run_prompt(MML_state *state)
 
 		if (cur_val.type != Invalid_type)
 			MML_println_typedval(state, &cur_val);
+		else
+		{
+			switch (cur_val.v.i) {
+			case MML_CLEAR_INVAL:
+				printf("\033[2J\033[;;f");
+				break;
+			default:
+				break;
+			}
+		}
 	}
 }

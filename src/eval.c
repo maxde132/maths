@@ -41,6 +41,7 @@ MML_state *MML_init_state(void)
 	hashmap_set(eval_builtin_maps[1], hashmap_str_lit("print"),			(uintptr_t)MML_print_typedval_multiargs);
 	hashmap_set(eval_builtin_maps[1], hashmap_str_lit("println"),		(uintptr_t)MML_println_typedval_multiargs);
 	hashmap_set(eval_builtin_maps[1], hashmap_str_lit("dbg"),			(uintptr_t)MML_print_exprh_tv_func);
+	hashmap_set(eval_builtin_maps[1], hashmap_str_lit("dbg_type"),		(uintptr_t)custom_dbg_type);
 	hashmap_set(eval_builtin_maps[1], hashmap_str_lit("max"),			(uintptr_t)custom_max);
 	hashmap_set(eval_builtin_maps[1], hashmap_str_lit("min"),			(uintptr_t)custom_min);
 	/*hashmap_set(eval_builtin_maps[1], hashmap_str_lit("range"), 		(uintptr_t)custom_range);*/
@@ -103,7 +104,8 @@ MML_state *MML_init_state(void)
 	static constexpr MML_Value I_M		= VAL_CNUM(I);
 	static constexpr MML_Value NAN_M		= VAL_NUM(NAN);
 	static constexpr MML_Value INFINITY_M	= VAL_NUM(INFINITY);
-	static constexpr MML_Value EXIT_M		= { Invalid_type, .v.n = MML_QUIT_INVAL };
+	static constexpr MML_Value EXIT_CMD_M	= { Invalid_type, .v.i = MML_QUIT_INVAL };
+	static constexpr MML_Value CLEAR_CMD_M	= { Invalid_type, .v.i = MML_CLEAR_INVAL };
 
 	eval_builtin_maps[0] = hashmap_create();
 	hashmap_set(eval_builtin_maps[0], hashmap_str_lit("true"),	(uintptr_t)&TRUE_M);
@@ -115,7 +117,8 @@ MML_state *MML_init_state(void)
 	hashmap_set(eval_builtin_maps[0], hashmap_str_lit("i"),	(uintptr_t)&I_M);
 	hashmap_set(eval_builtin_maps[0], hashmap_str_lit("nan"),	(uintptr_t)&NAN_M);
 	hashmap_set(eval_builtin_maps[0], hashmap_str_lit("inf"),	(uintptr_t)&INFINITY_M);
-	hashmap_set(eval_builtin_maps[0], hashmap_str_lit("exit"),	(uintptr_t)&EXIT_M);
+	hashmap_set(eval_builtin_maps[0], hashmap_str_lit("exit"),	(uintptr_t)&EXIT_CMD_M);
+	hashmap_set(eval_builtin_maps[0], hashmap_str_lit("clear"),	(uintptr_t)&CLEAR_CMD_M);
 
 
 	eval_builtins_are_initialized = true;
