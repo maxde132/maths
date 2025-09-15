@@ -9,6 +9,12 @@
 #include "mml/eval.h"
 #include "mml/parser.h"
 
+
+/* this code kind of breaks when the user sends EOF (0x04 or ^D).
+ * it just prints the truncation message until you terminate the program,
+ * and then prints a lot of prompt arrows.
+ * gonna have to bug fix this huh
+ */
 size_t fgetsn(char *restrict out, size_t size, FILE *stream)
 {
 	if (out == NULL || size == 0) return 0;

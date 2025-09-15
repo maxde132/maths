@@ -12,13 +12,16 @@ extern strbuf expression;
 void sig_handler(int32_t signum)
 {
 	MML_cleanup_state(MML_global_config.eval_state);
-	fprintf(stderr, "terminated with signal %d\n", signum);
+	fprintf(stderr, "\n\nterminated with signal %d\n", signum);
 	exit(2);
 }
 
 int32_t main(int32_t argc, char **argv)
 {
 	signal(SIGINT, sig_handler);
+	signal(SIGTERM, sig_handler);
+	signal(SIGQUIT, sig_handler);
+
 	MML_global_config.eval_state = MML_init_state();
 	MML_arg_parse(argc, argv);
 
