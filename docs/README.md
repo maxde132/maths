@@ -70,6 +70,7 @@ In the leftmost section of a function's entry in this list, `...` represents the
 #### Built-in functions (see [Advanced Syntax](#advanced-syntax) for function call syntax):
 - `print{...}` = evaluates and prints the values of its arguments (which may be of any type), separated by spaces, with no newline following the final printed value.
 - `println{...}` = evaluates and prints the value of its arguments (which may be of any type), separated by newlines, with a newline following the final printed value.
+- `dbg{expr}` = prints the Abstract Syntax Tree (AST) construction of an expression `expr`. The expression is not evaluated.
 - `atan2{y, x}` = performs the `atan2` function on its 2 _real_ arguments `y` and `x` (see [the wiki page](https://en.wikipedia.org/wiki/Atan2)).
 - `sin{a}` = returns the trigonometric `sin` aka sine function of `a`.
 - `cos{a}` = returns the trigonometric `cos` aka cosine function of `a`.

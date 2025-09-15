@@ -150,6 +150,14 @@ inline void MML_print_exprh(MML_Expr *expr)
 	fputc('\n', stdout);
 	MML_global_config.last_print_was_newline = true;
 }
+inline MML_Value MML_print_exprh_tv_func(MML_state *, MML_VecN *args)
+{
+	MML_print_expr(args->ptr[0], 0);
+	fputc('\n', stdout);
+	MML_global_config.last_print_was_newline = true;
+
+	return VAL_INVAL;
+}
 
 void MML_free_expr(MML_Expr **e)
 {
@@ -259,7 +267,8 @@ int32_t MML_push_to_vec(MML_VecN *vec, MML_Expr *elem)
 		vec->ptr = tmp;
 	}
 	vec->ptr[vec->n++] = elem;
-	++elem->num_refs;
+	if (elem != nullptr)
+		++elem->num_refs;
 	return 0;
 }
 

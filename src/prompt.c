@@ -50,7 +50,9 @@ void MML_run_prompt(MML_state *state)
 		while (expr_n_offset < state->exprs.n)
 		{
 			//MML_print_exprh(state->exprs.ptr[expr_n_offset]);
-			cur_val = MML_eval_expr(state, state->exprs.ptr[expr_n_offset++]);
+			MML_Expr *cur = state->exprs.ptr[expr_n_offset++];
+			if (cur != nullptr)
+				cur_val = MML_eval_expr(state, cur);
 		}
 
 		if (!MML_global_config.last_print_was_newline)

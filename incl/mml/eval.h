@@ -10,6 +10,7 @@ typedef struct MML_state {
 	MML_VecN vars_storage;
 	MML_VecN exprs;
 	MML_VecN allocd_vecs;
+	MML_Value last_val;
 	bool is_init;
 } MML_state;
 

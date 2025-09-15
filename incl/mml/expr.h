@@ -15,6 +15,7 @@ typedef struct MML_Operation {
 } MML_Operation;
 
 typedef enum MML_ExprType {
+	Invalid_type,
 	Operation_type,
 	RealNumber_type,
 	ComplexNumber_type,
@@ -22,7 +23,6 @@ typedef enum MML_ExprType {
 	Identifier_type,
 	InsertedIdentifier_type,
 	Vector_type,
-	Invalid_type,
 } MML_ExprType;
 
 typedef struct MML_VecN {
@@ -84,6 +84,7 @@ MML_Value MML_println_typedval(MML_state *state, MML_Value *val);
 MML_Value MML_print_typedval_multiargs(MML_state *state, MML_VecN *args);
 MML_Value MML_println_typedval_multiargs(MML_state *state, MML_VecN *args);
 void MML_print_exprh(MML_Expr *expr);
+MML_Value MML_print_exprh_tv_func(MML_state *, MML_VecN *args);
 
 void MML_free_expr(MML_Expr **e);
 

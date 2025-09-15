@@ -65,6 +65,7 @@ const char *const TOK_STRINGS[] = {
 };
 
 const char *const EXPR_TYPE_STRINGS[] = {
+	"invalid",
 	"operation",
 	"real number",
 	"complex number",
@@ -72,7 +73,6 @@ const char *const EXPR_TYPE_STRINGS[] = {
 	"identifier",
 	"inserted identifier",
 	"vector",
-	"invalid",
 };
 
 
@@ -264,15 +264,17 @@ static MML_Expr *parse_expr(const char **s, uint32_t max_preced, struct parser_s
 				MML_Expr *next_expr = parse_expr(s, PARSER_MAX_PRECED, state);
 				MML_push_to_vec(&left->u.o.right->u.v.v,
 						next_expr);
-				--next_expr->num_refs;
+				if (next_expr != nullptr)
+					--next_expr->num_refs;
 			} while (get_next_token(s, state).type == MML_COMMA_TOK);
 
 			if (current_tok.type != MML_CLOSE_BRAC_TOK)
 			{
-				fprintf(stderr, "expected closing brace for function call, got %s\n",
-						TOK_STRINGS[next_tok.type]);
+				get_next_token(s, state);
+			/*	fprintf(stderr, "expected closing brace for function call, got %s\n",
+						TOK_STRINGS[current_tok.type]);
 				MML_free_expr(&left);
-				return nullptr;
+				return nullptr;*/
 			}
 		} else
 		{
@@ -303,7 +305,8 @@ static MML_Expr *parse_expr(const char **s, uint32_t max_preced, struct parser_s
 
 			MML_Expr *e = parse_expr(s, PARSER_MAX_PRECED, state);
 			MML_push_to_vec(&vec, e);
-			--e->num_refs;
+			if (e != nullptr)
+				--e->num_refs;
 
 			tok = get_next_token(s, state);
 			if (tok.type != MML_CLOSE_BRACKET_TOK
