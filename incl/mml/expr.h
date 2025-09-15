@@ -65,19 +65,24 @@ typedef struct MML_Expr {
 #define VAL_BOOL(bl) ((MML_Value) { Boolean_type, .v.b = (bl) })
 #define VAL2EXPRP(val) (&(MML_Expr) { .type = (val).type, .u.v = (val).v })
 
-#define VAL_INVAL ((MML_Value) { Invalid_type, .v.n = NAN })
+enum INVAL_TYPES {
+	MML_ERROR_INVAL,
+	MML_QUIT_INVAL,
+};
+
+constexpr MML_Value VAL_INVAL = { Invalid_type, .v.n = MML_ERROR_INVAL };
 
 #define VAL_IS_NUM(v) (\
     (v).type == RealNumber_type \
  || (v).type == ComplexNumber_type \
  || (v).type == Boolean_type)
 
-struct MML_state;
+typedef struct MML_state MML_state;
 void MML_print_indent(uint32_t indent);
-MML_Value MML_print_typedval(struct MML_state *, MML_Value *val);
-MML_Value MML_println_typedval(struct MML_state *state, MML_Value *val);
-MML_Value MML_print_typedval_multiargs(struct MML_state *state, MML_VecN *args);
-MML_Value MML_println_typedval_multiargs(struct MML_state *state, MML_VecN *args);
+MML_Value MML_print_typedval(MML_state *, MML_Value *val);
+MML_Value MML_println_typedval(MML_state *state, MML_Value *val);
+MML_Value MML_print_typedval_multiargs(MML_state *state, MML_VecN *args);
+MML_Value MML_println_typedval_multiargs(MML_state *state, MML_VecN *args);
 void MML_print_exprh(MML_Expr *expr);
 
 void MML_free_expr(MML_Expr **e);

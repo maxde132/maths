@@ -25,7 +25,8 @@ struct MML_config {
 	char *PROG_NAME;
 	uint32_t precision;
 	uint32_t runtime_flags;
-	struct MML_state eval_state;
+	MML_state *eval_state;
+	bool last_print_was_newline;
 };
 extern struct MML_config MML_global_config;
 

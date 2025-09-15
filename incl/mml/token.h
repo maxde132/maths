@@ -27,7 +27,6 @@ typedef enum {
 
 	// non-operator tokens
 	MML_IDENT_TOK,
-	MML_INSERTED_IDENT_TOK,
 	MML_NUMBER_TOK,
 
 	MML_DIGIT_TOK, // not really used

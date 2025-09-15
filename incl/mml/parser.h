@@ -137,6 +137,6 @@ struct parser_state {
 MML_Expr *MML_parse(const char *s);
 
 MML_VecN MML_parse_stmts_to_ret(const char *s);
-void MML_parse_stmts(const char *s, struct MML_state *state);
+void MML_parse_stmts(const char *s, MML_state *state);
 
 #endif /* PARSER_H */

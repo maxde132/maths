@@ -20,13 +20,13 @@ A minimal example:
 
 int32_t main(void)
 {
-	struct MML_state state = MML_init_state(NULL);
-	MML_parse_stmts("println{cos{1.5pi} == 0.0}", &state);
+	MML_state *state = MML_init_state(NULL);
+	MML_parse_stmts("println{cos{1.5pi} == 0.0}", state);
 
-	for (size_t i = 0; i < state.exprs.n; ++i)
-		MML_eval_expr(&state, state.exprs.ptr[i]);
+	for (size_t i = 0; i < state->exprs.n; ++i)
+		MML_eval_expr(state, state->exprs.ptr[i]);
 
-	MML_cleanup_state(&state);
+	MML_cleanup_state(state);
 }
 ```
 

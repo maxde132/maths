@@ -14,7 +14,7 @@ void MML_print_indent(uint32_t indent)
 	printf("%*s", indent, "");
 }
 
-MML_Value MML_print_typedval(struct MML_state *, MML_Value *val)
+MML_Value MML_print_typedval(MML_state *, MML_Value *val)
 {
 	if (val == nullptr)
 	{
@@ -49,16 +49,18 @@ MML_Value MML_print_typedval(struct MML_state *, MML_Value *val)
 		break;
 	}
 
-	return VAL_NUM(NAN);
+	MML_global_config.last_print_was_newline = false;
+	return (MML_Value) { Invalid_type, .v.n = NAN };
 }
 
-inline MML_Value MML_println_typedval(struct MML_state *state, MML_Value *val)
+inline MML_Value MML_println_typedval(MML_state *state, MML_Value *val)
 {
 	MML_Value ret = MML_print_typedval(state, val);
 	fputc('\n', stdout);
+	MML_global_config.last_print_was_newline = true;
 	return ret;
 }
-MML_Value MML_print_typedval_multiargs(struct MML_state *state, MML_VecN *args)
+MML_Value MML_print_typedval_multiargs(MML_state *state, MML_VecN *args)
 {
 	for (size_t i = 0; i < args->n; ++i)
 	{
@@ -67,9 +69,9 @@ MML_Value MML_print_typedval_multiargs(struct MML_state *state, MML_VecN *args)
 		if (i < args->n-1) fputc(' ', stdout);
 	}
 
-	return VAL_NUM(NAN);
+	return (MML_Value) { Invalid_type, .v.n = NAN };
 }
-MML_Value MML_println_typedval_multiargs(struct MML_state *state, MML_VecN *args)
+MML_Value MML_println_typedval_multiargs(MML_state *state, MML_VecN *args)
 {
 	for (size_t i = 0; i < args->n; ++i)
 	{
@@ -79,7 +81,7 @@ MML_Value MML_println_typedval_multiargs(struct MML_state *state, MML_VecN *args
 	if (args->n == 0)
 		fputc('\n', stdout);
 
-	return VAL_NUM(NAN);
+	return (MML_Value) { Invalid_type, .v.n = NAN };
 }
 
 void MML_print_expr(MML_Expr *expr, uint32_t indent)
@@ -138,12 +140,15 @@ void MML_print_expr(MML_Expr *expr, uint32_t indent)
 		printf("Invalid()");
 		break;
 	}
+
+	MML_global_config.last_print_was_newline = false;
 }
 
 inline void MML_print_exprh(MML_Expr *expr)
 {
 	MML_print_expr(expr, 0);
 	fputc('\n', stdout);
+	MML_global_config.last_print_was_newline = true;
 }
 
 void MML_free_expr(MML_Expr **e)

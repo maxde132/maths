@@ -30,15 +30,13 @@ static hashmap *eval_builtin_maps[] = {
 static bool eval_builtins_are_initialized = false;
 static size_t initialized_evaluators_count = 0;
 
-struct MML_state MML_init_state(struct MML_state *restrict state_out)
+MML_state *MML_init_state(void)
 {
-	/* todo: finish this! */
-	struct MML_state state = {0};
+	MML_state *state = calloc(1, sizeof(MML_state));
 
 	if (eval_builtins_are_initialized)
 		goto skip_builtins_init;
 
-	/* TODO UPDATE apply_funcs TO USE THESE MAPS */
 	eval_builtin_maps[1] = hashmap_create();
 	hashmap_set(eval_builtin_maps[1], hashmap_str_lit("print"),			(uintptr_t)MML_print_typedval_multiargs);
 	hashmap_set(eval_builtin_maps[1], hashmap_str_lit("println"),		(uintptr_t)MML_println_typedval_multiargs);
@@ -104,6 +102,7 @@ struct MML_state MML_init_state(struct MML_state *restrict state_out)
 	static constexpr MML_Value I_M		= VAL_CNUM(I);
 	static constexpr MML_Value NAN_M		= VAL_NUM(NAN);
 	static constexpr MML_Value INFINITY_M	= VAL_NUM(INFINITY);
+	static constexpr MML_Value EXIT_M		= { Invalid_type, .v.n = MML_QUIT_INVAL };
 
 	eval_builtin_maps[0] = hashmap_create();
 	hashmap_set(eval_builtin_maps[0], hashmap_str_lit("true"),	(uintptr_t)&TRUE_M);
@@ -115,40 +114,31 @@ struct MML_state MML_init_state(struct MML_state *restrict state_out)
 	hashmap_set(eval_builtin_maps[0], hashmap_str_lit("i"),	(uintptr_t)&I_M);
 	hashmap_set(eval_builtin_maps[0], hashmap_str_lit("nan"),	(uintptr_t)&NAN_M);
 	hashmap_set(eval_builtin_maps[0], hashmap_str_lit("inf"),	(uintptr_t)&INFINITY_M);
+	hashmap_set(eval_builtin_maps[0], hashmap_str_lit("exit"),	(uintptr_t)&EXIT_M);
 
 
 	eval_builtins_are_initialized = true;
 
 skip_builtins_init:
 
-	state.variables = nullptr;
-	state.inserted_vars = nullptr;
-	state.vars_storage = MML_new_vec(1);
-	state.exprs = MML_new_vec(1);
-	state.allocd_vecs = MML_new_vec(1);
+	state->variables = nullptr;
+	state->vars_storage = MML_new_vec(1);
+	state->exprs = MML_new_vec(1);
+	state->allocd_vecs = MML_new_vec(1);
 
 
-	state.is_init = true;
+	state->is_init = true;
 	++initialized_evaluators_count;
-
-	if (state_out != nullptr)
-		*state_out = state;
 
 	return state;
 }
 
-void MML_cleanup_state(struct MML_state *restrict state)
+void MML_cleanup_state(MML_state *restrict state)
 {
 	if (state->variables != nullptr)
 	{
 		hashmap_free(state->variables);
 		state->variables = nullptr;
-	}
-
-	if (state->inserted_vars != nullptr)
-	{
-		hashmap_free(state->inserted_vars);
-		state->inserted_vars = nullptr;
 	}
 
 	MML_free_vec(&state->vars_storage);
@@ -169,25 +159,18 @@ void MML_cleanup_state(struct MML_state *restrict state)
 			eval_builtin_maps[i] = nullptr;
 		}
 	}
+
+	free(state);
 }
 
-int32_t MML_eval_set_variable(struct MML_state *restrict state,
-		strbuf name, MML_Expr *expr, bool is_inserted)
+int32_t MML_eval_set_variable(MML_state *restrict state,
+		strbuf name, MML_Expr *expr)
 {
 	MML_push_to_vec(&state->vars_storage, expr);
-	if (is_inserted)
-	{
-		if (state->inserted_vars == nullptr)
-			state->inserted_vars = hashmap_create();
-		return hashmap_set(state->inserted_vars,
-				name.s, name.len, (uintptr_t)state->vars_storage.n-1);
-	} else
-	{
-		if (state->variables == nullptr)
-			state->variables = hashmap_create();
-		return hashmap_set(state->variables,
-				name.s, name.len, (uintptr_t)state->vars_storage.n-1);
-	}
+	if (state->variables == nullptr)
+		state->variables = hashmap_create();
+	return hashmap_set(state->variables,
+			name.s, name.len, (uintptr_t)state->vars_storage.n-1);
 }
 
 #define EPSILON 1e-15
@@ -200,7 +183,7 @@ static inline bool reals_are_equal_func(double a, double b)
 }
 static bool reals_are_equal_func(double, double);
 
-static MML_Value apply_func(struct MML_state *state,
+static MML_Value apply_func(MML_state *state,
 		strbuf ident, MML_Value right_vec)
 {
 	MML_val_func vec_args_func;
@@ -244,8 +227,11 @@ static MML_Value apply_func(struct MML_state *state,
 	return VAL_INVAL;
 }
 
-MML_Value MML_apply_binary_op(struct MML_state *restrict state, MML_Value a, MML_Value b, MML_TokenType op)
+MML_Value MML_apply_binary_op(MML_state *restrict state, MML_Value a, MML_Value b, MML_TokenType op)
 {
+	if (a.type == Invalid_type)
+		return VAL_INVAL;
+
 	if (VAL_IS_NUM(a) && b.type == Invalid_type)
 	{
 		switch (op) {
@@ -286,9 +272,9 @@ MML_Value MML_apply_binary_op(struct MML_state *restrict state, MML_Value a, MML
 			return (MML_Value) { Vector_type, .v = ret->u.v };
 		case MML_OP_UNARY_NOTHING: return a;
 		default:
-			fprintf(stderr, "invalid unary operator on %s operand: %s\n",
-					(a.type == ComplexNumber_type) ? "complex" : "real",
-					TOK_STRINGS[op]);
+			//fprintf(stderr, "invalid unary operator on %s operand: %s\n",
+			//		(a.type == ComplexNumber_type) ? "complex" : "real",
+			//		TOK_STRINGS[op]);
 			return VAL_INVAL;
 		}
 	} else if (VAL_IS_NUM(a) && VAL_IS_NUM(b)
@@ -423,7 +409,7 @@ MML_Value MML_apply_binary_op(struct MML_state *restrict state, MML_Value a, MML
 	return VAL_INVAL;
 }
 
-MML_Value MML_eval_expr(struct MML_state *state, const MML_Expr *expr)
+MML_Value MML_eval_expr(MML_state *state, const MML_Expr *expr)
 {
 	if (!state->is_init)
 	{
@@ -432,6 +418,8 @@ MML_Value MML_eval_expr(struct MML_state *state, const MML_Expr *expr)
 	}
 
 	if (expr == nullptr)
+		return VAL_INVAL;
+	else if (expr->type == Invalid_type)
 		return VAL_INVAL;
 	else if (expr->type == Vector_type)
 		return (MML_Value) { Vector_type, .v.v = expr->u.v.v };
@@ -451,17 +439,7 @@ MML_Value MML_eval_expr(struct MML_state *state, const MML_Expr *expr)
 				&& hashmap_get(state->variables, expr->u.v.s.s, expr->u.v.s.len, (uintptr_t *)&out))
 			return MML_eval_expr(state, state->vars_storage.ptr[out]);
 
-		fprintf(stderr, "warning: undefined identifier in user-defined variable namespace: '%.*s'\n",
-				(int)expr->u.v.s.len, expr->u.v.s.s);
-		return VAL_INVAL;
-	} else if (expr->type == InsertedIdentifier_type)
-	{
-		size_t out;
-		if (state->inserted_vars != nullptr
-				&& hashmap_get(state->inserted_vars, expr->u.v.s.s, expr->u.v.s.len, (uintptr_t *)&out))
-			return MML_eval_expr(state, state->vars_storage.ptr[out]);
-
-		fprintf(stderr, "warning: undefined identifier in inserted variable namespace: '$%.*s'\n",
+		fprintf(stderr, "warning: undefined identifier: '%.*s'\n",
 				(int)expr->u.v.s.len, expr->u.v.s.s);
 		return VAL_INVAL;
 	}
@@ -469,12 +447,9 @@ MML_Value MML_eval_expr(struct MML_state *state, const MML_Expr *expr)
 	const MML_Expr *left = expr->u.o.left;
 	const MML_Expr *right = expr->u.o.right;
 
-	if (expr->u.o.op == MML_OP_ASSERT_EQUAL
-			&& (left->type == Identifier_type || left->type == InsertedIdentifier_type))
+	if (expr->u.o.op == MML_OP_ASSERT_EQUAL && left->type == Identifier_type)
 	{
-		MML_eval_set_variable(state, left->u.v.s,
-				(MML_Expr *)right,
-				left->type == InsertedIdentifier_type);
+		MML_eval_set_variable(state, left->u.v.s, (MML_Expr *)right);
 		return MML_eval_expr(state, right);
 	} else if (expr->u.o.op == MML_OP_FUNC_CALL_TOK)
 	{
@@ -483,6 +458,8 @@ MML_Value MML_eval_expr(struct MML_state *state, const MML_Expr *expr)
 		 || left->type != Identifier_type)
 			return VAL_INVAL;
 		MML_Value right_val_vec = MML_eval_expr(state, right);
+		if (right_val_vec.type == Invalid_type)
+			return VAL_INVAL;
 		return apply_func(state, left->u.v.s, right_val_vec);
 	}
 
@@ -492,12 +469,12 @@ MML_Value MML_eval_expr(struct MML_state *state, const MML_Expr *expr)
 			expr->u.o.op);
 }
 
-inline int32_t MML_eval_push_expr(struct MML_state *state, MML_Expr *expr)
+inline int32_t MML_eval_push_expr(MML_state *state, MML_Expr *expr)
 {
 	--expr->num_refs;
 	return MML_push_to_vec(&state->exprs, expr);
 }
-inline MML_Value MML_eval_top_expr(struct MML_state *state)
+inline MML_Value MML_eval_top_expr(MML_state *state)
 {
 	return MML_eval_expr(state, *(const MML_Expr **)MML_peek_top_vec(&state->exprs));
 }

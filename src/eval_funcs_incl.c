@@ -20,7 +20,7 @@ _Complex double custom_sqrt(double a)
 	return csqrt(a + 0.0*I);
 }
 
-MML_Value custom_atan2(struct MML_state *state, MML_VecN *args)
+MML_Value custom_atan2(MML_state *state, MML_VecN *args)
 {
 	if (args->n != 2)
 	{
@@ -38,7 +38,7 @@ MML_Value custom_atan2(struct MML_state *state, MML_VecN *args)
 	return VAL_NUM(atan2(y.v.n, x.v.n));
 }
 
-MML_Value custom_max(struct MML_state *state, MML_VecN *args)
+MML_Value custom_max(MML_state *state, MML_VecN *args)
 {
 	MML_Value max = VAL_INVAL;
 
@@ -57,7 +57,7 @@ MML_Value custom_max(struct MML_state *state, MML_VecN *args)
 	return max;
 }
 
-MML_Value custom_min(struct MML_state *state, MML_VecN *args)
+MML_Value custom_min(MML_state *state, MML_VecN *args)
 {
 	MML_Value min = VAL_INVAL;
 

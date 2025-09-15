@@ -29,7 +29,6 @@ const char *const TOK_STRINGS[] = {
 
 
 	"IDENT_TOK",
-	"INSERTED_IDENT_TOK",
 	"NUMBER_TOK",
 
 	"DIGIT_TOK",
@@ -168,9 +167,6 @@ static MML_Token get_next_token(const char **s, struct parser_state *state)
 		*s = end;
 		ret.type = MML_NUMBER_TOK;
 		break;
-	case MML_DOLLAR_TOK:
-		++*s;
-		[[fallthrough]];
 	case MML_LETTER_TOK:
 	case MML_UNDERSCORE_TOK:
 		ret.buf.s = (char *)*s;
@@ -178,7 +174,7 @@ static MML_Token get_next_token(const char **s, struct parser_state *state)
 			++*s;
 		} while (isalnum(**s) || **s == '_');
 		ret.buf.len = *s - ret.buf.s;
-		ret.type = (type == MML_DOLLAR_TOK) ? MML_INSERTED_IDENT_TOK : MML_IDENT_TOK;
+		ret.type = MML_IDENT_TOK;
 		ret.buf.allocd = false;
 		break;
 	default:
@@ -238,7 +234,7 @@ static MML_Expr *parse_expr(const char **s, uint32_t max_preced, struct parser_s
 		left->u.o.left = operand;
 		left->u.o.right = NULL;
 		left->u.o.op = new_token_type;
-	} else if (tok.type == MML_IDENT_TOK || tok.type == MML_INSERTED_IDENT_TOK)
+	} else if (tok.type == MML_IDENT_TOK)
 	{
 		MML_Token ident = tok;
 		MML_Token next_tok = peek_token(s, state);
@@ -263,7 +259,7 @@ static MML_Expr *parse_expr(const char **s, uint32_t max_preced, struct parser_s
 			left->u.o.right->u.v.v = MML_new_vec(1);
 			do
 			{
-				if (peek_token(s, state).type == MML_CLOSE_BRAC_TOK)
+				if (**s == '\0' || peek_token(s, state).type == MML_CLOSE_BRAC_TOK)
 					break;
 				MML_Expr *next_expr = parse_expr(s, PARSER_MAX_PRECED, state);
 				MML_push_to_vec(&left->u.o.right->u.v.v,
@@ -374,8 +370,7 @@ static MML_Expr *parse_expr(const char **s, uint32_t max_preced, struct parser_s
 			return nullptr;
 		}
 		bool do_advance = true;
-		if (op_tok.type == MML_INSERTED_IDENT_TOK
-		 || op_tok.type == MML_IDENT_TOK || op_tok.type == MML_NUMBER_TOK)
+		if (op_tok.type == MML_IDENT_TOK || op_tok.type == MML_NUMBER_TOK)
 		{
 			op_tok.type = MML_OP_MUL_TOK;
 			do_advance = false;
@@ -435,7 +430,7 @@ MML_VecN MML_parse_stmts_to_ret(const char *s)
 	return ret;
 }
 
-void MML_parse_stmts(const char *s, struct MML_state *state)
+void MML_parse_stmts(const char *s, MML_state *state)
 {
 	struct parser_state parser_state = {0};
 	do

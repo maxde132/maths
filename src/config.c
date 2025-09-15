@@ -13,7 +13,8 @@ struct MML_config MML_global_config = {
 	.PROG_NAME = NULL,
 	.precision = 6,
 	.runtime_flags = 0,
-	.eval_state = {0},
+	.eval_state = nullptr,
+	.last_print_was_newline = true,
 };
 
 strbuf expression = { NULL, 0, false };
@@ -35,7 +36,7 @@ void MML_print_usage(void)
 			  "  -V, --version                      Display program information\n"
 			  "  -                                  Read expression string from stdin\n"
 			, MML_global_config.PROG_NAME);
-	MML_cleanup_state(&MML_global_config.eval_state);
+	MML_cleanup_state(MML_global_config.eval_state);
 	exit(1);
 }
 
@@ -89,12 +90,12 @@ void MML_arg_parse(int32_t argc, char **argv)
 				if (cur == NULL || *++cur == '\0')
 				{
 					fprintf(stderr, "argument error: expected expression following command-line variable definition\n");
-					MML_cleanup_state(&MML_global_config.eval_state);
+					MML_cleanup_state(MML_global_config.eval_state);
 					exit(1);
 				}
 				strbuf name = { argv[arg_n]+2+8, cur - (argv[arg_n]+2+8) - 1, false };
 				MML_Expr *e = MML_parse(cur);
-				MML_eval_set_variable(&MML_global_config.eval_state, name, e, true);
+				MML_eval_set_variable(MML_global_config.eval_state, name, e);
 				--e->num_refs;
 			} else
 			{
@@ -167,8 +168,8 @@ void MML_arg_parse(int32_t argc, char **argv)
 		}
 	}
 
-	if (expression.s == NULL)
-		SET_FLAG(READ_STDIN);
+	if (expression.s == NULL && !FLAG_IS_SET(READ_STDIN))
+		SET_FLAG(RUN_PROMPT);
 }
 
 strbuf MML_read_string_from_stream(FILE *stream)
