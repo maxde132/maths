@@ -1,12 +1,15 @@
 #include "mml/prompt.h"
 
+#define _POSIX_C_SOURCE 200809L
+#define __USE_XOPEN2K8
+
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <termios.h>
 #include <unistd.h>
 #include <stddef.h>
 #include <stdint.h>
-#include <stdio.h>
 
 #include "mml/config.h"
 #include "mml/expr.h"
@@ -149,7 +152,7 @@ void MML_run_prompt(MML_state *state)
 					"characters was truncated\n", LINE_MAX);
 		line_in[n-2] = '\0';*/
 
-		memset(line_in, '\0', (n_read>0) ? n_read : LINE_MAX_LEN);
+		memset(line_in, '\0', (n_read>0) ? (size_t)n_read : LINE_MAX_LEN);
 		n_read = get_prompt_line(line_in, LINE_MAX_LEN);
 		puts("");
 		if (n_read == -1)

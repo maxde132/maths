@@ -35,7 +35,7 @@ void MML_term_set_raw_mode(void)
 
 	raw_mode_is_set = true;
 	
-	dprintf(STDOUT_FILENO, "\x1b[5 q");
+	write(STDOUT_FILENO, "\x1b[5 q", 5);
 }
 void MML_term_restore(void)
 {
@@ -45,7 +45,7 @@ void MML_term_restore(void)
 	tcsetattr(STDIN_FILENO, TCSANOW, &old_term);
 	raw_mode_is_set = false;
 
-	dprintf(STDOUT_FILENO, "\x1b[0 q");
+	write(STDOUT_FILENO, "\x1b[0 q", 5);
 }
 
 void MML_print_usage(void)
