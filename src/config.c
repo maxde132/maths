@@ -1,5 +1,7 @@
 #include "mml/config.h"
 
+#include <termios.h>
+#include <unistd.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -18,6 +20,33 @@ struct MML_config MML_global_config = {
 };
 
 strbuf expression = { NULL, 0, false };
+
+static struct termios old_term;
+static bool raw_mode_is_set = false;
+void MML_term_set_raw_mode(void)
+{
+	struct termios new_term;
+	tcgetattr(STDIN_FILENO, &old_term);
+	new_term = old_term;
+	new_term.c_lflag &= ~(ICANON | ECHO);
+	new_term.c_cc[VMIN] = 0;
+	new_term.c_cc[VTIME] = 0;
+	tcsetattr(STDIN_FILENO, TCSANOW, &new_term);
+
+	raw_mode_is_set = true;
+	
+	dprintf(STDOUT_FILENO, "\x1b[5 q");
+}
+void MML_term_restore(void)
+{
+	if (!raw_mode_is_set)
+		return;
+
+	tcsetattr(STDIN_FILENO, TCSANOW, &old_term);
+	raw_mode_is_set = false;
+
+	dprintf(STDOUT_FILENO, "\x1b[0 q");
+}
 
 void MML_print_usage(void)
 {
