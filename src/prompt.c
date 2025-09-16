@@ -1,8 +1,5 @@
 #include "mml/prompt.h"
 
-#define _POSIX_C_SOURCE 200809L
-#define __USE_XOPEN2K8
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -117,10 +114,11 @@ ssize_t get_prompt_line(char *out, size_t len)
 
 		if (needs_update)
 		{
-			dprintf(STDOUT_FILENO, "\r\x1b[4C\x1b[K%s\x1b[%dG%s",
+			fprintf(stdout, "\r\x1b[4C\x1b[K%s\x1b[%dG%s",
 					out, (int)(5+(cursor-out)), (is_block_cursor)
 						? "\x1b[1 q"
 						: "\x1b[5 q");
+			fflush(stdout);
 			needs_update = false;
 		}
 	}
@@ -145,12 +143,8 @@ void MML_run_prompt(MML_state *state)
 	ssize_t n_read = 0;
 	while (!(cur_val.type == Invalid_type && cur_val.v.i == MML_QUIT_INVAL))
 	{
-		dprintf(STDOUT_FILENO, "==> ");
-		/*size_t n = fgetsn(line_in, LINE_MAX+1, stdin);
-		if (line_in[n-2] != '\n')
-			fprintf(stderr, "warning: input longer than %zu "
-					"characters was truncated\n", LINE_MAX);
-		line_in[n-2] = '\0';*/
+		printf("==> ");
+		fflush(stdout);
 
 		memset(line_in, '\0', (n_read>0) ? (size_t)n_read : LINE_MAX_LEN);
 		n_read = get_prompt_line(line_in, LINE_MAX_LEN);
@@ -179,12 +173,15 @@ void MML_run_prompt(MML_state *state)
 		{
 			switch (cur_val.v.i) {
 			case MML_CLEAR_INVAL:
-				dprintf(STDOUT_FILENO, "\033[2J\033[;;f");
+				printf("\033[2J\033[;;f");
 				break;
 			default:
 				break;
 			}
 		}
+
+		fflush(stdout);
+		fflush(stderr);
 	}
 
 	/*for (size_t i = 0; i < hist_in_use; ++i)

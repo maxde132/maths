@@ -5,5 +5,4 @@
 - [x] fix memory leaks caused by adding variable assignment (memory leaks for literally everything?), then rebase dev back into main <br />
 - [x] fix segfault when using `--set_var:` to insert a variable when the variable value string is empty (e.g. `--set_var:A=`) <br />
 - [x] syntax guide and other documentation <br />
-- [ ] other Boolean operators (&& and ||, mainly)
 - [ ] interactive prompt (like python's IDLE) (getting there) <br />

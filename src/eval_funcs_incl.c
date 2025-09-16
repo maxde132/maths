@@ -1,6 +1,7 @@
 #include <complex.h>
 #include <math.h>
 #include <stdio.h>
+#include <string.h>
 
 #include "mml/config.h"
 #include "mml/eval.h"
@@ -82,6 +83,38 @@ MML_Value custom_dbg_type(MML_state *state, MML_VecN *args)
 {
 	printf("%s", EXPR_TYPE_STRINGS[MML_eval_expr(state, args->ptr[0]).type]);
 	MML_global_config.last_print_was_newline = false;
+
+	return VAL_INVAL;
+}
+
+MML_Value custom_config_set(MML_state *state, MML_VecN *args)
+{
+	if (args->n != 2
+	 || args->ptr[0]->type != Identifier_type)
+	{
+		fprintf(stderr, "`config_set` takes two arguments; "
+				"an identifier and some other value\n");
+		return VAL_INVAL;
+	}
+
+	const strbuf config_ident = args->ptr[0]->u.v.s;
+
+	if (strncmp(config_ident.s, "precision", sizeof("precision")-1) == 0)
+	{
+		MML_Value val = MML_eval_expr(state, args->ptr[1]);
+		if (val.type != RealNumber_type)
+		{
+			fprintf(stderr, "`config_set`: the `precision` config setting "
+					"must be of type RealNumber\n");
+			return VAL_INVAL;
+		}
+		MML_global_config.precision = (uint32_t)floor(val.v.n);
+	} else
+	{
+		fprintf(stderr, "`config_set`: unknown config setting `%.*s`\n",
+				(int)config_ident.len, config_ident.s);
+		return VAL_INVAL;
+	}
 
 	return VAL_INVAL;
 }

@@ -98,5 +98,6 @@ In the leftmost section of a function's entry in this list, `...` represents the
 - `imag{z}` = returns the imaginary component (as a real) of the complex argument `z`.
 
 #### Additional functions that may or may not be provided
+- `config_set{ident, val}` = sets the value of the configuration option specified by `ident` to `val`. Valid types for `val` depend on the config option specified by `ident`. 
 - `max{...}` = returns the greatest of its arguments, where each of its arguments must be a real number or a Boolean value (the `max` function makes little sense on unordered values such as complex numbers).
 - `min{...}` = returns the least of its arguments, where each of its arguments must be a real number or a Boolean value (the `min` function makes little sense on unordered values such as complex numbers).
