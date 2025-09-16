@@ -193,6 +193,36 @@ void MML_free_expr(MML_Expr **e)
 	*e = nullptr;
 }
 
+void MML_free_expr_not_parent(MML_Expr **e)
+{
+	if (*e == nullptr) return;
+
+	if (--(*e)->num_refs > 0)
+		return;
+	if ((*e)->type == Operation_type)
+	{
+		MML_free_expr(&(*e)->u.o.left);
+		MML_free_expr(&(*e)->u.o.right);
+	} else if ((*e)->type == Identifier_type)
+	{
+		if ((*e)->u.v.s.allocd)
+			free((*e)->u.v.s.s);
+	} else if ((*e)->type == Vector_type)
+	{
+		if (!(*e)->should_free_vec_block)
+			MML_free_vec(&(*e)->u.v.v);
+		else
+		{
+			free((*e)->u.v.v.ptr[0]);
+			free((*e)->u.v.v.ptr);
+			(*e)->u.v.v.ptr = nullptr;
+		}
+	}
+
+	free(*e);
+	*e = nullptr;
+}
+
 #ifndef NDEBUG
 VecN MML_new_vec_debug(size_t n, struct call_info call)
 #else

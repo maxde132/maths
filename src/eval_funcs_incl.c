@@ -87,6 +87,13 @@ MML_Value custom_dbg_type(MML_state *state, MML_VecN *args)
 	return VAL_INVAL;
 }
 
+MML_Value custom_dbg_ident(MML_state *state, MML_VecN *args)
+{
+	MML_print_exprh(MML_eval_get_variable(state, args->ptr[0]->u.v.s));
+
+	return VAL_INVAL;
+}
+
 MML_Value custom_config_set(MML_state *state, MML_VecN *args)
 {
 	if (args->n != 2

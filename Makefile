@@ -5,7 +5,7 @@ CC := gcc
 
 EXEC := mml
 
-CFLAGS := -Wall -Wextra -std=c23 -Iincl -I. -DNDEBUG -fprofile-instr-generate -fcoverage-mapping -g
+CFLAGS := -Wall -Wextra -std=c23 -Iincl -I. -DNDEBUG -O3
 LDFLAGS := $(CFLAGS) -lm
 
 .PHONY: clean build_all

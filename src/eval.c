@@ -42,6 +42,7 @@ MML_state *MML_init_state(void)
 	hashmap_set(eval_builtin_maps[1], hashmap_str_lit("println"),		(uintptr_t)MML_println_typedval_multiargs);
 	hashmap_set(eval_builtin_maps[1], hashmap_str_lit("dbg"),			(uintptr_t)MML_print_exprh_tv_func);
 	hashmap_set(eval_builtin_maps[1], hashmap_str_lit("dbg_type"),		(uintptr_t)custom_dbg_type);
+	hashmap_set(eval_builtin_maps[1], hashmap_str_lit("dbg_ident"),		(uintptr_t)custom_dbg_ident);
 	hashmap_set(eval_builtin_maps[1], hashmap_str_lit("config_set"),		(uintptr_t)custom_config_set);
 	hashmap_set(eval_builtin_maps[1], hashmap_str_lit("max"),			(uintptr_t)custom_max);
 	hashmap_set(eval_builtin_maps[1], hashmap_str_lit("min"),			(uintptr_t)custom_min);
@@ -176,6 +177,16 @@ int32_t MML_eval_set_variable(MML_state *restrict state,
 		state->variables = hashmap_create();
 	return hashmap_set(state->variables,
 			name.s, name.len, (uintptr_t)state->vars_storage.n-1);
+}
+MML_Expr *MML_eval_get_variable(MML_state *restrict state,
+		strbuf name)
+{
+	size_t out;
+	if (state->variables != nullptr && 
+			hashmap_get(state->variables, name.s, name.len, (uintptr_t *)&out))
+		return state->vars_storage.ptr[out];
+
+	return NULL;
 }
 
 #define EPSILON 1e-15
@@ -424,31 +435,34 @@ MML_Value MML_eval_expr_recurse(MML_state *state, const MML_Expr *expr)
 
 	if (expr == nullptr)
 		return VAL_INVAL;
-	else if (expr->type == Invalid_type)
+	switch (expr->type) {
+	case Invalid_type:
 		return VAL_INVAL;
-	else if (expr->type == Vector_type)
+	case Vector_type:
 		return (MML_Value) { Vector_type, .v.v = expr->u.v.v };
-	else if (expr->type == RealNumber_type)
+	case RealNumber_type:
 		return VAL_NUM(expr->u.v.n);
-	else if (expr->type == ComplexNumber_type)
+	case ComplexNumber_type:
 		return VAL_CNUM(expr->u.v.cn);
-	else if (expr->type == Boolean_type)
+	case Boolean_type:
 		return VAL_BOOL(expr->u.v.b);
-	else if (expr->type == Identifier_type)
-	{
+	case Identifier_type: {
 		MML_Value *val;
-		size_t out;
 		if (strncmp(expr->u.v.s.s, "ans", expr->u.v.s.len) == 0)
 			return state->last_val;
 		if (hashmap_get(eval_builtin_maps[0], expr->u.v.s.s, expr->u.v.s.len, (uintptr_t *)&val))
 			return *val;
-		else if (state->variables != nullptr
-				&& hashmap_get(state->variables, expr->u.v.s.s, expr->u.v.s.len, (uintptr_t *)&out))
-			return MML_eval_expr_recurse(state, state->vars_storage.ptr[out]);
+		
+		MML_Expr *e = MML_eval_get_variable(state, expr->u.v.s);
+		if (e != NULL)
+			return MML_eval_expr_recurse(state, e);
 
 		fprintf(stderr, "warning: undefined identifier: '%.*s'\n",
 				(int)expr->u.v.s.len, expr->u.v.s.s);
 		return VAL_INVAL;
+	}
+	default:
+		break;
 	}
 
 	const MML_Expr *left = expr->u.o.left;

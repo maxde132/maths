@@ -59,6 +59,7 @@ typedef enum {
 	MML_TILDE_TOK,
 
 	MML_INVALID_TOK,
+	MML_WHITESPACE_TOK,
 	MML_EOF_TOK,
 } MML_TokenType;
 

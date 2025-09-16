@@ -61,6 +61,7 @@ const char *const TOK_STRINGS[] = {
 	"TILDE_TOK",
 
 	"INVALID_TOK",
+	"WHITESPACE_TOK",
 	"EOF_TOK",
 };
 
@@ -76,8 +77,6 @@ const char *const EXPR_TYPE_STRINGS[] = {
 };
 
 
-static MML_Token current_tok = nToken(MML_INVALID_TOK, NULL, 0);
-
 // Gets the next token and advances the string pointer.
 static MML_Token get_next_token(const char **s, struct parser_state *state)
 {
@@ -89,12 +88,14 @@ static MML_Token get_next_token(const char **s, struct parser_state *state)
 		return state->peeked_tok;
 	}
 
-	while (isspace(**s)) ++*s;
+	const char *cached_s = *s;
+	while (isspace(*cached_s)) ++cached_s;
 
-	if (**s == '\0') return nToken(MML_EOF_TOK, NULL, 0);
-
-	MML_TokenType type = TOK_BY_CHAR[**s - 0x21];
+	MML_TokenType type = TOK_BY_CHAR[(unsigned char)*cached_s];
 	switch (type) {
+	case MML_EOF_TOK:
+		*s = cached_s;
+		return state->current_tok = nToken(MML_EOF_TOK, NULL, 0);
 	case MML_OP_DOT_TOK:
 	case MML_OP_AT_TOK:
 	case MML_OP_POW_TOK:
@@ -113,77 +114,79 @@ static MML_Token get_next_token(const char **s, struct parser_state *state)
 	case MML_PIPE_TOK:
 	case MML_SEMICOLON_TOK:
 	case MML_TILDE_TOK:
-		ret = nToken(type, *s, 1);
-		++*s;
+		ret = nToken(type, cached_s, 1);
+		++cached_s;
 		break;
 	case MML_OP_LESS_TOK:
-		if ((*s)[1] == '=')
+		if ((cached_s)[1] == '=')
 		{
-			ret = nToken(MML_OP_LESSEQ_TOK, *s, 2);
-			*s += 2;
+			ret = nToken(MML_OP_LESSEQ_TOK, cached_s, 2);
+			cached_s += 2;
 			break;
 		}
-		ret = nToken(MML_OP_LESS_TOK, *s, 1);
-		++*s;
+		ret = nToken(MML_OP_LESS_TOK, cached_s, 1);
+		++cached_s;
 		break;
 	case MML_OP_GREATER_TOK:
-		if ((*s)[1] == '=')
+		if ((cached_s)[1] == '=')
 		{
-			ret = nToken(MML_OP_GREATEREQ_TOK, *s, 2);
-			*s += 2;
+			ret = nToken(MML_OP_GREATEREQ_TOK, cached_s, 2);
+			cached_s += 2;
 			break;
 		}
-		ret = nToken(MML_OP_GREATER_TOK, *s, 1);
-		++*s;
+		ret = nToken(MML_OP_GREATER_TOK, cached_s, 1);
+		++cached_s;
 		break;
 	case MML_OP_EQ_TOK:
-		if ((*s)[1] != '=')
+		if ((cached_s)[1] != '=')
 		{
-			ret = nToken(MML_OP_ASSERT_EQUAL, *s, 1);
-			++*s;
+			ret = nToken(MML_OP_ASSERT_EQUAL, cached_s, 1);
+			++cached_s;
 			break;
 		}
-		ret = nToken(MML_OP_EQ_TOK, *s, 2);
-		*s += 2;
+		ret = nToken(MML_OP_EQ_TOK, cached_s, 2);
+		cached_s += 2;
 		break;
 	case MML_OP_NOT_TOK:
-		if ((*s)[1] == '=')
+		if ((cached_s)[1] == '=')
 		{
-			ret = nToken(MML_OP_NOTEQ_TOK, *s, 2);
-			*s += 2;
+			ret = nToken(MML_OP_NOTEQ_TOK, cached_s, 2);
+			cached_s += 2;
 			break;
 		}
-		ret = nToken(MML_OP_NOT_TOK, *s, 1);
-		++*s;
+		ret = nToken(MML_OP_NOT_TOK, cached_s, 1);
+		++cached_s;
 		break;
-	case MML_DIGIT_TOK:
-		ret.buf.s = (char *)*s;
-		char *end;
-		if (state->looking_for_int)
-			strtoll(ret.buf.s, &end, 10);
-		else
-			strtod(ret.buf.s, &end);
-		ret.buf.len = end - ret.buf.s;
-		*s = end;
-		ret.type = MML_NUMBER_TOK;
+	case MML_DIGIT_TOK: {
+		const char *const start = cached_s;
+		while (isdigit(*cached_s))
+			++cached_s;
+		if (!state->looking_for_int && *cached_s == '.')
+		{
+			++cached_s;
+			while (isdigit(*cached_s))
+				++cached_s;
+		}
+		ret = nToken(MML_NUMBER_TOK, start, cached_s - start);
 		break;
+	}
 	case MML_LETTER_TOK:
-	case MML_UNDERSCORE_TOK:
-		ret.buf.s = (char *)*s;
+	case MML_UNDERSCORE_TOK: {
+		const char *const start = (char *)cached_s;
 		do {
-			++*s;
-		} while (isalnum(**s) || **s == '_');
-		ret.buf.len = *s - ret.buf.s;
-		ret.type = MML_IDENT_TOK;
-		ret.buf.allocd = false;
+			++cached_s;
+		} while (isalnum(*cached_s) || *cached_s == '_');
+		ret = nToken(MML_IDENT_TOK, start, cached_s - start);
 		break;
+	}
 	default:
-		fprintf(stderr, "invalid token starts at '%.5s'\n", *s);
+		fprintf(stderr, "invalid token starts at '%.5s'\n", cached_s);
 		break;
 	}
 
 
-	current_tok = ret;
+	state->current_tok = ret;
+	*s = cached_s;
 	return ret;
 }
 
@@ -268,7 +271,7 @@ static MML_Expr *parse_expr(const char **s, uint32_t max_preced, struct parser_s
 					--next_expr->num_refs;
 			} while (get_next_token(s, state).type == MML_COMMA_TOK);
 
-			if (current_tok.type != MML_CLOSE_BRAC_TOK)
+			if (state->current_tok.type != MML_CLOSE_BRAC_TOK)
 			{
 				get_next_token(s, state);
 			/*	fprintf(stderr, "expected closing brace for function call, got %s\n",
@@ -356,7 +359,6 @@ static MML_Expr *parse_expr(const char **s, uint32_t max_preced, struct parser_s
 		state->looking_for_int = false;
 	} else
 	{
-		//fprintf(stderr, "found no valid operations/literals, returning (null)\n");
 		MML_free_expr(&left);
 		return nullptr;
 	}

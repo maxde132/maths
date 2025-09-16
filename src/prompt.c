@@ -93,6 +93,7 @@ ssize_t get_prompt_line(char *out, size_t len)
 			case KC_ALT_D:
 				memset(out, '\0', len);
 				cursor = out;
+				is_block_cursor = false;
 				needs_update = true;
 				break;
 			case KC_RIGHT_ARROW:

@@ -37,9 +37,11 @@ void MML_cleanup_state(MML_state *restrict state);
  * IS_INSERTED determines whether the variable will be moved to the user-defined or
  * inserted variable namespace. */
 int32_t MML_eval_set_variable(MML_state *restrict state, strbuf name, MML_Expr *expr);
+MML_Expr *MML_eval_get_variable(MML_state *restrict state, strbuf name);
 
 /* evaluates EXPR using the evaluator state data in STATE */
 MML_Value MML_eval_expr(MML_state *restrict state, const MML_Expr *expr);
+MML_Value MML_eval_expr_recurse(MML_state *restrict state, const MML_Expr *expr);
 
 /* push-moves EXPR onto the expression storage for STATE */
 int32_t MML_eval_push_expr(MML_state *restrict state, MML_Expr *expr);

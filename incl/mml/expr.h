@@ -89,6 +89,7 @@ void MML_print_exprh(MML_Expr *expr);
 MML_Value MML_print_exprh_tv_func(MML_state *, MML_VecN *args);
 
 void MML_free_expr(MML_Expr **e);
+void MML_free_expr_not_parent(MML_Expr **e);
 
 #ifndef NDEBUG
 struct call_info {
