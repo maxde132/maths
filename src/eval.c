@@ -6,6 +6,7 @@
 #include <string.h>
 #include <stdio.h>
 
+#include "dvec/dvec.h"
 #include "mml/parser.h"
 #include "mml/expr.h"
 #include "mml/config.h"
@@ -128,9 +129,9 @@ MML_state *MML_init_state(void)
 skip_builtins_init:
 
 	state->variables = nullptr;
-	state->vars_storage = MML_new_vec(1);
-	state->exprs = MML_new_vec(1);
-	state->allocd_vecs = MML_new_vec(1);
+	dv_init(state->vars_storage);
+	dv_init(state->exprs);
+	dv_init(state->allocd_vecs);
 
 
 	state->is_init = true;
@@ -148,13 +149,13 @@ void MML_cleanup_state(MML_state *restrict state)
 	}
 
 	MML_free_vec(&state->vars_storage);
-	state->vars_storage = (MML_VecN) { nullptr, 0, 0 };
+	state->vars_storage = (MML_ExprVec) {0};
 
 	MML_free_vec(&state->exprs);
-	state->exprs = (MML_VecN) { nullptr, 0, 0 };
+	state->exprs = (MML_ExprVec) {0};
 
 	MML_free_vec(&state->allocd_vecs);
-	state->allocd_vecs = (MML_VecN) { nullptr, 0, 0 };
+	state->allocd_vecs = (MML_ExprVec) {0};
 
 	state->is_init = false;
 	if (--initialized_evaluators_count == 0)
@@ -172,11 +173,11 @@ void MML_cleanup_state(MML_state *restrict state)
 int32_t MML_eval_set_variable(MML_state *restrict state,
 		strbuf name, MML_Expr *expr)
 {
-	MML_push_to_vec(&state->vars_storage, expr);
+	dv_push(state->vars_storage, expr);
 	if (state->variables == nullptr)
 		state->variables = hashmap_create();
 	return hashmap_set(state->variables,
-			name.s, name.len, (uintptr_t)state->vars_storage.n-1);
+			name.s, name.len, (uintptr_t)dv_n(state->vars_storage)-1);
 }
 MML_Expr *MML_eval_get_variable(MML_state *restrict state,
 		strbuf name)
@@ -184,7 +185,7 @@ MML_Expr *MML_eval_get_variable(MML_state *restrict state,
 	size_t out;
 	if (state->variables != nullptr && 
 			hashmap_get(state->variables, name.s, name.len, (uintptr_t *)&out))
-		return state->vars_storage.ptr[out];
+		return dv_a(state->vars_storage, out);
 
 	return NULL;
 }
@@ -211,7 +212,7 @@ static MML_Value apply_func(MML_state *state,
 	_Complex double (*cd_d_func) (double);
 	double (*d_cd_func) (_Complex double);
 
-	const MML_Value first_arg_val = MML_eval_expr(state, right_vec.v.v.ptr[0]);
+	const MML_Value first_arg_val = MML_eval_expr(state, dv_a(right_vec.v.v, 0));
 	if (first_arg_val.type == RealNumber_type)
 	{
 		if (hashmap_get(eval_builtin_maps[4], ident.s, ident.len, (uintptr_t *)&cd_d_func))
@@ -250,6 +251,7 @@ MML_Value MML_apply_binary_op(MML_state *restrict state, MML_Value a, MML_Value 
 
 	if (VAL_IS_NUM(a) && b.type == Invalid_type)
 	{
+		// unary operators
 		switch (op) {
 		case MML_OP_NOT_TOK:
 			if (a.type != ComplexNumber_type)
@@ -267,24 +269,20 @@ MML_Value MML_apply_binary_op(MML_state *restrict state, MML_Value a, MML_Value 
 			MML_Expr *ret = calloc(1, sizeof(MML_Expr));
 			ret->type = Vector_type;
 			ret->should_free_vec_block = true;
-			ret->u.v.v = MML_new_vec(2);
-			ret->u.v.v.n = 2;
+			dv_init(ret->u.v.v);
+			dv_resize(ret->u.v.v, 2);
 
 			MML_Expr *data = calloc(2, sizeof(MML_Expr));
-			const MML_Value not_negated = a;
-			const MML_Value negated = MML_apply_binary_op(state,
+			const MML_Value negated_a = MML_apply_binary_op(state,
 					a,
 					VAL_INVAL,
 					MML_OP_NEGATE);
-			data[0] = (MML_Expr) {
-				not_negated.type, .num_refs=1, .u.v=not_negated.v
-			};
-			data[1] = (MML_Expr) {
-				negated.type, .num_refs=1, .u.v=negated.v
-			};
-			ret->u.v.v.ptr[0] = &data[0];
-			ret->u.v.v.ptr[1] = &data[1];
-			MML_push_to_vec(&state->allocd_vecs, ret);
+			data[0] = (MML_Expr) { a.type, .num_refs=1, .u.v=a.v };
+			data[1] = (MML_Expr) { negated_a.type, .num_refs=1, .u.v=negated_a.v };
+			dv_a(ret->u.v.v, 0) = &data[0];
+			dv_a(ret->u.v.v, 1) = &data[1];
+
+			dv_push(state->allocd_vecs, ret);
 			return (MML_Value) { Vector_type, .v = ret->u.v };
 		case MML_OP_UNARY_NOTHING: return a;
 		default:
@@ -342,15 +340,15 @@ MML_Value MML_apply_binary_op(MML_state *restrict state, MML_Value a, MML_Value 
 			fprintf(stderr, "vectors may only be indexed by a positive integer\n");
 			return VAL_INVAL;
 		}
-		if (i >= a.v.v.n)
+		if (i >= dv_n(a.v.v))
 		{
-			fprintf(stderr, "index %zu out of range for vector of length %zu\n", i, a.v.v.n);
+			fprintf(stderr, "index %zu out of range for vector of length %zu\n", i, dv_n(a.v.v));
 			return VAL_INVAL;
 		}
-		return MML_eval_expr(state, a.v.v.ptr[i]);
+		return MML_eval_expr(state, dv_a(a.v.v, i));
 	} else if (a.type == Vector_type && b.type == Vector_type
 		  && op == MML_OP_MUL_TOK
-		  && a.v.v.n == b.v.v.n)
+		  && dv_n(a.v.v) == dv_n(b.v.v))
 	{
 		// n-dimensional dot product
 		//
@@ -359,11 +357,11 @@ MML_Value MML_apply_binary_op(MML_state *restrict state, MML_Value a, MML_Value 
 		// of the corresponding nested vectors in each, along with the regular
 		// multiplication. (not intentionally, that's just what happens)
 		double sum = 0.0;
-		for (size_t i = 0; i < a.v.v.n; ++i)
+		for (size_t i = 0; i < dv_n(a.v.v); ++i)
 		{
 			sum += MML_apply_binary_op(state,
-					MML_eval_expr(state, a.v.v.ptr[i]),
-					MML_eval_expr(state, b.v.v.ptr[i]),
+					MML_eval_expr(state, dv_a(a.v.v, i)),
+					MML_eval_expr(state, dv_a(b.v.v, i)),
 					MML_OP_MUL_TOK).v.n;
 		}
 		return VAL_NUM(sum);
@@ -372,9 +370,9 @@ MML_Value MML_apply_binary_op(MML_state *restrict state, MML_Value a, MML_Value 
 		// compute vector magnitude
 		_Complex double sum = 0.0;
 		MML_Value cur_elem;
-		for (size_t i = 0; i < a.v.v.n; ++i)
+		for (size_t i = 0; i < dv_n(a.v.v); ++i)
 		{
-			cur_elem = MML_eval_expr(state, a.v.v.ptr[i]);
+			cur_elem = MML_eval_expr(state, dv_a(a.v.v, i));
 			sum += MML_apply_binary_op(state, cur_elem, cur_elem, MML_OP_MUL_TOK).v.n;
 		}
 		_Complex double ret = csqrt(sum);
@@ -387,7 +385,7 @@ MML_Value MML_apply_binary_op(MML_state *restrict state, MML_Value a, MML_Value 
 		case MML_OP_SUB_TOK:
 		case MML_OP_MUL_TOK:
 		case MML_OP_DIV_TOK:
-			const MML_VecN *src_vec = (a.type == Vector_type)
+			const MML_ExprVec *src_vec = (a.type == Vector_type)
 				? &a.v.v
 				: &b.v.v;
 			const MML_Value *scalar = (VAL_IS_NUM(a)) ? &a : &b;
@@ -395,22 +393,22 @@ MML_Value MML_apply_binary_op(MML_state *restrict state, MML_Value a, MML_Value 
 			MML_Expr *ret = calloc(1, sizeof(MML_Expr));
 			ret->type = Vector_type;
 			ret->should_free_vec_block = true;
-			ret->u.v.v = MML_new_vec(src_vec->n);
-			ret->u.v.v.n = src_vec->n;
+			dv_init(ret->u.v.v);
+			dv_resize(ret->u.v.v, dv_n(*src_vec));
 
-			MML_Expr *data = calloc(src_vec->n, sizeof(MML_Expr));
-			for (size_t i = 0; i < src_vec->n; ++i)
+			MML_Expr *data = calloc(dv_n(*src_vec), sizeof(MML_Expr));
+			for (size_t i = 0; i < dv_n(*src_vec); ++i)
 			{
 				MML_Value cur = MML_apply_binary_op(state,
-						MML_eval_expr(state, src_vec->ptr[i]),
+						MML_eval_expr(state, dv_a(*src_vec, i)),
 						*scalar,
 						op);
 				data[i].type = cur.type;
 				data[i].num_refs = 1;
 				data[i].u.v = cur.v;
-				ret->u.v.v.ptr[i] = &data[i];
+				dv_a(ret->u.v.v, i) = &data[i];
 			}
-			MML_push_to_vec(&state->allocd_vecs, ret);
+			dv_push(state->allocd_vecs, ret);
 			return (MML_Value) { Vector_type, .v = ret->u.v };
 		default:
 			fprintf(stderr,
@@ -497,9 +495,9 @@ inline MML_Value MML_eval_expr(MML_state *state, const MML_Expr *expr)
 inline int32_t MML_eval_push_expr(MML_state *state, MML_Expr *expr)
 {
 	--expr->num_refs;
-	return MML_push_to_vec(&state->exprs, expr);
+	return dv_push(state->exprs, expr);
 }
 inline MML_Value MML_eval_top_expr(MML_state *state)
 {
-	return MML_eval_expr_recurse(state, *(const MML_Expr **)MML_peek_top_vec(&state->exprs));
+	return MML_eval_expr_recurse(state, *(const MML_Expr **)dv_peek(state->exprs));
 }

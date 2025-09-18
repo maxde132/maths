@@ -301,7 +301,7 @@ struct parser_state {
 		"otherwise severe memory leaks will ensue...")]]
 MML_Expr *MML_parse(const char *s);
 
-MML_VecN MML_parse_stmts_to_ret(const char *s);
+MML_ExprVec MML_parse_stmts_to_ret(const char *s);
 void MML_parse_stmts(const char *s, MML_state *state);
 
 #endif /* PARSER_H */

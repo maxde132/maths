@@ -3,6 +3,7 @@
 #include <stdio.h>
 
 #include "mml/parser.h"
+#include "dvec/dvec.h"
 #include "mml/eval.h"
 #include "mml/token.h"
 
@@ -259,14 +260,13 @@ static MML_Expr *parse_expr(const char **s, uint32_t max_preced, struct parser_s
 			left->u.o.right->type = Vector_type;
 			left->u.o.right->num_refs = 1;
 			left->u.o.right->should_free_vec_block = false;
-			left->u.o.right->u.v.v = MML_new_vec(1);
+			left->u.o.right->u.v.v = (MML_ExprVec) DVEC_INIT;
 			do
 			{
 				if (**s == '\0' || peek_token(s, state).type == MML_CLOSE_BRAC_TOK)
 					break;
 				MML_Expr *next_expr = parse_expr(s, PARSER_MAX_PRECED, state);
-				MML_push_to_vec(&left->u.o.right->u.v.v,
-						next_expr);
+				dv_push(left->u.o.right->u.v.v, next_expr);
 				if (next_expr != nullptr)
 					--next_expr->num_refs;
 			} while (get_next_token(s, state).type == MML_COMMA_TOK);
@@ -297,7 +297,7 @@ static MML_Expr *parse_expr(const char **s, uint32_t max_preced, struct parser_s
 		}
 	} else if (tok.type == MML_OPEN_BRACKET_TOK)
 	{
-		MML_VecN vec = MML_new_vec(1);
+		MML_ExprVec vec = DVEC_INIT;
 		while (tok.type != MML_CLOSE_BRACKET_TOK)
 		{
 			tok = peek_token(s, state);
@@ -305,7 +305,7 @@ static MML_Expr *parse_expr(const char **s, uint32_t max_preced, struct parser_s
 				break;
 
 			MML_Expr *e = parse_expr(s, PARSER_MAX_PRECED, state);
-			MML_push_to_vec(&vec, e);
+			dv_push(vec, e);
 			if (e != nullptr)
 				--e->num_refs;
 
@@ -421,13 +421,13 @@ inline MML_Expr *MML_parse(const char *s)
 	struct parser_state state = {0};
 	return parse_expr(&s, PARSER_MAX_PRECED, &state);
 }
-MML_VecN MML_parse_stmts_to_ret(const char *s)
+MML_ExprVec MML_parse_stmts_to_ret(const char *s)
 {
-	MML_VecN ret = MML_new_vec(1);
+	MML_ExprVec ret = DVEC_INIT;
 	struct parser_state state = {0};
 	do
 	{
-		MML_push_to_vec(&ret, parse_expr(&s, PARSER_MAX_PRECED, &state));
+		dv_push(ret, parse_expr(&s, PARSER_MAX_PRECED, &state));
 	} while (get_next_token(&s, &state).type == MML_SEMICOLON_TOK);
 
 	return ret;

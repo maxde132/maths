@@ -7,14 +7,14 @@ typedef struct hashmap hashmap;
 
 typedef struct MML_state {
 	hashmap *variables;
-	MML_VecN vars_storage;
-	MML_VecN exprs;
-	MML_VecN allocd_vecs;
+	MML_ExprVec vars_storage;
+	MML_ExprVec exprs;
+	MML_ExprVec allocd_vecs;
 	MML_Value last_val;
 	bool is_init;
 } MML_state;
 
-typedef MML_Value (*MML_val_func)(MML_state *restrict state, MML_VecN *args);
+typedef MML_Value (*MML_val_func)(MML_state *restrict state, MML_ExprVec *args);
 
 #ifndef MML_BARE_USE
 MML_Value MML_apply_binary_op(MML_state *restrict state,

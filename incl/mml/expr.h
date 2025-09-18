@@ -5,6 +5,7 @@
 #include <stdint.h>
 
 #include "token.h"
+#include "dvec/dvec.h"
 
 typedef struct MML_Expr MML_Expr;
 
@@ -25,18 +26,14 @@ typedef enum MML_ExprType {
 	Vector_type,
 } MML_ExprType;
 
-typedef struct MML_VecN {
-	MML_Expr **ptr;
-	size_t n;
-	size_t allocd_size;
-} MML_VecN;
+typedef dvec_t(MML_Expr *) MML_ExprVec;
 
 typedef union MML_EvalValue {
 	double n;
 	_Complex double cn;
 	bool b;
 	strbuf s;
-	MML_VecN v;
+	MML_ExprVec v;
 	int64_t i;
 } MML_EvalValue;
 
@@ -83,37 +80,16 @@ typedef struct MML_state MML_state;
 void MML_print_indent(uint32_t indent);
 MML_Value MML_print_typedval(MML_state *, const MML_Value *val);
 MML_Value MML_println_typedval(MML_state *state, const MML_Value *val);
-MML_Value MML_print_typedval_multiargs(MML_state *state, MML_VecN *args);
-MML_Value MML_println_typedval_multiargs(MML_state *state, MML_VecN *args);
+MML_Value MML_print_typedval_multiargs(MML_state *state, MML_ExprVec *args);
+MML_Value MML_println_typedval_multiargs(MML_state *state, MML_ExprVec *args);
 void MML_print_exprh(MML_Expr *expr);
-MML_Value MML_print_exprh_tv_func(MML_state *, MML_VecN *args);
+MML_Value MML_print_exprh_tv_func(MML_state *, MML_ExprVec *args);
 
 void MML_free_expr(MML_Expr **e);
-void MML_free_expr_not_parent(MML_Expr **e);
 
-#ifndef NDEBUG
-struct call_info {
-	size_t line_n;
-	const char *filename;
-};
-
-MML_VecN MML_new_vec_debug(size_t n, struct call_info call);
-void MML_free_vec_debug(MML_VecN *vec, struct call_info call);
-#define MML_new_vec(n) (MML_new_vec_debug(n, (struct call_info) {__LINE__, __FILE_NAME__}))
-#define MML_free_vec(vec) (MML_free_vec_debug(vec, (struct call_info) {__LINE__, __FILE_NAME__}))
-#else
-MML_VecN MML_new_vec(size_t n);
-void MML_free_vec(MML_VecN *vec);
-#endif
-MML_VecN MML_construct_vec(size_t n, ...);
-/* does a push-move (pushes VAL to vector, "moves" VAL to vector).
- * "move" means it doesn't increment the reference count, so you might get
- * memory leaks if you try to use/free VAL after calling this. */
-int32_t MML_push_to_vec(MML_VecN *vec, MML_Expr *val);
-MML_Expr **MML_peek_top_vec(MML_VecN *vec);
-MML_Expr *MML_pop_from_vec(MML_VecN *vec);
-void MML_print_vec(const MML_VecN *vec);
-void MML_println_vec(const MML_VecN *vec);
+void MML_free_vec(MML_ExprVec *vec);
+void MML_print_vec(const MML_ExprVec *vec);
+void MML_println_vec(const MML_ExprVec *vec);
 
 void MML_free_pp(void *p);
 

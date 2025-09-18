@@ -4,6 +4,7 @@
 #include <math.h>
 #include <stdlib.h>
 
+#include "dvec/dvec.h"
 #include "mml/parser.h"
 #include "mml/eval.h"
 #include "mml/expr.h"
@@ -62,25 +63,25 @@ inline MML_Value MML_println_typedval(MML_state *state, const MML_Value *val)
 	MML_global_config.last_print_was_newline = true;
 	return ret;
 }
-MML_Value MML_print_typedval_multiargs(MML_state *state, MML_VecN *args)
+MML_Value MML_print_typedval_multiargs(MML_state *state, MML_ExprVec *args)
 {
-	for (size_t i = 0; i < args->n; ++i)
+	for (size_t i = 0; i < dv_n(*args); ++i)
 	{
-		MML_Value cur_val = MML_eval_expr(state, args->ptr[i]);
+		MML_Value cur_val = MML_eval_expr(state, dv_a(*args, i));
 		MML_print_typedval(state, &cur_val);
-		if (i < args->n-1) fputc(' ', stdout);
+		if (i < dv_n(*args)-1) fputc(' ', stdout);
 	}
 
 	return (MML_Value) { Invalid_type, .v.n = NAN };
 }
-MML_Value MML_println_typedval_multiargs(MML_state *state, MML_VecN *args)
+MML_Value MML_println_typedval_multiargs(MML_state *state, MML_ExprVec *args)
 {
-	for (size_t i = 0; i < args->n; ++i)
+	for (size_t i = 0; i < dv_n(*args); ++i)
 	{
-		MML_Value cur_val = MML_eval_expr(state, args->ptr[i]);
+		MML_Value cur_val = MML_eval_expr(state, dv_a(*args, i));
 		MML_println_typedval(state, &cur_val);
 	}
-	if (args->n == 0)
+	if (dv_n(*args) == 0)
 		fputc('\n', stdout);
 
 	return (MML_Value) { Invalid_type, .v.n = NAN };
@@ -131,11 +132,11 @@ void MML_print_expr(const MML_Expr *expr, uint32_t indent)
 		printf("Identifier('%.*s')", (int)expr->u.v.s.len, expr->u.v.s.s);
 		break;
 	case Vector_type:
-		printf("Vector(n=%zu):\n", expr->u.v.v.n);
-		for (size_t i = 0; i < expr->u.v.v.n; ++i)
+		printf("Vector(n=%zu):\n", dv_n(expr->u.v.v));
+		for (size_t i = 0; i < dv_n(expr->u.v.v); ++i)
 		{
-			MML_print_expr(expr->u.v.v.ptr[i], indent+2);
-			if (i < expr->u.v.v.n - 1) fputc('\n', stdout);
+			MML_print_expr(dv_a(expr->u.v.v, i), indent+2);
+			if (i < dv_n(expr->u.v.v) - 1) fputc('\n', stdout);
 		}
 		break;
 	default:
@@ -152,9 +153,9 @@ inline void MML_print_exprh(MML_Expr *expr)
 	fputc('\n', stdout);
 	MML_global_config.last_print_was_newline = true;
 }
-inline MML_Value MML_print_exprh_tv_func(MML_state *, MML_VecN *args)
+inline MML_Value MML_print_exprh_tv_func(MML_state *, MML_ExprVec *args)
 {
-	MML_print_expr(args->ptr[0], 0);
+	MML_print_expr(dv_a(*args, 0), 0);
 	fputc('\n', stdout);
 	MML_global_config.last_print_was_newline = true;
 
@@ -183,9 +184,9 @@ void MML_free_expr(MML_Expr **e)
 			MML_free_vec(&(*e)->u.v.v);
 		else
 		{
-			free((*e)->u.v.v.ptr[0]);
-			free((*e)->u.v.v.ptr);
-			(*e)->u.v.v.ptr = nullptr;
+			free(dv_a((*e)->u.v.v, 0));
+			dv_destroy((*e)->u.v.v);
+			_dv_ptr((*e)->u.v.v) = nullptr;
 		}
 	}
 
@@ -193,134 +194,18 @@ void MML_free_expr(MML_Expr **e)
 	*e = nullptr;
 }
 
-void MML_free_expr_not_parent(MML_Expr **e)
+void MML_free_vec(MML_ExprVec *vec)
 {
-	if (*e == nullptr) return;
-
-	if (--(*e)->num_refs > 0)
-		return;
-	if ((*e)->type == Operation_type)
-	{
-		MML_free_expr(&(*e)->u.o.left);
-		MML_free_expr(&(*e)->u.o.right);
-	} else if ((*e)->type == Identifier_type)
-	{
-		if ((*e)->u.v.s.allocd)
-			free((*e)->u.v.s.s);
-	} else if ((*e)->type == Vector_type)
-	{
-		if (!(*e)->should_free_vec_block)
-			MML_free_vec(&(*e)->u.v.v);
-		else
-		{
-			free((*e)->u.v.v.ptr[0]);
-			free((*e)->u.v.v.ptr);
-			(*e)->u.v.v.ptr = nullptr;
-		}
-	}
-
-	free(*e);
-	*e = nullptr;
+	for (size_t i = 0; i < dv_n(*vec); ++i)
+		MML_free_expr(&dv_a(*vec, i));
+	dv_destroy(*vec);
 }
 
-#ifndef NDEBUG
-VecN MML_new_vec_debug(size_t n, struct call_info call)
-#else
-MML_VecN MML_new_vec(size_t n)
-#endif
-{
-#ifndef NDEBUG
-	static size_t n_vecs_allocd = 0;
-	if (call.filename != nullptr)
-		printf("alloc'd vector #%zu (%s:%zu)\n",
-			++n_vecs_allocd,
-			call.filename, call.line_n);
-#endif
-	return (MML_VecN) {
-		.ptr = calloc(n, sizeof(MML_Expr *)),
-		.n = 0,
-		.allocd_size = n,
-	};
-}
-
-#ifndef NDEBUG
-void MML_free_vec_debug(VecN *vec, struct call_info call)
-#else
-void MML_free_vec(MML_VecN *vec)
-#endif
-{
-	for (size_t i = 0; i < vec->n; ++i)
-		MML_free_expr(&vec->ptr[i]);
-	free(vec->ptr);
-#ifndef NDEBUG
-	static size_t vector_free_count = 0;
-	if (call.filename != nullptr)
-		printf("freed vector #%zu (%s:%zu)\n",
-			++vector_free_count,
-			call.filename, call.line_n);
-#endif
-}
-
-MML_VecN MML_construct_vec(size_t n, ...)
-{
-	MML_VecN ret = {
-		.ptr = calloc(n, sizeof(MML_Expr *)),
-		.n = n,
-		.allocd_size = n
-	};
-	MML_Value cur;
-	va_list args;
-	va_start(args, n);
-	for (size_t i = 0; i < n; ++i)
-	{
-		cur = va_arg(args, MML_Value);
-		ret.ptr[i] = calloc(1, sizeof(MML_Expr));
-		ret.ptr[i]->type = cur.type;
-		ret.ptr[i]->u.v = cur.v;
-	}
-
-	va_end(args);
-
-	return ret;
-}
-
-int32_t MML_push_to_vec(MML_VecN *vec, MML_Expr *elem)
-{
-	if (vec->allocd_size < (vec->n + 1))
-	{
-		MML_Expr **tmp = realloc(vec->ptr,
-				(vec->allocd_size*=2) * sizeof(MML_Expr *));
-		if (tmp == NULL)
-		{
-			fprintf(stderr, "could not resize vector memory\n");
-			MML_free_vec(vec);
-			return 1;
-		}
-		vec->ptr = tmp;
-	}
-	vec->ptr[vec->n++] = elem;
-	if (elem != nullptr)
-		++elem->num_refs;
-	return 0;
-}
-
-inline MML_Expr **MML_peek_top_vec(MML_VecN *vec)
-{
-	MML_Expr **ret = &vec->ptr[vec->n-1];
-	++(*ret)->num_refs;
-	return ret;
-}
-
-inline MML_Expr *MML_pop_from_vec(MML_VecN *vec)
-{
-	return vec->ptr[--vec->n];
-}
-
-inline void MML_print_vec(const MML_VecN *vec)
+inline void MML_print_vec(const MML_ExprVec *vec)
 {
 	MML_print_expr(&(const MML_Expr) { Vector_type, 0, .u.v.v = *vec }, 0);
 }
-inline void MML_println_vec(const MML_VecN *vec)
+inline void MML_println_vec(const MML_ExprVec *vec)
 {
 	MML_print_expr(&(const MML_Expr) { Vector_type, 0, .u.v.v = *vec }, 0);
 	fputc('\n', stdout);

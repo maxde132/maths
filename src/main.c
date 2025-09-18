@@ -6,6 +6,7 @@
 #include "mml/mml.h"
 #include "mml/config.h"
 #include "mml/prompt.h"
+#include "dvec/dvec.h"
 
 extern strbuf expression;
 
@@ -43,13 +44,13 @@ int32_t main(int32_t argc, char **argv)
 
 	if (!FLAG_IS_SET(NO_EVAL))
 	{
-		for (size_t i = 0; i < MML_global_config.eval_state->exprs.n; ++i)
+		for (size_t i = 0; i < dv_n(MML_global_config.eval_state->exprs); ++i)
 		{
 			MML_Value val = MML_eval_expr(
 					MML_global_config.eval_state,
-					MML_global_config.eval_state->exprs.ptr[i]);
+					dv_a(MML_global_config.eval_state->exprs, i));
 
-			if (i == MML_global_config.eval_state->exprs.n-1 && FLAG_IS_SET(PRINT))
+			if (i == dv_n(MML_global_config.eval_state->exprs)-1 && FLAG_IS_SET(PRINT))
 				MML_print_typedval(MML_global_config.eval_state, &val);
 		}
 	}

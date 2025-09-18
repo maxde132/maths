@@ -13,6 +13,8 @@
 #include "mml/eval.h"
 #include "mml/parser.h"
 
+#define PROMPT_STR "==> "
+
 enum KEY_CODES {
 	KC_UP_ARROW		= 0x0000'0000'0041'5b1b,
 	KC_DOWN_ARROW	= 0x0000'0000'0042'5b1b,
@@ -83,6 +85,7 @@ ssize_t get_prompt_line(char *out, size_t len)
 				break;
 			case KC_BACKSPACE:
 			case KC_DELETE:
+				// somehow truncates the string to end where the deleted character was (maybe misplaced null terminator?)
 				if (cursor == out)
 						break;
 				memmove(cursor-1, cursor, len - (cursor - out));
@@ -91,7 +94,7 @@ ssize_t get_prompt_line(char *out, size_t len)
 				needs_update = true;
 				break;
 			case KC_ALT_D:
-				memset(out, '\0', len);
+				*out = '\0';
 				cursor = out;
 				is_block_cursor = false;
 				needs_update = true;
@@ -104,7 +107,8 @@ ssize_t get_prompt_line(char *out, size_t len)
 				needs_update = true;
 				break;
 			default:
-				memmove(cursor+1, cursor, len - (cursor - out));
+				// somehow truncates the string to end just after the inserted character (maybe misplaced null terminator?)
+				memmove(cursor+1, cursor, len - (cursor - out) - 1);
 				*cursor++ = c;
 				is_block_cursor = false;
 				needs_update = true;
@@ -115,7 +119,10 @@ ssize_t get_prompt_line(char *out, size_t len)
 
 		if (needs_update)
 		{
-			fprintf(stdout, "\r\x1b[4C\x1b[K%s\x1b[%dG%s",
+			//fprintf(stderr, "\n[debug] text from cursor: '%s'\n", cursor);
+			//fprintf(stderr, "[debug] text from out: '%s'\n", out);
+			fprintf(stdout, "\r%s\x1b[K%s\x1b[%dG%s",
+					PROMPT_STR,
 					out, (int)(5+(cursor-out)), (is_block_cursor)
 						? "\x1b[1 q"
 						: "\x1b[5 q");
@@ -144,7 +151,7 @@ void MML_run_prompt(MML_state *state)
 	ssize_t n_read = 0;
 	while (!(cur_val.type == Invalid_type && cur_val.v.i == MML_QUIT_INVAL))
 	{
-		printf("==> ");
+		printf("%s", PROMPT_STR);
 		fflush(stdout);
 
 		memset(line_in, '\0', (n_read>0) ? (size_t)n_read : LINE_MAX_LEN);
@@ -154,12 +161,15 @@ void MML_run_prompt(MML_state *state)
 			break;
 		else if (n_read == -2)
 			continue;
+	#ifndef NDEBUG
+		printf("buf: '%s'\n", line_in);
+	#endif
 
 		MML_parse_stmts(line_in, state);
 
-		while (expr_n_offset < state->exprs.n)
+		while (expr_n_offset < dv_n(state->exprs))
 		{
-			MML_Expr *cur = state->exprs.ptr[expr_n_offset++];
+			MML_Expr *cur = dv_a(state->exprs, expr_n_offset++);
 			if (cur != nullptr)
 				cur_val = MML_eval_expr(state, cur);
 		}
