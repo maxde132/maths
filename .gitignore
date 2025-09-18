@@ -2,6 +2,7 @@ compile_commands.json
 .cache/
 __pycache__/
 vgcore*
+.DS_Store
 
 obj/*
 build/*

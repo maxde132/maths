@@ -60,6 +60,9 @@
 #define _dv_ptr(v) ((v).items)
 #define dv_max(v) ((v).capacity)
 
+#define dv_foreach(v, item_p) \
+	for ((item_p) = (v).items; (size_t)((item_p)-(v).items) < (v).size; ++(item_p))
+
 #define dv_assign(dst, src) (memcpy((dst), (src), sizeof(dvec_t(int))))
 
 
