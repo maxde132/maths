@@ -17,16 +17,19 @@ A minimal example:
 #include <stdint.h>
 
 #include "mml/mml.h"
+#include "dvec/dvec.h"
 
 int32_t main(void)
 {
-	MML_state *state = MML_init_state(NULL);
+	MML_state *state = MML_init_state();
 	MML_parse_stmts("println{cos{1.5pi} == 0.0}", state);
 
-	for (size_t i = 0; i < state->exprs.n; ++i)
-		MML_eval_expr(state, state->exprs.ptr[i]);
+	for (size_t i = 0; i < dv_n(state->exprs); ++i)
+		MML_eval_expr(state, dv_a(state->exprs, i));
 
 	MML_cleanup_state(state);
+
+	return 0;
 }
 ```
 

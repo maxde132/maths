@@ -5,4 +5,5 @@
 - [x] fix memory leaks caused by adding variable assignment (memory leaks for literally everything?), then rebase dev back into main <br />
 - [x] fix segfault when using `--set_var:` to insert a variable when the variable value string is empty (e.g. `--set_var:A=`) <br />
 - [x] syntax guide and other documentation <br />
+- [ ] === operator for exact equality (do away with --no-estimate-equality)
 - [ ] interactive prompt (like python's IDLE) (getting there) <br />
