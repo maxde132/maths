@@ -5,10 +5,11 @@ CC := gcc
 
 EXEC := mml
 
-CFLAGS := -Wall -Wextra -std=c23 -Iincl -I. -DNDEBUG -O3
+FPIC_FLAG := 
+CFLAGS := -Wall -Wextra -std=c23 -Iincl -I. -DNDEBUG -g
 LDFLAGS := $(CFLAGS) -lm
 
-.PHONY: clean build_all
+.PHONY: clean static_lib shared_lib
 
 all: build/$(EXEC)
 
@@ -18,36 +19,38 @@ build/$(EXEC): build obj Makefile $(OBJ_FILES)
 build/lib$(EXEC).a: build obj Makefile $(OBJ_FILES)
 	ar rcs build/lib$(EXEC).a $(OBJ_FILES)
 
-#build/lib$(EXEC).so: build obj Makefile $(OBJ_FILES)
-#	$(CC) $(OBJ_FILES) $(LDFLAGS) -shared -o build/lib$(EXEC).so
+build/lib$(EXEC).so: FPIC_FLAG=-fPIC
+build/lib$(EXEC).so: build obj Makefile $(OBJ_FILES) 
+	$(CC) $(OBJ_FILES) $(LDFLAGS) -shared -o build/lib$(EXEC).so
 
-build_all: build/$(EXEC) build/lib$(EXEC).a # build/lib$(EXEC).so
+obj/main.o: Makefile src/main.c incl/mml/expr.h incl/mml/token.h incl/mml/parser.h incl/mml/eval.h
+	$(CC) src/main.c -c -o obj/main.o $(CFLAGS) $(FPIC_FLAG)
 
-obj/main.o: Makefile src/main.c incl/mml/expr.h incl/mml/token.h incl/mml/parser.h incl/mml/eval.h incl/dvec/dvec.h
-	$(CC) src/main.c -c -o obj/main.o $(CFLAGS)
+obj/expr.o: Makefile src/expr.c incl/mml/expr.h incl/mml/config.h
+	$(CC) src/expr.c -c -o obj/expr.o $(CFLAGS) $(FPIC_FLAG)
 
-obj/expr.o: Makefile src/expr.c incl/mml/expr.h incl/mml/config.h incl/dvec/dvec.h
-	$(CC) src/expr.c -c -o obj/expr.o $(CFLAGS)
+obj/parser.o: Makefile src/parser.c incl/mml/parser.h incl/mml/token.h incl/mml/expr.h
+	$(CC) src/parser.c -c -o obj/parser.o $(CFLAGS) $(FPIC_FLAG)
 
-obj/parser.o: Makefile src/parser.c incl/mml/parser.h incl/mml/token.h incl/mml/expr.h incl/dvec/dvec.h
-	$(CC) src/parser.c -c -o obj/parser.o $(CFLAGS)
-
-obj/eval.o: Makefile src/eval.c incl/mml/eval.h incl/mml/expr.h incl/mml/config.h src/eval_funcs_incl.c incl/dvec/dvec.h
-	$(CC) src/eval.c -c -o obj/eval.o $(CFLAGS)
+obj/eval.o: Makefile src/eval.c incl/mml/eval.h incl/mml/expr.h incl/mml/config.h src/eval_funcs_incl.c
+	$(CC) src/eval.c -c -o obj/eval.o $(CFLAGS) $(FPIC_FLAG)
 
 obj/config.o: Makefile src/config.c incl/mml/config.h incl/mml/token.h incl/mml/expr.h incl/mml/eval.h
-	$(CC) src/config.c -c -o obj/config.o $(CFLAGS)
+	$(CC) src/config.c -c -o obj/config.o $(CFLAGS) $(FPIC_FLAG)
 
-obj/prompt.o: Makefile src/prompt.c incl/mml/prompt.h incl/mml/eval.h incl/mml/parser.h incl/dvec/dvec.h
-	$(CC) src/prompt.c -c -o obj/prompt.o $(CFLAGS)
+obj/prompt.o: Makefile src/prompt.c incl/mml/prompt.h incl/mml/eval.h incl/mml/parser.h
+	$(CC) src/prompt.c -c -o obj/prompt.o $(CFLAGS) $(FPIC_FLAG)
 
 obj/map.o: Makefile c-hashmap/map.c c-hashmap/map.h
-	$(CC) c-hashmap/map.c -Ic-hashmap -c -o obj/map.o $(CFLAGS)
+	$(CC) c-hashmap/map.c -Ic-hashmap -c -o obj/map.o $(CFLAGS) $(FPIC_FLAG)
 
 obj:
 	mkdir obj
 build:
 	mkdir build
+
+static_lib: clean build/lib$(EXEC).a
+shared_lib: clean build/lib$(EXEC).so
 
 clean:
 	rm -f build/* obj/*

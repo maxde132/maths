@@ -30,7 +30,11 @@ int32_t main(void)
 }
 ```
 
-And it can be compiled with this command (assuming you've run `make build_all`, are currently in the root directory, and named the example file `test.c`):
+And it can be compiled with this command (assuming you've run `make shared_lib` or `make static_lib`, are currently in the root directory, and named the example file `test.c`):
 ```sh
-gcc -o test test.c -Iincl -Lbuild -lmml
+gcc -o test test.c -Iincl -Lbuild -lmml -lm
+```
+The shared object file is a bit finnicky, so if you link with the shared library, you'll probably have to do this (the above should work on OS X, though):
+```sh
+gcc -o test test.c -Iincl build/libmml.so
 ```
