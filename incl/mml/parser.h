@@ -18,6 +18,7 @@ constexpr const uint8_t PRECEDENCE[] = {
 
 	6, 6, 6, 6,
 	7, 7,
+	7, 7,
 
 	14,
 

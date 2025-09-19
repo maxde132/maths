@@ -20,6 +20,7 @@ const char *const TOK_STRINGS[] = {
 	"OP_LESS", "OP_GREATER",
 	"OP_LESSEQ", "OP_GREATEREQ",
 	"OP_EQ", "OP_NOTEQ",
+	"OP_EXACT_EQ", "OP_EXACT_NOTEQ",
 	
 	"OP_ASSERT_EQUAL",
 	
@@ -139,24 +140,34 @@ static MML_Token get_next_token(const char **s, struct parser_state *state)
 		++cached_s;
 		break;
 	case MML_OP_EQ_TOK:
-		if ((cached_s)[1] != '=')
+		if (cached_s[1] != '=')
 		{
 			ret = nToken(MML_OP_ASSERT_EQUAL, cached_s, 1);
 			++cached_s;
-			break;
+		} else if (cached_s[2] != '=')
+		{
+			ret = nToken(MML_OP_EQ_TOK, cached_s, 2);
+			cached_s += 2;
+		} else
+		{
+			ret = nToken(MML_OP_EXACT_EQ, cached_s, 3);
+			cached_s += 3;
 		}
-		ret = nToken(MML_OP_EQ_TOK, cached_s, 2);
-		cached_s += 2;
 		break;
 	case MML_OP_NOT_TOK:
-		if ((cached_s)[1] == '=')
+		if ((cached_s)[1] != '=')
+		{
+			ret = nToken(MML_OP_NOT_TOK, cached_s, 1);
+			++cached_s;
+		} else if ((cached_s)[2] != '=')
 		{
 			ret = nToken(MML_OP_NOTEQ_TOK, cached_s, 2);
 			cached_s += 2;
-			break;
+		} else
+		{
+			ret = nToken(MML_OP_EXACT_NOTEQ, cached_s, 3);
+			cached_s += 3;
 		}
-		ret = nToken(MML_OP_NOT_TOK, cached_s, 1);
-		++cached_s;
 		break;
 	case MML_DIGIT_TOK: {
 		const char *const start = cached_s;

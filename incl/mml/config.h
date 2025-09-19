@@ -13,9 +13,8 @@ enum {
 	PRINT		= BIT(1),
 	READ_STDIN	= BIT(2),
 	BOOLS_PRINT_NUM = BIT(3),
-	NO_ESTIMATE_EQUALITY = BIT(4),
-	NO_EVAL	= BIT(5),
-	RUN_PROMPT	= BIT(6),
+	NO_EVAL	= BIT(4),
+	RUN_PROMPT	= BIT(5),
 };
 
 #define SET_FLAG(f) (MML_global_config.runtime_flags |= (f))

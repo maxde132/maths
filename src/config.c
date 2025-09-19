@@ -59,7 +59,6 @@ void MML_print_usage(void)
                     "  -p PREC, --precision=PREC          Set the number of decimal digits to be printed when printing numbers (default 6)\n"
 			  "  --no-eval                          Only parse the expression; don't evaluate it (default OFF)\n"
                     "  --bools-are-nums                   Write the number 1 or 0 to represent boolean values (default OFF)\n"
-			  "  --no-estimate-equality             Consider two reals equal only if they are exactly equal to the bit (default OFF)\n"
 			  "  -I, --interactive                  Start an interactive prompt (similar to the Python IDLE)\n"
 			  "  -h, --help                         Display this help message\n"
 			  "  -V, --version                      Display program information\n"
@@ -106,8 +105,6 @@ void MML_arg_parse(int32_t argc, char **argv)
 				expression.s = argv[arg_n]+2+5;
 			else if (strcmp(argv[arg_n]+2, "bools-are-nums") == 0)
 				SET_FLAG(BOOLS_PRINT_NUM);
-			else if (strcmp(argv[arg_n]+2, "no-estimate-equality") == 0)
-				SET_FLAG(NO_ESTIMATE_EQUALITY);
 			else if (strcmp(argv[arg_n]+2, "no-eval") == 0)
 				SET_FLAG(NO_EVAL);
 			else if (strcmp(argv[arg_n]+2, "interactive") == 0)

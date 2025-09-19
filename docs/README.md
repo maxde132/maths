@@ -16,8 +16,10 @@ MML uses the most of the usual syntax for mathematical expressions, as well as a
 In this guide, the word 'expression' will be used to mean any valid operation or constant, where an operation may have as one of its operands another operation. The word `expr` in a specification (the leftmost part of an entry) will be used to represent any valid expression.
 All expressions (equality or otherwise) found here evaluate to the boolean value `true`, for density of the explanation.
 #### Some of the relevant operators:
-- `A == B`	= equality operator							(ex. `3 == 3`)
-- `A != B`	= inequality operator						(ex. `9 != 5`)
+- `A == B`	= estimated (15 digits) equality operator	(ex. `3 == 3`)
+- `A != B`	= estimated (15 digits) inequality operator	(ex. `9 != 5`)
+- `A === B`	= exact equality operator					(ex. `3 === 3`)
+- `A !== B`	= exact inequality operator					(ex. `9 !== 5`)
 - `!A`		= unary Boolean NOT operator				(ex. `!false == true`)
 - `A < B`	= less than operator						(ex. `9 < 5 == false`)
 - `A <= B`	= less than or equal operator				(ex. `9 <= 9 == true`)
@@ -37,6 +39,8 @@ All expressions (equality or otherwise) found here evaluate to the boolean value
 Because it would be a massive pain otherwise, you may specify multiple statements/expressions by separating them with a semicolon (`;`).
 
 ## <span id="advanced-syntax">Advanced Syntax</span> [↩](#contents)
+No, there's no scientific notation yet.
+
 MML also supports the use of vectors of any length (it gets weird if the length is 0, though).
 A vector may be created via this syntax for a vector literal:
 `[A, B, C, ...]` where there may be a trailing comma following the last element. `[5, 15, 9.2]` is an example.

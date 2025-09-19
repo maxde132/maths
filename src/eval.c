@@ -12,6 +12,7 @@
 #include "mml/config.h"
 #include "c-hashmap/map.h"
 #include "eval_funcs_incl.c"
+#include "mml/token.h"
 
 /* 0 constants
  * 1 tv_tv_funcs
@@ -192,14 +193,6 @@ MML_Expr *MML_eval_get_variable(MML_state *restrict state,
 
 #define EPSILON 1e-15
 
-static inline bool reals_are_equal_func(double a, double b)
-{
-	if (FLAG_IS_SET(NO_ESTIMATE_EQUALITY))
-		return a == b;
-	return fabs(a-b) < EPSILON;
-}
-static bool reals_are_equal_func(double, double);
-
 static MML_Value apply_func(MML_state *state,
 		strbuf ident, MML_Value right_vec)
 {
@@ -305,8 +298,10 @@ MML_Value MML_apply_binary_op(MML_state *restrict state, MML_Value a, MML_Value 
 			case MML_OP_GREATER_TOK: return VAL_BOOL(MML_get_number(&a) > MML_get_number(&b));
 			case MML_OP_LESSEQ_TOK: return VAL_BOOL(MML_get_number(&a) <= MML_get_number(&b));
 			case MML_OP_GREATEREQ_TOK: return VAL_BOOL(MML_get_number(&a) >= MML_get_number(&b));
-			case MML_OP_EQ_TOK: return VAL_BOOL(reals_are_equal_func(MML_get_number(&a), MML_get_number(&b)));
-			case MML_OP_NOTEQ_TOK: return VAL_BOOL(!reals_are_equal_func(MML_get_number(&a), MML_get_number(&b)));
+			case MML_OP_EQ_TOK: return VAL_BOOL(fabs(MML_get_number(&a) - MML_get_number(&b)) < EPSILON);
+			case MML_OP_NOTEQ_TOK: return VAL_BOOL(fabs(MML_get_number(&a) - MML_get_number(&b)) >= EPSILON);
+			case MML_OP_EXACT_EQ: return VAL_BOOL(MML_get_number(&a) == MML_get_number(&b));
+			case MML_OP_EXACT_NOTEQ: return VAL_BOOL(MML_get_number(&a) != MML_get_number(&b));
 			default:
 				fprintf(stderr, "invalid binary operator on real operands: %s\n", TOK_STRINGS[op]);
 				return VAL_INVAL;
@@ -319,8 +314,12 @@ MML_Value MML_apply_binary_op(MML_state *restrict state, MML_Value a, MML_Value 
 			case MML_OP_DIV_TOK: return VAL_CNUM(MML_get_complex(&a) / MML_get_complex(&b));
 			case MML_OP_ADD_TOK: return VAL_CNUM(MML_get_complex(&a) + MML_get_complex(&b));
 			case MML_OP_SUB_TOK: return VAL_CNUM(MML_get_complex(&a) - MML_get_complex(&b));
-			case MML_OP_EQ_TOK: return VAL_BOOL(MML_get_complex(&a) == MML_get_complex(&b));
-			case MML_OP_NOTEQ_TOK: return VAL_BOOL(MML_get_complex(&a) != MML_get_complex(&b));
+			case MML_OP_EQ_TOK:
+			case MML_OP_EXACT_EQ:
+				return VAL_BOOL(MML_get_complex(&a) == MML_get_complex(&b));
+			case MML_OP_NOTEQ_TOK:
+			case MML_OP_EXACT_NOTEQ:
+				return VAL_BOOL(MML_get_complex(&a) != MML_get_complex(&b));
 			default:
 				fprintf(stderr, "invalid binary operator on complex operands: %s\n", TOK_STRINGS[op]);
 				return VAL_INVAL;
