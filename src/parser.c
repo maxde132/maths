@@ -1,11 +1,12 @@
 #include <stdlib.h>
 #include <ctype.h>
-#include <stdio.h>
 
 #include "mml/parser.h"
-#include "dvec/dvec.h"
 #include "mml/eval.h"
+#include "mml/expr.h"
 #include "mml/token.h"
+#include "mml/config.h"
+#include "dvec/dvec.h"
 
 const char *const TOK_STRINGS[] = {
 	"OP_FUNC_CALL",
@@ -192,7 +193,7 @@ static MML_Token get_next_token(const char **s, struct parser_state *state)
 		break;
 	}
 	default:
-		fprintf(stderr, "invalid token starts at '%.5s'\n", cached_s);
+		MML_log_warn("invalid token starts at '%.5s'\n", cached_s++);
 		break;
 	}
 
@@ -232,7 +233,7 @@ static MML_Expr *parse_expr(const char **s, uint32_t max_preced, struct parser_s
 	MML_Token tok = get_next_token(s, state);
 
 	MML_Expr *left = calloc(1, sizeof(MML_Expr));
-	left->num_refs = 1;
+	left->num_refs = 1; // i don't know why isn't 1 but i have memory leaks if it is
 
 	if (tok.type == MML_OP_SUB_TOK || tok.type == MML_OP_ADD_TOK
 			|| op_is_unary(tok.type))
@@ -297,14 +298,15 @@ static MML_Expr *parse_expr(const char **s, uint32_t max_preced, struct parser_s
 		}
 	} else if (tok.type == MML_OPEN_PAREN_TOK)
 	{
-		free(left); // have to free the memory block held in `left` before overwriting the pointer
+		MML_free_expr(&left);
 		left = parse_expr(s, PARSER_MAX_PRECED, state);
 		MML_Token close_paren_tok = get_next_token(s, state);
 		if (close_paren_tok.type != MML_CLOSE_PAREN_TOK)
 		{
-			fprintf(stderr, "expected close paren for parenthesis block, got %s\n", TOK_STRINGS[close_paren_tok.type]);
+			get_next_token(s, state);
+			/*MML_log_err("expected close paren for parenthesis block, got %s\n", TOK_STRINGS[close_paren_tok.type]);
 			MML_free_expr(&left);
-			return nullptr;
+			return nullptr;*/
 		}
 	} else if (tok.type == MML_OPEN_BRACKET_TOK)
 	{
@@ -324,7 +326,7 @@ static MML_Expr *parse_expr(const char **s, uint32_t max_preced, struct parser_s
 			if (tok.type != MML_CLOSE_BRACKET_TOK
 			 && tok.type != MML_COMMA_TOK)
 			{
-				fprintf(stderr, "unexpected token %s found after element"
+				MML_log_err("unexpected token %s found after element"
 						" in vector literal (expected CLOSE_BRACKET_TOK or COMMA_TOK)\n",
 					 TOK_STRINGS[tok.type]);
 				MML_free_expr(&left);
@@ -335,26 +337,26 @@ static MML_Expr *parse_expr(const char **s, uint32_t max_preced, struct parser_s
 		*left = (MML_Expr) { Vector_type, 1, .u.v.v = vec };
 	} else if (tok.type == MML_PIPE_TOK)
 	{
-		free(left);
-		left = nullptr;
+		MML_free_expr(&left);
 		tok = peek_token(s, state);
 		if (tok.type == MML_PIPE_TOK)
 		{
-			fprintf(stderr, "expected expression in pipe block\n");
+			MML_log_err("expected expression in pipe block\n");
 			return nullptr;
 		}
 		left = parse_expr(s, PARSER_MAX_PRECED, state);
 		MML_Token close_pipe_tok = get_next_token(s, state);
 		if (close_pipe_tok.type != MML_PIPE_TOK)
 		{
-			fprintf(stderr, "expected closing pipe for pipe block, got %s\n",
+			get_next_token(s, state);
+			/*MML_log_err("expected closing pipe for pipe block, got %s\n",
 					TOK_STRINGS[close_pipe_tok.type]);
 			MML_free_expr(&left);
-			return nullptr;
+			return nullptr;*/
 		}
 		MML_Expr *opnode = calloc(1, sizeof(MML_Expr));
 		opnode->type = Operation_type;
-		opnode->num_refs = 1;
+		opnode->num_refs = 2;
 		opnode->u.o.left = left;
 		opnode->u.o.right = nullptr;
 		opnode->u.o.op = MML_PIPE_TOK;
@@ -379,12 +381,13 @@ static MML_Expr *parse_expr(const char **s, uint32_t max_preced, struct parser_s
 		MML_Token op_tok = peek_token(s, state);
 		if (op_tok.type == MML_INVALID_TOK)
 		{
-			fprintf(stderr, "invalid token found\n");
-			MML_free_expr(&left);
-			return nullptr;
+			MML_log_dbg("start of loop and found invalid token\n");
+			break;
+		//	MML_free_expr(&left);
+		//	return nullptr;
 		}
 		bool do_advance = true;
-		if (op_tok.type == MML_IDENT_TOK || op_tok.type == MML_NUMBER_TOK)
+		if (op_tok.type == MML_IDENT_TOK || op_tok.type == MML_NUMBER_TOK || op_tok.type == MML_OPEN_PAREN_TOK)
 		{
 			op_tok.type = MML_OP_MUL_TOK;
 			do_advance = false;
@@ -408,7 +411,7 @@ static MML_Expr *parse_expr(const char **s, uint32_t max_preced, struct parser_s
 
 		if (right == nullptr)
 		{
-			fprintf(stderr, "expected expression after operator %s\n",
+			MML_log_err("expected expression after operator %s\n",
 					TOK_STRINGS[op_tok.type]);
 			MML_free_expr(&left);
 			return nullptr;
@@ -416,7 +419,7 @@ static MML_Expr *parse_expr(const char **s, uint32_t max_preced, struct parser_s
 
 		MML_Expr *opnode = calloc(1, sizeof(MML_Expr));
 		opnode->type = Operation_type;
-		opnode->num_refs = 1;
+		opnode->num_refs = 1; // i don't know why isn't 1 but i have memory leaks if it is
 		opnode->u.o.left = left;
 		opnode->u.o.right = right;
 		opnode->u.o.op = op_tok.type;

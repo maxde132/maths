@@ -9,7 +9,6 @@
 #include "dvec/dvec.h"
 #include "mml/parser.h"
 #include "mml/expr.h"
-#include "mml/config.h"
 #include "c-hashmap/map.h"
 #include "eval_funcs_incl.c"
 #include "mml/token.h"
@@ -150,13 +149,8 @@ void MML_cleanup_state(MML_state *restrict state)
 	}
 
 	MML_free_vec(&state->vars_storage);
-	state->vars_storage = (MML_ExprVec) {0};
-
 	MML_free_vec(&state->exprs);
-	state->exprs = (MML_ExprVec) {0};
-
 	MML_free_vec(&state->allocd_vecs);
-	state->allocd_vecs = (MML_ExprVec) {0};
 
 	state->is_init = false;
 	if (--initialized_evaluators_count == 0)
