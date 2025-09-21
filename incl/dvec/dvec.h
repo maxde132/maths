@@ -15,7 +15,7 @@
 #define dv_init(v) ((v).size = 0, (v).capacity = 0, (v).items = NULL)
 
 #define dv_destroy(v) \
-	(free((v).items), (v).size = (v).capacity = 0)
+	(free((v).items), (v).items = (void *)((v).size = (v).capacity = 0))
 
 
 #define _dv_type(v) typeof(*(v).items)

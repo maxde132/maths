@@ -6,4 +6,6 @@
 - [x] fix segfault when using `--set_var:` to insert a variable when the variable value string is empty (e.g. `--set_var:A=`) <br />
 - [x] syntax guide and other documentation <br />
 - [x] === operator for exact equality (do away with --no-estimate-equality)
-- [ ] interactive prompt (like python's IDLE) (getting there) <br />
+- [x] interactive prompt (like python's IDLE) (pretty much done) <br />
+- [ ] add history to interactive prompt <br />
+- [ ] fix random memory leaks (probably caused by evaluator but I can't figure out the root cause) <br />
