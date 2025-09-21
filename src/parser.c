@@ -247,9 +247,9 @@ static MML_Expr *parse_expr(const char **s, uint32_t max_preced, struct parser_s
 		MML_Expr *operand = parse_expr(s, PRECEDENCE[new_token_type], state);
 
 		left->type = Operation_type;
-		left->u.o.left = operand;
-		left->u.o.right = NULL;
-		left->u.o.op = new_token_type;
+		left->o.left = operand;
+		left->o.right = NULL;
+		left->o.op = new_token_type;
 	} else if (tok.type == MML_IDENT_TOK)
 	{
 		MML_Token ident = tok;
@@ -260,25 +260,25 @@ static MML_Expr *parse_expr(const char **s, uint32_t max_preced, struct parser_s
 			MML_Expr *name = calloc(1, sizeof(MML_Expr));
 			name->type = Identifier_type;
 			name->num_refs = 1;
-			name->u.v.s = ident.buf;
+			name->s = ident.buf;
 
 			left->type = Operation_type;
-			left->u.o.left = name;
-			left->u.o.op = MML_OP_FUNC_CALL_TOK;
+			left->o.left = name;
+			left->o.op = MML_OP_FUNC_CALL_TOK;
 
 			get_next_token(s, state);
 
-			left->u.o.right = calloc(1, sizeof(MML_Expr));
-			left->u.o.right->type = Vector_type;
-			left->u.o.right->num_refs = 1;
-			left->u.o.right->should_free_vec_block = false;
-			left->u.o.right->u.v.v = (MML_ExprVec) DVEC_INIT;
+			left->o.right = calloc(1, sizeof(MML_Expr));
+			left->o.right->type = Vector_type;
+			left->o.right->num_refs = 1;
+			left->o.right->should_free_vec_block = false;
+			left->o.right->v = (MML_ExprVec) DVEC_INIT;
 			do
 			{
 				if (**s == '\0' || peek_token(s, state).type == MML_CLOSE_BRAC_TOK)
 					break;
 				MML_Expr *next_expr = parse_expr(s, PARSER_MAX_PRECED, state);
-				dv_push(left->u.o.right->u.v.v, next_expr);
+				dv_push(left->o.right->v, next_expr);
 				if (next_expr != nullptr)
 					--next_expr->num_refs;
 			} while (get_next_token(s, state).type == MML_COMMA_TOK);
@@ -294,7 +294,7 @@ static MML_Expr *parse_expr(const char **s, uint32_t max_preced, struct parser_s
 		} else
 		{
 			left->type = Identifier_type;
-			left->u.v.s = ident.buf;
+			left->s = ident.buf;
 		}
 	} else if (tok.type == MML_OPEN_PAREN_TOK)
 	{
@@ -334,7 +334,7 @@ static MML_Expr *parse_expr(const char **s, uint32_t max_preced, struct parser_s
 				return nullptr;
 			}
 		}
-		*left = (MML_Expr) { Vector_type, 1, .u.v.v = vec };
+		*left = (MML_Expr) { Vector_type, 1, .v = vec };
 	} else if (tok.type == MML_PIPE_TOK)
 	{
 		MML_free_expr(&left);
@@ -357,9 +357,9 @@ static MML_Expr *parse_expr(const char **s, uint32_t max_preced, struct parser_s
 		MML_Expr *opnode = calloc(1, sizeof(MML_Expr));
 		opnode->type = Operation_type;
 		opnode->num_refs = 2;
-		opnode->u.o.left = left;
-		opnode->u.o.right = nullptr;
-		opnode->u.o.op = MML_PIPE_TOK;
+		opnode->o.left = left;
+		opnode->o.right = nullptr;
+		opnode->o.op = MML_PIPE_TOK;
 
 		left = opnode;
 	} else if (tok.type == MML_NUMBER_TOK)
@@ -420,9 +420,9 @@ static MML_Expr *parse_expr(const char **s, uint32_t max_preced, struct parser_s
 		MML_Expr *opnode = calloc(1, sizeof(MML_Expr));
 		opnode->type = Operation_type;
 		opnode->num_refs = 1; // i don't know why isn't 1 but i have memory leaks if it is
-		opnode->u.o.left = left;
-		opnode->u.o.right = right;
-		opnode->u.o.op = op_tok.type;
+		opnode->o.left = left;
+		opnode->o.right = right;
+		opnode->o.op = op_tok.type;
 
 		left = opnode;
 	}

@@ -38,7 +38,7 @@ MML_Value custom_atan2(MML_state *state, MML_ExprVec *args)
 		fprintf(stderr, "`atan2` takes exactly 2 real number arguments\n");
 		return VAL_INVAL;
 	}
-	return VAL_NUM(atan2(y.v.n, x.v.n));
+	return VAL_NUM(atan2(y.n, x.n));
 }
 
 MML_Value custom_max(MML_state *state, MML_ExprVec *args)
@@ -53,7 +53,7 @@ MML_Value custom_max(MML_state *state, MML_ExprVec *args)
 			return VAL_INVAL;
 		MML_Value cur = MML_eval_expr(state, dv_a(*args, i));
 		MML_Value tmp = MML_apply_binary_op(state, cur, max, MML_OP_GREATER_TOK);
-		if (tmp.type == Boolean_type && tmp.v.b)
+		if (tmp.type == Boolean_type && tmp.b)
 			max = cur;
 	}
 
@@ -72,7 +72,7 @@ MML_Value custom_min(MML_state *state, MML_ExprVec *args)
 			return VAL_INVAL;
 		MML_Value cur = MML_eval_expr(state, dv_a(*args, i));
 		MML_Value tmp = MML_apply_binary_op(state, cur, min, MML_OP_LESS_TOK);
-		if (tmp.type == Boolean_type && tmp.v.b)
+		if (tmp.type == Boolean_type && tmp.b)
 			min = cur;
 	}
 
@@ -89,7 +89,7 @@ MML_Value custom_dbg_type(MML_state *state, MML_ExprVec *args)
 
 MML_Value custom_dbg_ident(MML_state *state, MML_ExprVec *args)
 {
-	MML_print_exprh(MML_eval_get_variable(state, dv_a(*args, 0)->u.v.s));
+	MML_print_exprh(MML_eval_get_variable(state, dv_a(*args, 0)->s));
 
 	return VAL_INVAL;
 }
@@ -104,7 +104,7 @@ MML_Value custom_config_set(MML_state *state, MML_ExprVec *args)
 		return VAL_INVAL;
 	}
 
-	const strbuf config_ident = dv_a(*args, 0)->u.v.s;
+	const strbuf config_ident = dv_a(*args, 0)->s;
 
 	if (strncmp(config_ident.s, "precision", sizeof("precision")-1) == 0)
 	{
@@ -115,7 +115,7 @@ MML_Value custom_config_set(MML_state *state, MML_ExprVec *args)
 					"must be of type RealNumber\n");
 			return VAL_INVAL;
 		}
-		MML_global_config.precision = (uint32_t)floor(val.v.n);
+		MML_global_config.precision = (uint32_t)floor(val.n);
 	} else
 	{
 		fprintf(stderr, "`config_set`: unknown config setting `%.*s`\n",
