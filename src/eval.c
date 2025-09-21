@@ -225,7 +225,7 @@ static MML_Value apply_func(MML_state *state,
 	}
 
 
-	fprintf(stderr, "undefined function for %s argument in function call: '%.*s'\n",
+	MML_log_err("undefined function for %s argument in function call: '%.*s'\n",
 			EXPR_TYPE_STRINGS[first_arg_val.type],
 			(int)ident.len, ident.s);
 	return VAL_INVAL;
@@ -244,7 +244,7 @@ MML_Value MML_apply_binary_op(MML_state *restrict state, MML_Value a, MML_Value 
 			if (a.type != ComplexNumber_type)
 				return VAL_BOOL(MML_get_number(&a) == 0);
 
-			fprintf(stderr, "invalid unary operator on complex operand: %s\n", TOK_STRINGS[MML_OP_NOT_TOK]);	
+			MML_log_warn("invalid unary operator on complex operand: %s\n", TOK_STRINGS[MML_OP_NOT_TOK]);
 			return VAL_INVAL;
 		case MML_OP_NEGATE: return (a.type == ComplexNumber_type)
 				? VAL_CNUM(-MML_get_complex(&a))
@@ -297,7 +297,7 @@ MML_Value MML_apply_binary_op(MML_state *restrict state, MML_Value a, MML_Value 
 			case MML_OP_EXACT_EQ: return VAL_BOOL(MML_get_number(&a) == MML_get_number(&b));
 			case MML_OP_EXACT_NOTEQ: return VAL_BOOL(MML_get_number(&a) != MML_get_number(&b));
 			default:
-				fprintf(stderr, "invalid binary operator on real operands: %s\n", TOK_STRINGS[op]);
+				MML_log_warn("invalid binary operator on real operands: %s\n", TOK_STRINGS[op]);
 				return VAL_INVAL;
 		}
 	} else if (VAL_IS_NUM(a) && VAL_IS_NUM(b))
@@ -315,7 +315,7 @@ MML_Value MML_apply_binary_op(MML_state *restrict state, MML_Value a, MML_Value 
 			case MML_OP_EXACT_NOTEQ:
 				return VAL_BOOL(MML_get_complex(&a) != MML_get_complex(&b));
 			default:
-				fprintf(stderr, "invalid binary operator on complex operands: %s\n", TOK_STRINGS[op]);
+				MML_log_warn("invalid binary operator on complex operands: %s\n", TOK_STRINGS[op]);
 				return VAL_INVAL;
 		}
 	} else if (a.type == Vector_type && b.type == RealNumber_type
@@ -323,19 +323,19 @@ MML_Value MML_apply_binary_op(MML_state *restrict state, MML_Value a, MML_Value 
 	{
 		if (a.type == RealNumber_type)
 		{
-			fprintf(stderr, "cannot index real number with vector\n");
+			MML_log_err("cannot index real numebr with vector (that makes no sense, what are you doing\?\?)\n");
 			return VAL_INVAL;
 		}
 		// vector index
 		size_t i = (size_t)MML_get_number(&b);
 		if (fabs(i - MML_get_number(&b)) > EPSILON || MML_get_number(&b) < 0)
 		{
-			fprintf(stderr, "vectors may only be indexed by a positive integer\n");
+			MML_log_err("vectors may only be indexed by a positive integer\n");
 			return VAL_INVAL;
 		}
 		if (i >= dv_n(a.v))
 		{
-			fprintf(stderr, "index %zu out of range for vector of length %zu\n", i, dv_n(a.v));
+			MML_log_err("index %zu out of range for vector of length %zu\n", i, dv_n(a.v));
 			return VAL_INVAL;
 		}
 		return MML_eval_expr(state, dv_a(a.v, i));
@@ -404,15 +404,17 @@ MML_Value MML_apply_binary_op(MML_state *restrict state, MML_Value a, MML_Value 
 			dv_push(state->allocd_vecs, ret);
 			return (MML_Value) { Vector_type, .v = ret->v };
 		default:
-			fprintf(stderr,
-					"invalid binary operator on Vector and arithmetic operands: %s\n",
+			MML_log_warn("invalid binary operator on %s and %s operands: %s\n",
+					EXPR_TYPE_STRINGS[a.type], EXPR_TYPE_STRINGS[b.type],
 					TOK_STRINGS[op]);
 			return VAL_INVAL;
 		}
 
 	}
 
-	fprintf(stderr, "invalid operator: %s\n", TOK_STRINGS[op]);
+	MML_log_warn("invalid binary operator on %s and %s operands: %s\n",
+			EXPR_TYPE_STRINGS[a.type], EXPR_TYPE_STRINGS[b.type],
+			TOK_STRINGS[op]);
 	return VAL_INVAL;
 }
 
@@ -420,7 +422,7 @@ MML_Value MML_eval_expr_recurse(MML_state *state, const MML_Expr *expr)
 {
 	if (!state->is_init)
 	{
-		fprintf(stderr, "you must run `MML_init_state` before using any evaluator functions.\n");
+		MML_log_err("you must run `MML_init_state` before using any evaluator functions.\n");
 		return VAL_INVAL;
 	}
 
@@ -448,7 +450,7 @@ MML_Value MML_eval_expr_recurse(MML_state *state, const MML_Expr *expr)
 		if (e != NULL)
 			return MML_eval_expr_recurse(state, e);
 
-		fprintf(stderr, "warning: undefined identifier: '%.*s'\n",
+		MML_log_warn("undefined identifier: '%.*s'\n",
 				(int)expr->s.len, expr->s.s);
 		return VAL_INVAL;
 	}
