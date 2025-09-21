@@ -24,28 +24,28 @@ MML_Value MML_print_typedval(MML_state *, const MML_Value *val)
 	}
 	switch (val->type) {
 	case Integer_type:
-		printf("%" PRIi64, val->v.i);
+		printf("%" PRIi64, val->i);
 		break;
 	case RealNumber_type:
-		printf("%.*f", MML_global_config.precision, val->v.n);
+		printf("%.*f", MML_global_config.precision, val->n);
 		break;
 	case ComplexNumber_type:
 		printf("%.*f%+.*fi",
-				MML_global_config.precision, creal(val->v.cn),
-				MML_global_config.precision, cimag(val->v.cn));
+				MML_global_config.precision, creal(val->cn),
+				MML_global_config.precision, cimag(val->cn));
 		break;
 	case Boolean_type:
 		if (FLAG_IS_SET(BOOLS_PRINT_NUM))
 			printf("%.*f",
-					MML_global_config.precision, (val->v.b) ? 1.0 : 0.0);
+					MML_global_config.precision, (val->b) ? 1.0 : 0.0);
 		else
-			printf("%s", (val->v.b) ? "true" : "false");
+			printf("%s", (val->b) ? "true" : "false");
 		break;
 	case Identifier_type:
-		printf("%.*s", (int)val->v.s.len, val->v.s.s);
+		printf("%.*s", (int)val->s.len, val->s.s);
 		break;
 	case Vector_type:
-		MML_print_vec(&val->v.v);
+		MML_print_vec(&val->v);
 		break;
 	default:
 		printf("(null)");
@@ -53,7 +53,7 @@ MML_Value MML_print_typedval(MML_state *, const MML_Value *val)
 	}
 
 	MML_global_config.last_print_was_newline = false;
-	return (MML_Value) { Invalid_type, .v.n = NAN };
+	return (MML_Value) { Invalid_type, .n = NAN };
 }
 
 inline MML_Value MML_println_typedval(MML_state *state, const MML_Value *val)
@@ -72,7 +72,7 @@ MML_Value MML_print_typedval_multiargs(MML_state *state, MML_ExprVec *args)
 		if (i < dv_n(*args)-1) fputc(' ', stdout);
 	}
 
-	return (MML_Value) { Invalid_type, .v.n = NAN };
+	return (MML_Value) { Invalid_type, .n = NAN };
 }
 MML_Value MML_println_typedval_multiargs(MML_state *state, MML_ExprVec *args)
 {
@@ -84,7 +84,7 @@ MML_Value MML_println_typedval_multiargs(MML_state *state, MML_ExprVec *args)
 	if (dv_n(*args) == 0)
 		fputc('\n', stdout);
 
-	return (MML_Value) { Invalid_type, .v.n = NAN };
+	return (MML_Value) { Invalid_type, .n = NAN };
 }
 
 void MML_print_expr(const MML_Expr *expr, uint32_t indent)
@@ -97,46 +97,46 @@ void MML_print_expr(const MML_Expr *expr, uint32_t indent)
 	}
 	switch (expr->type) {
 	case Operation_type:
-		printf("Operation(%s):\n", TOK_STRINGS[expr->u.o.op]);
+		printf("Operation(%s):\n", TOK_STRINGS[expr->o.op]);
 		MML_print_indent(indent+2);
 
 		printf("Left:\n");
-		MML_print_expr(expr->u.o.left, indent+4);
-		if (expr->u.o.right)
+		MML_print_expr(expr->o.left, indent+4);
+		if (expr->o.right)
 		{
 			fputc('\n', stdout);
 			MML_print_indent(indent+2);
 			printf("Right:\n");
-			MML_print_expr(expr->u.o.right, indent+4);
+			MML_print_expr(expr->o.right, indent+4);
 		}
 		break;
 	case Integer_type:
-		printf("Integer(%" PRIi64 ")", expr->u.v.i);
+		printf("Integer(%" PRIi64 ")", expr->i);
 		break;
 	case RealNumber_type:
-		printf("RealNumber(%.*f)", MML_global_config.precision, expr->u.v.n);
+		printf("RealNumber(%.*f)", MML_global_config.precision, expr->n);
 		break;
 	case ComplexNumber_type:
 		printf("ComplexNumber(%.*f%+.*fi)",
-				MML_global_config.precision, creal(expr->u.v.cn),
-				MML_global_config.precision, cimag(expr->u.v.cn));
+				MML_global_config.precision, creal(expr->cn),
+				MML_global_config.precision, cimag(expr->cn));
 		break;
 	case Boolean_type:
 		if (FLAG_IS_SET(BOOLS_PRINT_NUM))
 			printf("Boolean(%.*f)",
-					MML_global_config.precision, (expr->u.v.b) ? 1.0 : 0.0);
+					MML_global_config.precision, (expr->b) ? 1.0 : 0.0);
 		else
-			printf("Boolean(%s)", (expr->u.v.b) ? "true" : "false");
+			printf("Boolean(%s)", (expr->b) ? "true" : "false");
 		break;
 	case Identifier_type:
-		printf("Identifier('%.*s')", (int)expr->u.v.s.len, expr->u.v.s.s);
+		printf("Identifier('%.*s')", (int)expr->s.len, expr->s.s);
 		break;
 	case Vector_type:
-		printf("Vector(n=%zu):\n", dv_n(expr->u.v.v));
-		for (size_t i = 0; i < dv_n(expr->u.v.v); ++i)
+		printf("Vector(n=%zu):\n", dv_n(expr->v));
+		for (size_t i = 0; i < dv_n(expr->v); ++i)
 		{
-			MML_print_expr(dv_a(expr->u.v.v, i), indent+2);
-			if (i < dv_n(expr->u.v.v) - 1) fputc('\n', stdout);
+			MML_print_expr(dv_a(expr->v, i), indent+2);
+			if (i < dv_n(expr->v) - 1) fputc('\n', stdout);
 		}
 		break;
 	default:
@@ -172,21 +172,21 @@ void MML_free_expr(MML_Expr **e)
 	}
 	if ((*e)->type == Operation_type)
 	{
-		MML_free_expr(&(*e)->u.o.left);
-		MML_free_expr(&(*e)->u.o.right);
+		MML_free_expr(&(*e)->o.left);
+		MML_free_expr(&(*e)->o.right);
 	} else if ((*e)->type == Identifier_type)
 	{
-		if ((*e)->u.v.s.allocd)
-			free((*e)->u.v.s.s);
+		if ((*e)->s.allocd)
+			free((*e)->s.s);
 	} else if ((*e)->type == Vector_type)
 	{
 		if (!(*e)->should_free_vec_block)
-			MML_free_vec(&(*e)->u.v.v);
+			MML_free_vec(&(*e)->v);
 		else
 		{
-			free(dv_a((*e)->u.v.v, 0));
-			dv_destroy((*e)->u.v.v);
-			_dv_ptr((*e)->u.v.v) = nullptr;
+			free(dv_a((*e)->v, 0));
+			dv_destroy((*e)->v);
+			_dv_ptr((*e)->v) = nullptr;
 		}
 	}
 
@@ -203,11 +203,11 @@ void MML_free_vec(MML_ExprVec *vec)
 
 inline void MML_print_vec(const MML_ExprVec *vec)
 {
-	MML_print_expr(&(const MML_Expr) { Vector_type, 0, .u.v.v = *vec }, 0);
+	MML_print_expr(&(const MML_Expr) { Vector_type, 0, .v = *vec }, 0);
 }
 inline void MML_println_vec(const MML_ExprVec *vec)
 {
-	MML_print_expr(&(const MML_Expr) { Vector_type, 0, .u.v.v = *vec }, 0);
+	MML_print_expr(&(const MML_Expr) { Vector_type, 0, .v = *vec }, 0);
 	fputc('\n', stdout);
 }
 
@@ -221,14 +221,14 @@ inline double MML_get_number(MML_Value *v)
 	if (!VAL_IS_NUM(*v) || v->type == ComplexNumber_type)
 		return NAN;
 	return (v->type == RealNumber_type)
-		? v->v.n
-		: ((v->v.b) ? 1.0 : 0.0);
+		? v->n
+		: ((v->b) ? 1.0 : 0.0);
 }
 inline _Complex double MML_get_complex(MML_Value *v)
 {
 	if (!VAL_IS_NUM(*v))
 		return NAN;
 	return (v->type == ComplexNumber_type)
-		? v->v.cn
+		? v->cn
 		: MML_get_number(v) + 0.0*I;
 }
