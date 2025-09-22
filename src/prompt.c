@@ -149,7 +149,7 @@ void MML_run_prompt(MML_state *state)
 	puts("-- MML interactive prompt --");
 	puts("run `exit` or press SUPER+D to quit prompt.");
 	ssize_t n_read = 0;
-	while (!(cur_val.type == Invalid_type && cur_val.v.i == MML_QUIT_INVAL))
+	while (!(cur_val.type == Invalid_type && cur_val.i == MML_QUIT_INVAL))
 	{
 		printf("%s", PROMPT_STR);
 		fflush(stdout);
@@ -182,7 +182,7 @@ void MML_run_prompt(MML_state *state)
 			MML_println_typedval(state, &cur_val);
 		else
 		{
-			switch (cur_val.v.i) {
+			switch (cur_val.i) {
 			case MML_CLEAR_INVAL:
 				printf("\033[2J\033[;;f");
 				break;

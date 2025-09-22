@@ -9,7 +9,6 @@
 #include "dvec/dvec.h"
 #include "mml/parser.h"
 #include "mml/expr.h"
-#include "mml/config.h"
 #include "c-hashmap/map.h"
 #include "eval_funcs_incl.c"
 #include "mml/token.h"
@@ -108,8 +107,8 @@ MML_state *MML_init_state(void)
 	static constexpr MML_Value I_M		= VAL_CNUM(I);
 	static constexpr MML_Value NAN_M		= VAL_NUM(NAN);
 	static constexpr MML_Value INFINITY_M	= VAL_NUM(INFINITY);
-	static constexpr MML_Value EXIT_CMD_M	= { Invalid_type, .v.i = MML_QUIT_INVAL };
-	static constexpr MML_Value CLEAR_CMD_M	= { Invalid_type, .v.i = MML_CLEAR_INVAL };
+	static constexpr MML_Value EXIT_CMD_M	= { Invalid_type, .i = MML_QUIT_INVAL };
+	static constexpr MML_Value CLEAR_CMD_M	= { Invalid_type, .i = MML_CLEAR_INVAL };
 
 	eval_builtin_maps[0] = hashmap_create();
 	hashmap_set(eval_builtin_maps[0], hashmap_str_lit("true"),	(uintptr_t)&TRUE_M);
@@ -117,7 +116,7 @@ MML_state *MML_init_state(void)
 	hashmap_set(eval_builtin_maps[0], hashmap_str_lit("pi"),	(uintptr_t)&PI_M);
 	hashmap_set(eval_builtin_maps[0], hashmap_str_lit("e"),	(uintptr_t)&E_M);
 	hashmap_set(eval_builtin_maps[0], hashmap_str_lit("phi"),	(uintptr_t)&PHI_M);
-	static_assert(I_M.v.cn == I, "how on earth does I != I? i think your computer's borked\n");
+	static_assert(I_M.cn == I, "how on earth does I != I? i think your computer's borked\n");
 	hashmap_set(eval_builtin_maps[0], hashmap_str_lit("i"),	(uintptr_t)&I_M);
 	hashmap_set(eval_builtin_maps[0], hashmap_str_lit("nan"),	(uintptr_t)&NAN_M);
 	hashmap_set(eval_builtin_maps[0], hashmap_str_lit("inf"),	(uintptr_t)&INFINITY_M);
@@ -150,13 +149,8 @@ void MML_cleanup_state(MML_state *restrict state)
 	}
 
 	MML_free_vec(&state->vars_storage);
-	state->vars_storage = (MML_ExprVec) {0};
-
 	MML_free_vec(&state->exprs);
-	state->exprs = (MML_ExprVec) {0};
-
 	MML_free_vec(&state->allocd_vecs);
-	state->allocd_vecs = (MML_ExprVec) {0};
 
 	state->is_init = false;
 	if (--initialized_evaluators_count == 0)
@@ -198,22 +192,22 @@ static MML_Value apply_func(MML_state *state,
 {
 	MML_val_func vec_args_func;
 	if (hashmap_get(eval_builtin_maps[1], ident.s, ident.len, (uintptr_t *)&vec_args_func))
-		return ((*vec_args_func)(state, &right_vec.v.v));
+		return ((*vec_args_func)(state, &right_vec.v));
 
 	double (*d_d_func) (double);
 	_Complex double (*cd_cd_func) (_Complex double);
 	_Complex double (*cd_d_func) (double);
 	double (*d_cd_func) (_Complex double);
 
-	const MML_Value first_arg_val = MML_eval_expr(state, dv_a(right_vec.v.v, 0));
+	const MML_Value first_arg_val = MML_eval_expr(state, dv_a(right_vec.v, 0));
 	if (first_arg_val.type == RealNumber_type)
 	{
 		if (hashmap_get(eval_builtin_maps[4], ident.s, ident.len, (uintptr_t *)&cd_d_func))
 			if (first_arg_val.type == RealNumber_type)
-				return VAL_CNUM((*cd_d_func)(first_arg_val.v.n));
+				return VAL_CNUM((*cd_d_func)(first_arg_val.n));
 		if (hashmap_get(eval_builtin_maps[2], ident.s, ident.len, (uintptr_t *)&d_d_func))
 			if (first_arg_val.type == RealNumber_type)
-				return VAL_NUM((*d_d_func)(first_arg_val.v.n));
+				return VAL_NUM((*d_d_func)(first_arg_val.n));
 	} else if (first_arg_val.type == ComplexNumber_type)
 	{
 		char *temp __attribute__((cleanup(MML_free_pp)))
@@ -223,15 +217,15 @@ static MML_Value apply_func(MML_state *state,
 
 		if (hashmap_get(eval_builtin_maps[5], temp, ident.len + sizeof("complex_")-1, (uintptr_t *)&d_cd_func))
 			if (first_arg_val.type == ComplexNumber_type)
-				return VAL_NUM((*d_cd_func)(first_arg_val.v.cn));
+				return VAL_NUM((*d_cd_func)(first_arg_val.cn));
 
 		if (hashmap_get(eval_builtin_maps[3], temp, ident.len + sizeof("complex_")-1, (uintptr_t *)&cd_cd_func))
 			if (first_arg_val.type == ComplexNumber_type)
-				return VAL_CNUM((*cd_cd_func)(first_arg_val.v.cn));
+				return VAL_CNUM((*cd_cd_func)(first_arg_val.cn));
 	}
 
 
-	fprintf(stderr, "undefined function for %s argument in function call: '%.*s'\n",
+	MML_log_err("undefined function for %s argument in function call: '%.*s'\n",
 			EXPR_TYPE_STRINGS[first_arg_val.type],
 			(int)ident.len, ident.s);
 	return VAL_INVAL;
@@ -250,7 +244,7 @@ MML_Value MML_apply_binary_op(MML_state *restrict state, MML_Value a, MML_Value 
 			if (a.type != ComplexNumber_type)
 				return VAL_BOOL(MML_get_number(&a) == 0);
 
-			fprintf(stderr, "invalid unary operator on complex operand: %s\n", TOK_STRINGS[MML_OP_NOT_TOK]);	
+			MML_log_warn("invalid unary operator on complex operand: %s\n", TOK_STRINGS[MML_OP_NOT_TOK]);
 			return VAL_INVAL;
 		case MML_OP_NEGATE: return (a.type == ComplexNumber_type)
 				? VAL_CNUM(-MML_get_complex(&a))
@@ -262,21 +256,21 @@ MML_Value MML_apply_binary_op(MML_state *restrict state, MML_Value a, MML_Value 
 			MML_Expr *ret = calloc(1, sizeof(MML_Expr));
 			ret->type = Vector_type;
 			ret->should_free_vec_block = true;
-			dv_init(ret->u.v.v);
-			dv_resize(ret->u.v.v, 2);
+			dv_init(ret->v);
+			dv_resize(ret->v, 2);
 
 			MML_Expr *data = calloc(2, sizeof(MML_Expr));
 			const MML_Value negated_a = MML_apply_binary_op(state,
 					a,
 					VAL_INVAL,
 					MML_OP_NEGATE);
-			data[0] = (MML_Expr) { a.type, .num_refs=1, .u.v=a.v };
-			data[1] = (MML_Expr) { negated_a.type, .num_refs=1, .u.v=negated_a.v };
-			dv_a(ret->u.v.v, 0) = &data[0];
-			dv_a(ret->u.v.v, 1) = &data[1];
+			data[0] = (MML_Expr) { a.type, .num_refs=1, .v=a.v };
+			data[1] = (MML_Expr) { negated_a.type, .num_refs=1, .v=negated_a.v };
+			dv_a(ret->v, 0) = &data[0];
+			dv_a(ret->v, 1) = &data[1];
 
 			dv_push(state->allocd_vecs, ret);
-			return (MML_Value) { Vector_type, .v = ret->u.v };
+			return (MML_Value) { Vector_type, .v = ret->v };
 		case MML_OP_UNARY_NOTHING: return a;
 		default:
 			//fprintf(stderr, "invalid unary operator on %s operand: %s\n",
@@ -303,7 +297,7 @@ MML_Value MML_apply_binary_op(MML_state *restrict state, MML_Value a, MML_Value 
 			case MML_OP_EXACT_EQ: return VAL_BOOL(MML_get_number(&a) == MML_get_number(&b));
 			case MML_OP_EXACT_NOTEQ: return VAL_BOOL(MML_get_number(&a) != MML_get_number(&b));
 			default:
-				fprintf(stderr, "invalid binary operator on real operands: %s\n", TOK_STRINGS[op]);
+				MML_log_warn("invalid binary operator on real operands: %s\n", TOK_STRINGS[op]);
 				return VAL_INVAL;
 		}
 	} else if (VAL_IS_NUM(a) && VAL_IS_NUM(b))
@@ -321,7 +315,7 @@ MML_Value MML_apply_binary_op(MML_state *restrict state, MML_Value a, MML_Value 
 			case MML_OP_EXACT_NOTEQ:
 				return VAL_BOOL(MML_get_complex(&a) != MML_get_complex(&b));
 			default:
-				fprintf(stderr, "invalid binary operator on complex operands: %s\n", TOK_STRINGS[op]);
+				MML_log_warn("invalid binary operator on complex operands: %s\n", TOK_STRINGS[op]);
 				return VAL_INVAL;
 		}
 	} else if (a.type == Vector_type && b.type == RealNumber_type
@@ -329,25 +323,25 @@ MML_Value MML_apply_binary_op(MML_state *restrict state, MML_Value a, MML_Value 
 	{
 		if (a.type == RealNumber_type)
 		{
-			fprintf(stderr, "cannot index real number with vector\n");
+			MML_log_err("cannot index real numebr with vector (that makes no sense, what are you doing\?\?)\n");
 			return VAL_INVAL;
 		}
 		// vector index
 		size_t i = (size_t)MML_get_number(&b);
 		if (fabs(i - MML_get_number(&b)) > EPSILON || MML_get_number(&b) < 0)
 		{
-			fprintf(stderr, "vectors may only be indexed by a positive integer\n");
+			MML_log_err("vectors may only be indexed by a positive integer\n");
 			return VAL_INVAL;
 		}
-		if (i >= dv_n(a.v.v))
+		if (i >= dv_n(a.v))
 		{
-			fprintf(stderr, "index %zu out of range for vector of length %zu\n", i, dv_n(a.v.v));
+			MML_log_err("index %zu out of range for vector of length %zu\n", i, dv_n(a.v));
 			return VAL_INVAL;
 		}
-		return MML_eval_expr(state, dv_a(a.v.v, i));
+		return MML_eval_expr(state, dv_a(a.v, i));
 	} else if (a.type == Vector_type && b.type == Vector_type
 		  && op == MML_OP_MUL_TOK
-		  && dv_n(a.v.v) == dv_n(b.v.v))
+		  && dv_n(a.v) == dv_n(b.v))
 	{
 		// n-dimensional dot product
 		//
@@ -356,12 +350,12 @@ MML_Value MML_apply_binary_op(MML_state *restrict state, MML_Value a, MML_Value 
 		// of the corresponding nested vectors in each, along with the regular
 		// multiplication. (not intentionally, that's just what happens)
 		double sum = 0.0;
-		for (size_t i = 0; i < dv_n(a.v.v); ++i)
+		for (size_t i = 0; i < dv_n(a.v); ++i)
 		{
 			sum += MML_apply_binary_op(state,
-					MML_eval_expr(state, dv_a(a.v.v, i)),
-					MML_eval_expr(state, dv_a(b.v.v, i)),
-					MML_OP_MUL_TOK).v.n;
+					MML_eval_expr(state, dv_a(a.v, i)),
+					MML_eval_expr(state, dv_a(b.v, i)),
+					MML_OP_MUL_TOK).n;
 		}
 		return VAL_NUM(sum);
 	} else if (a.type == Vector_type && op == MML_PIPE_TOK)
@@ -369,10 +363,10 @@ MML_Value MML_apply_binary_op(MML_state *restrict state, MML_Value a, MML_Value 
 		// compute vector magnitude
 		_Complex double sum = 0.0;
 		MML_Value cur_elem;
-		for (size_t i = 0; i < dv_n(a.v.v); ++i)
+		for (size_t i = 0; i < dv_n(a.v); ++i)
 		{
-			cur_elem = MML_eval_expr(state, dv_a(a.v.v, i));
-			sum += MML_apply_binary_op(state, cur_elem, cur_elem, MML_OP_MUL_TOK).v.n;
+			cur_elem = MML_eval_expr(state, dv_a(a.v, i));
+			sum += MML_apply_binary_op(state, cur_elem, cur_elem, MML_OP_MUL_TOK).n;
 		}
 		_Complex double ret = csqrt(sum);
 		return (cimag(ret) == 0.0) ? VAL_NUM(creal(ret)) : VAL_CNUM(ret);
@@ -385,15 +379,15 @@ MML_Value MML_apply_binary_op(MML_state *restrict state, MML_Value a, MML_Value 
 		case MML_OP_MUL_TOK:
 		case MML_OP_DIV_TOK:
 			const MML_ExprVec *src_vec = (a.type == Vector_type)
-				? &a.v.v
-				: &b.v.v;
+				? &a.v
+				: &b.v;
 			const MML_Value *scalar = (VAL_IS_NUM(a)) ? &a : &b;
 
 			MML_Expr *ret = calloc(1, sizeof(MML_Expr));
 			ret->type = Vector_type;
 			ret->should_free_vec_block = true;
-			dv_init(ret->u.v.v);
-			dv_resize(ret->u.v.v, dv_n(*src_vec));
+			dv_init(ret->v);
+			dv_resize(ret->v, dv_n(*src_vec));
 
 			MML_Expr *data = calloc(dv_n(*src_vec), sizeof(MML_Expr));
 			for (size_t i = 0; i < dv_n(*src_vec); ++i)
@@ -404,21 +398,23 @@ MML_Value MML_apply_binary_op(MML_state *restrict state, MML_Value a, MML_Value 
 						op);
 				data[i].type = cur.type;
 				data[i].num_refs = 1;
-				data[i].u.v = cur.v;
-				dv_a(ret->u.v.v, i) = &data[i];
+				data[i].v = cur.v;
+				dv_a(ret->v, i) = &data[i];
 			}
 			dv_push(state->allocd_vecs, ret);
-			return (MML_Value) { Vector_type, .v = ret->u.v };
+			return (MML_Value) { Vector_type, .v = ret->v };
 		default:
-			fprintf(stderr,
-					"invalid binary operator on Vector and arithmetic operands: %s\n",
+			MML_log_warn("invalid binary operator on %s and %s operands: %s\n",
+					EXPR_TYPE_STRINGS[a.type], EXPR_TYPE_STRINGS[b.type],
 					TOK_STRINGS[op]);
 			return VAL_INVAL;
 		}
 
 	}
 
-	fprintf(stderr, "invalid operator: %s\n", TOK_STRINGS[op]);
+	MML_log_warn("invalid binary operator on %s and %s operands: %s\n",
+			EXPR_TYPE_STRINGS[a.type], EXPR_TYPE_STRINGS[b.type],
+			TOK_STRINGS[op]);
 	return VAL_INVAL;
 }
 
@@ -426,7 +422,7 @@ MML_Value MML_eval_expr_recurse(MML_state *state, const MML_Expr *expr)
 {
 	if (!state->is_init)
 	{
-		fprintf(stderr, "you must run `MML_init_state` before using any evaluator functions.\n");
+		MML_log_err("you must run `MML_init_state` before using any evaluator functions.\n");
 		return VAL_INVAL;
 	}
 
@@ -436,40 +432,40 @@ MML_Value MML_eval_expr_recurse(MML_state *state, const MML_Expr *expr)
 	case Invalid_type:
 		return VAL_INVAL;
 	case Vector_type:
-		return (MML_Value) { Vector_type, .v.v = expr->u.v.v };
+		return (MML_Value) { Vector_type, .v = expr->v };
 	case RealNumber_type:
-		return VAL_NUM(expr->u.v.n);
+		return VAL_NUM(expr->n);
 	case ComplexNumber_type:
-		return VAL_CNUM(expr->u.v.cn);
+		return VAL_CNUM(expr->cn);
 	case Boolean_type:
-		return VAL_BOOL(expr->u.v.b);
+		return VAL_BOOL(expr->b);
 	case Identifier_type: {
 		MML_Value *val;
-		if (strncmp(expr->u.v.s.s, "ans", expr->u.v.s.len) == 0)
+		if (strncmp(expr->s.s, "ans", expr->s.len) == 0)
 			return state->last_val;
-		if (hashmap_get(eval_builtin_maps[0], expr->u.v.s.s, expr->u.v.s.len, (uintptr_t *)&val))
+		if (hashmap_get(eval_builtin_maps[0], expr->s.s, expr->s.len, (uintptr_t *)&val))
 			return *val;
 		
-		MML_Expr *e = MML_eval_get_variable(state, expr->u.v.s);
+		MML_Expr *e = MML_eval_get_variable(state, expr->s);
 		if (e != NULL)
 			return MML_eval_expr_recurse(state, e);
 
-		fprintf(stderr, "warning: undefined identifier: '%.*s'\n",
-				(int)expr->u.v.s.len, expr->u.v.s.s);
+		MML_log_warn("undefined identifier: '%.*s'\n",
+				(int)expr->s.len, expr->s.s);
 		return VAL_INVAL;
 	}
 	default:
 		break;
 	}
 
-	const MML_Expr *left = expr->u.o.left;
-	const MML_Expr *right = expr->u.o.right;
+	const MML_Expr *left = expr->o.left;
+	const MML_Expr *right = expr->o.right;
 
-	if (expr->u.o.op == MML_OP_ASSERT_EQUAL && left->type == Identifier_type)
+	if (expr->o.op == MML_OP_ASSERT_EQUAL && left->type == Identifier_type)
 	{
-		MML_eval_set_variable(state, left->u.v.s, (MML_Expr *)right);
+		MML_eval_set_variable(state, left->s, (MML_Expr *)right);
 		return MML_eval_expr_recurse(state, right);
-	} else if (expr->u.o.op == MML_OP_FUNC_CALL_TOK)
+	} else if (expr->o.op == MML_OP_FUNC_CALL_TOK)
 	{
 		if (left == NULL
 		 || right == NULL
@@ -478,13 +474,13 @@ MML_Value MML_eval_expr_recurse(MML_state *state, const MML_Expr *expr)
 		MML_Value right_val_vec = MML_eval_expr_recurse(state, right);
 		if (right_val_vec.type == Invalid_type)
 			return VAL_INVAL;
-		return apply_func(state, left->u.v.s, right_val_vec);
+		return apply_func(state, left->s, right_val_vec);
 	}
 
 	return MML_apply_binary_op(state,
 			MML_eval_expr_recurse(state, left),
 			(right) ? MML_eval_expr_recurse(state, right) : VAL_INVAL,
-			expr->u.o.op);
+			expr->o.op);
 }
 inline MML_Value MML_eval_expr(MML_state *state, const MML_Expr *expr)
 {

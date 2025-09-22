@@ -28,15 +28,6 @@ typedef enum MML_ExprType {
 
 typedef dvec_t(MML_Expr *) MML_ExprVec;
 
-typedef union MML_EvalValue {
-	double n;
-	_Complex double cn;
-	bool b;
-	strbuf s;
-	MML_ExprVec v;
-	int64_t i;
-} MML_EvalValue;
-
 #define VALTYPE_IS_ORDERED(v) \
 	((v).type != ComplexNumber_type && \
 	 (v).type != Vector_type && \
@@ -44,7 +35,14 @@ typedef union MML_EvalValue {
 
 typedef struct MML_Value {
 	MML_ExprType type;
-	MML_EvalValue v;
+	union {
+		double n;
+		_Complex double cn;
+		bool b;
+		strbuf s;
+		MML_ExprVec v;
+		int64_t i;
+	};
 } MML_Value;
 
 typedef struct MML_Expr {
@@ -53,15 +51,19 @@ typedef struct MML_Expr {
 	bool should_free_vec_block;
 	union {
 		MML_Operation o;
-		MML_EvalValue v;
-	} u;
+		double n;
+		_Complex double cn;
+		bool b;
+		strbuf s;
+		MML_ExprVec v;
+		int64_t i;
+	};
 } MML_Expr;
 
-#define EXPR_NUM(num) ((MML_Expr) { RealNumber_type, .u.v.n = (num) })
-#define VAL_NUM(num) ((MML_Value) { RealNumber_type, .v.n = (num) })
-#define VAL_CNUM(num) ((MML_Value) { ComplexNumber_type, .v.cn = (num) })
-#define VAL_BOOL(bl) ((MML_Value) { Boolean_type, .v.b = (bl) })
-#define VAL2EXPRP(val) (&(MML_Expr) { .type = (val).type, .u.v = (val).v })
+#define EXPR_NUM(num) ((MML_Expr) { RealNumber_type, .n = (num) })
+#define VAL_NUM(num) ((MML_Value) { RealNumber_type, .n = (num) })
+#define VAL_CNUM(num) ((MML_Value) { ComplexNumber_type, .cn = (num) })
+#define VAL_BOOL(bl) ((MML_Value) { Boolean_type, .b = (bl) })
 
 enum INVAL_TYPES {
 	MML_ERROR_INVAL,
@@ -69,7 +71,7 @@ enum INVAL_TYPES {
 	MML_CLEAR_INVAL,
 };
 
-constexpr MML_Value VAL_INVAL = { Invalid_type, .v.i = MML_ERROR_INVAL };
+constexpr MML_Value VAL_INVAL = { Invalid_type, .i = MML_ERROR_INVAL };
 
 #define VAL_IS_NUM(v) (\
     (v).type == RealNumber_type \
