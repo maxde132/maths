@@ -1,3 +1,6 @@
 [submodule "c-hashmap"]
 	path = c-hashmap
 	url = https://github.com/mashpoe/c-hashmap
+[submodule "cvi"]
+	path = cvi
+	url = https://github.com/ilovapples/custom-vector-implementations

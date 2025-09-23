@@ -6,7 +6,7 @@
 #include <string.h>
 #include <stdio.h>
 
-#include "dvec/dvec.h"
+#include "cvi/dvec/dvec.h"
 #include "mml/parser.h"
 #include "mml/expr.h"
 #include "c-hashmap/map.h"

@@ -6,7 +6,7 @@
 #include "mml/mml.h"
 #include "mml/config.h"
 #include "mml/prompt.h"
-#include "dvec/dvec.h"
+#include "cvi/dvec/dvec.h"
 
 extern strbuf expression;
 
