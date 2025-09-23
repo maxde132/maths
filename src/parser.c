@@ -6,7 +6,7 @@
 #include "mml/expr.h"
 #include "mml/token.h"
 #include "mml/config.h"
-#include "dvec/dvec.h"
+#include "cvi/dvec/dvec.h"
 
 const char *const TOK_STRINGS[] = {
 	"OP_FUNC_CALL",

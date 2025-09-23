@@ -5,7 +5,7 @@
 #include <stdint.h>
 
 #include "token.h"
-#include "dvec/dvec.h"
+#include "cvi/dvec/dvec.h"
 
 typedef struct MML_Expr MML_Expr;
 

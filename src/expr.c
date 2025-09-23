@@ -4,7 +4,7 @@
 #include <math.h>
 #include <stdlib.h>
 
-#include "dvec/dvec.h"
+#include "cvi/dvec/dvec.h"
 #include "mml/parser.h"
 #include "mml/eval.h"
 #include "mml/expr.h"
