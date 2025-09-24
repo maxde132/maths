@@ -15,7 +15,7 @@ void MML_print_indent(uint32_t indent)
 	printf("%*s", indent, "");
 }
 
-MML_Value MML_print_typedval(MML_state *, const MML_Value *val)
+MML_Value MML_print_typedval(MML_state *state, const MML_Value *val)
 {
 	if (val == nullptr)
 	{
@@ -45,7 +45,17 @@ MML_Value MML_print_typedval(MML_state *, const MML_Value *val)
 		printf("%.*s", (int)val->s.len, val->s.s);
 		break;
 	case Vector_type:
-		MML_print_vec(&val->v);
+		fputc('[', stdout);
+		MML_Value cur_val;
+		MML_Expr **cur;
+		dv_foreach(val->v, cur)
+		{
+			cur_val = MML_eval_expr(state, *cur);
+			MML_print_typedval(state, &cur_val);
+			if ((size_t)(cur - _dv_ptr(val->v)) < dv_n(val->v)-1)
+				fputs(", ", stdout);
+		}
+		fputc(']', stdout);
 		break;
 	default:
 		printf("(null)");
@@ -199,16 +209,6 @@ void MML_free_vec(MML_ExprVec *vec)
 	for (size_t i = 0; i < dv_n(*vec); ++i)
 		MML_free_expr(&dv_a(*vec, i));
 	dv_destroy(*vec);
-}
-
-inline void MML_print_vec(const MML_ExprVec *vec)
-{
-	MML_print_expr(&(const MML_Expr) { Vector_type, 0, .v = *vec }, 0);
-}
-inline void MML_println_vec(const MML_ExprVec *vec)
-{
-	MML_print_expr(&(const MML_Expr) { Vector_type, 0, .v = *vec }, 0);
-	fputc('\n', stdout);
 }
 
 inline void MML_free_pp(void *p)

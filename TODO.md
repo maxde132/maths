@@ -9,4 +9,4 @@
 - [x] interactive prompt (like python's IDLE) (pretty much done) <br />
 - [ ] add history to interactive prompt <br />
 - [ ] fix random memory leaks (probably caused by evaluator but I can't figure out the root cause) <br />
-- [ ] fix the identifier 'a' having inexplicable bugs (--set_var doesn't work with it, it never flags an 'undefined variable' error even when it should, etc.) <br />
+- [x] fix the identifier 'a' having inexplicable bugs (--set_var doesn't work with it, it never flags an 'undefined variable' error even when it should, etc.) <br />

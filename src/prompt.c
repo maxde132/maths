@@ -162,7 +162,7 @@ void MML_run_prompt(MML_state *state)
 		else if (n_read == -2)
 			continue;
 	#ifndef NDEBUG
-		printf("buf: '%s'\n", line_in);
+		//printf("buf: '%s'\n", line_in);
 	#endif
 
 		MML_parse_stmts(line_in, state);

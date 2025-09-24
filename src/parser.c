@@ -381,7 +381,6 @@ static MML_Expr *parse_expr(const char **s, uint32_t max_preced, struct parser_s
 		MML_Token op_tok = peek_token(s, state);
 		if (op_tok.type == MML_INVALID_TOK)
 		{
-			MML_log_dbg("start of loop and found invalid token\n");
 			break;
 		//	MML_free_expr(&left);
 		//	return nullptr;

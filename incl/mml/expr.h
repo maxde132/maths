@@ -90,8 +90,6 @@ MML_Value MML_print_exprh_tv_func(MML_state *, MML_ExprVec *args);
 void MML_free_expr(MML_Expr **e);
 
 void MML_free_vec(MML_ExprVec *vec);
-void MML_print_vec(const MML_ExprVec *vec);
-void MML_println_vec(const MML_ExprVec *vec);
 
 void MML_free_pp(void *p);
 
