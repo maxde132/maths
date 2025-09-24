@@ -3,6 +3,7 @@
 #include <stddef.h>
 #include <inttypes.h>
 
+#include "mml/expr.h"
 #include "mml/mml.h"
 #include "mml/config.h"
 #include "mml/prompt.h"
@@ -40,7 +41,9 @@ int32_t main(int32_t argc, char **argv)
 	//Expr *expr = parse(expression.s);
 	//eval_push_expr(&eval_state, expr);
 	MML_parse_stmts(expression.s, MML_global_config.eval_state);
-	if (FLAG_IS_SET(DEBUG)) MML_println_vec(&MML_global_config.eval_state->exprs);
+	if (FLAG_IS_SET(DEBUG)) MML_println_typedval(
+			MML_global_config.eval_state,
+			&(MML_Value) { .type=Vector_type, .v=MML_global_config.eval_state->exprs });
 
 	if (!FLAG_IS_SET(NO_EVAL))
 	{

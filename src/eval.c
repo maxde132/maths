@@ -441,7 +441,7 @@ MML_Value MML_eval_expr_recurse(MML_state *state, const MML_Expr *expr)
 		return VAL_BOOL(expr->b);
 	case Identifier_type: {
 		MML_Value *val;
-		if (strncmp(expr->s.s, "ans", expr->s.len) == 0)
+		if (expr->s.len == 3 && strncmp(expr->s.s, "ans", 3) == 0)
 			return state->last_val;
 		if (hashmap_get(eval_builtin_maps[0], expr->s.s, expr->s.len, (uintptr_t *)&val))
 			return *val;

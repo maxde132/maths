@@ -5,8 +5,10 @@ CC := gcc
 
 EXEC := mml
 
+#NO_DEBUG := -DNDEBUG
+
 FPIC_FLAG := 
-CFLAGS := -Wall -Wextra -std=c23 -Iincl -I. -DNDEBUG -g
+CFLAGS := -Wall -Wextra -std=c23 -Iincl -I. $(NO_DEBUG) -g
 LDFLAGS := $(CFLAGS) -lm
 
 .PHONY: cleanobjs clean static_lib shared_lib
