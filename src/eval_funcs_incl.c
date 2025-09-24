@@ -125,3 +125,47 @@ MML_Value custom_config_set(MML_state *state, MML_ExprVec *args)
 
 	return VAL_INVAL;
 }
+
+MML_Value custom_root(MML_state *state, MML_ExprVec *args)
+{
+	if (dv_n(*args) == 1)
+	{
+		return MML_apply_binary_op(state,
+				MML_eval_expr(state, dv_a(*args, 0)),
+				VAL_INVAL,
+				MML_OP_ROOT);
+	}
+
+	if (dv_n(*args) != 2)
+	{
+		MML_log_err("`root`: takes either 2 numbers (number, complex number, or Boolean) arguments or 1 number argument\n");
+		return VAL_INVAL;
+	}
+
+	return MML_apply_binary_op(state,
+			MML_eval_expr(state, dv_a(*args, 0)),
+			MML_eval_expr(state, dv_a(*args, 1)), MML_OP_ROOT);
+}
+
+MML_Value custom_logb(MML_state *state, MML_ExprVec *args)
+{
+	if (dv_n(*args) != 2)
+	{
+		MML_log_err("`logb`: takes exactly 2 number (number, complex number, or Boolean) arguments\n");
+		return VAL_INVAL;
+	}
+
+	MML_Value a = MML_eval_expr(state, dv_a(*args, 0));
+	MML_Value b = MML_eval_expr(state, dv_a(*args, 1));
+
+	if (!VAL_IS_NUM(a) || !VAL_IS_NUM(b))
+	{
+		MML_log_err("`logb`: takes exactly 2 number (number, complex number, or Boolean) arguments\n");
+		return VAL_INVAL;
+	}
+
+	if (a.type != ComplexNumber_type && b.type != ComplexNumber_type)
+		return VAL_NUM(log(MML_get_number(&a)) / log(MML_get_number(&b)));
+	else
+		return VAL_CNUM(clog(MML_get_complex(&a)) / clog(MML_get_complex(&b)));
+}
