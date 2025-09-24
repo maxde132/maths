@@ -14,6 +14,7 @@ const char *const TOK_STRINGS[] = {
 	"OP_AT_TOK",
 
 	"OP_POW",
+	"OP_ROOT",
 
 	"OP_MUL", "OP_DIV", "OP_MOD",
 	"OP_ADD", "OP_SUB",

@@ -47,7 +47,8 @@ MML_state *MML_init_state(void)
 	hashmap_set(eval_builtin_maps[1], hashmap_str_lit("config_set"),		(uintptr_t)custom_config_set);
 	hashmap_set(eval_builtin_maps[1], hashmap_str_lit("max"),			(uintptr_t)custom_max);
 	hashmap_set(eval_builtin_maps[1], hashmap_str_lit("min"),			(uintptr_t)custom_min);
-	/*hashmap_set(eval_builtin_maps[1], hashmap_str_lit("range"), 		(uintptr_t)custom_range);*/
+	hashmap_set(eval_builtin_maps[1], hashmap_str_lit("root"),			(uintptr_t)custom_root);
+	hashmap_set(eval_builtin_maps[1], hashmap_str_lit("logb"),			(uintptr_t)custom_logb);
 	hashmap_set(eval_builtin_maps[1], hashmap_str_lit("atan2"),			(uintptr_t)custom_atan2);
 
 	eval_builtin_maps[2] = hashmap_create();
@@ -272,6 +273,9 @@ MML_Value MML_apply_binary_op(MML_state *restrict state, MML_Value a, MML_Value 
 			dv_push(state->allocd_vecs, ret);
 			return (MML_Value) { Vector_type, .v = ret->v };
 		case MML_OP_UNARY_NOTHING: return a;
+		case MML_OP_ROOT: return (a.type == ComplexNumber_type)
+				? VAL_CNUM(csqrt(MML_get_complex(&a)))
+				: VAL_NUM(sqrt(MML_get_number(&a)));
 		default:
 			//fprintf(stderr, "invalid unary operator on %s operand: %s\n",
 			//		(a.type == ComplexNumber_type) ? "complex" : "real",
@@ -296,6 +300,7 @@ MML_Value MML_apply_binary_op(MML_state *restrict state, MML_Value a, MML_Value 
 			case MML_OP_NOTEQ_TOK: return VAL_BOOL(fabs(MML_get_number(&a) - MML_get_number(&b)) >= EPSILON);
 			case MML_OP_EXACT_EQ: return VAL_BOOL(MML_get_number(&a) == MML_get_number(&b));
 			case MML_OP_EXACT_NOTEQ: return VAL_BOOL(MML_get_number(&a) != MML_get_number(&b));
+			case MML_OP_ROOT: return VAL_NUM(pow(MML_get_number(&a), 1.0/MML_get_number(&b)));
 			default:
 				MML_log_warn("invalid binary operator on real operands: %s\n", TOK_STRINGS[op]);
 				return VAL_INVAL;
@@ -314,6 +319,7 @@ MML_Value MML_apply_binary_op(MML_state *restrict state, MML_Value a, MML_Value 
 			case MML_OP_NOTEQ_TOK:
 			case MML_OP_EXACT_NOTEQ:
 				return VAL_BOOL(MML_get_complex(&a) != MML_get_complex(&b));
+			case MML_OP_ROOT: return VAL_NUM(cpow(MML_get_complex(&a), 1.0/MML_get_complex(&b)));
 			default:
 				MML_log_warn("invalid binary operator on complex operands: %s\n", TOK_STRINGS[op]);
 				return VAL_INVAL;
