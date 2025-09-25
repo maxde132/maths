@@ -216,7 +216,7 @@ inline void MML_free_pp(void *p)
 	free(*(void **)p);
 }
 
-inline double MML_get_number(MML_Value *v)
+inline double MML_get_number(const MML_Value *v)
 {
 	if (!VAL_IS_NUM(*v) || v->type == ComplexNumber_type)
 		return NAN;
@@ -224,7 +224,7 @@ inline double MML_get_number(MML_Value *v)
 		? v->n
 		: ((v->b) ? 1.0 : 0.0);
 }
-inline _Complex double MML_get_complex(MML_Value *v)
+inline _Complex double MML_get_complex(const MML_Value *v)
 {
 	if (!VAL_IS_NUM(*v))
 		return NAN;
