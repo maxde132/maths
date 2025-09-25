@@ -320,8 +320,8 @@ static MML_Expr *parse_expr(const char **s, uint32_t max_preced, struct parser_s
 
 			MML_Expr *e = parse_expr(s, PARSER_MAX_PRECED, state);
 			dv_push(vec, e);
-			if (e != nullptr)
-				--e->num_refs;
+			/*if (e != nullptr)
+				--e->num_refs;*/
 
 			tok = get_next_token(s, state);
 			if (tok.type != MML_CLOSE_BRACKET_TOK

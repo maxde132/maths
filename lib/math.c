@@ -157,6 +157,7 @@ static void register_functions(hashmap *maps[6])
 	hashmap_set(maps[2], hashmap_str_lit("acosh"),			(uintptr_t)acosh);
 	hashmap_set(maps[2], hashmap_str_lit("atanh"),			(uintptr_t)atanh);
 	hashmap_set(maps[2], hashmap_str_lit("ln"),			(uintptr_t)log);
+	hashmap_set(maps[2], hashmap_str_lit("log"),			(uintptr_t)log);
 	hashmap_set(maps[2], hashmap_str_lit("log2"),			(uintptr_t)log2);
 	hashmap_set(maps[2], hashmap_str_lit("log10"),			(uintptr_t)log10);
 	hashmap_set(maps[2], hashmap_str_lit("sqrt"),			(uintptr_t)sqrt);
@@ -177,6 +178,7 @@ static void register_functions(hashmap *maps[6])
 	hashmap_set(maps[3], hashmap_str_lit("complex_acosh"),	(uintptr_t)cacosh);
 	hashmap_set(maps[3], hashmap_str_lit("complex_atanh"),	(uintptr_t)catanh);
 	hashmap_set(maps[3], hashmap_str_lit("complex_ln"),		(uintptr_t)clog);
+	hashmap_set(maps[3], hashmap_str_lit("complex_log"),		(uintptr_t)clog);
 	hashmap_set(maps[3], hashmap_str_lit("complex_log2"),		(uintptr_t)custom_clog2);
 	hashmap_set(maps[3], hashmap_str_lit("complex_log10"),	(uintptr_t)custom_clog10);
 	hashmap_set(maps[3], hashmap_str_lit("complex_sqrt"),		(uintptr_t)csqrt);

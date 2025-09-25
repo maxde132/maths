@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <termios.h>
+#include <time.h>
 #include <unistd.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -12,6 +13,14 @@
 #include "mml/expr.h"
 #include "mml/eval.h"
 #include "mml/parser.h"
+
+#define NSEC_IN_SEC 1000000000
+
+#define time_blck(elapsed_p, ...) { \
+	const clock_t start = clock(); \
+	{ __VA_ARGS__; }; \
+	*(elapsed_p) = (uint64_t)((double)(clock() - start) / CLOCKS_PER_SEC * NSEC_IN_SEC); \
+}
 
 #define PROMPT_STR "==> "
 
@@ -31,9 +40,9 @@ enum KEY_CODES {
 	KC_ESC		= 0x0000'0000'0000'001b,
 };
 
-/*constexpr size_t HIST_MAX_LEN = 40;
-char *hist_storage[HIST_MAX_LEN] = {nullptr};
-size_t hist_in_use = 0;*/
+/*static constexpr size_t HIST_MAX_LEN = 40;
+static char *hist_storage[HIST_MAX_LEN] = {nullptr};
+static size_t hist_in_use = 0;*/
 
 
 ssize_t get_prompt_line(char *out, size_t len)
@@ -165,13 +174,32 @@ void MML_run_prompt(MML_state *state)
 		//printf("buf: '%s'\n", line_in);
 	#endif
 
-		MML_parse_stmts(line_in, state);
+		uint64_t nsecs;
+		if (!FLAG_IS_SET(DBG_TIME))
+			MML_parse_stmts(line_in, state);
+		else {
+			time_blck(&nsecs, MML_parse_stmts(line_in, state));
+			MML_log_dbg("parsed in %.6fs\n", (double)nsecs/NSEC_IN_SEC);
+		}
 
-		while (expr_n_offset < dv_n(state->exprs))
+		if (!FLAG_IS_SET(DBG_TIME))
 		{
-			MML_Expr *cur = dv_a(state->exprs, expr_n_offset++);
-			if (cur != nullptr)
-				cur_val = MML_eval_expr(state, cur);
+			while (expr_n_offset < dv_n(state->exprs))
+			{
+				MML_Expr *cur = dv_a(state->exprs, expr_n_offset++);
+				if (cur != nullptr)
+					cur_val = MML_eval_expr(state, cur);
+			}
+		} else
+		{
+			time_blck(&nsecs, 
+			while (expr_n_offset < dv_n(state->exprs))
+			{
+				MML_Expr *cur = dv_a(state->exprs, expr_n_offset++);
+				if (cur != nullptr)
+					cur_val = MML_eval_expr(state, cur);
+			});
+			MML_log_dbg("evaluated in %.6fs\n", (double)nsecs/NSEC_IN_SEC);
 		}
 
 		if (!MML_global_config.last_print_was_newline)

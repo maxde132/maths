@@ -173,7 +173,7 @@ MML_Value MML_apply_binary_op(MML_state *restrict state, MML_Value a, MML_Value 
 	if (a.type == Invalid_type)
 		return VAL_INVAL;
 
-	if (VAL_IS_NUM(a) && b.type == Invalid_type)
+	if (b.type == Invalid_type)
 	{
 		// unary operators
 		switch (op) {
@@ -183,12 +183,41 @@ MML_Value MML_apply_binary_op(MML_state *restrict state, MML_Value a, MML_Value 
 
 			MML_log_warn("invalid unary operator on complex operand: %s\n", TOK_STRINGS[MML_OP_NOT_TOK]);
 			return VAL_INVAL;
-		case MML_OP_NEGATE: return (a.type == ComplexNumber_type)
-				? VAL_CNUM(-MML_get_complex(&a))
-				: VAL_NUM(-MML_get_number(&a));
-		case MML_PIPE_TOK: return (a.type == ComplexNumber_type)
-				? VAL_CNUM(cabs(MML_get_complex(&a)))
-				: VAL_NUM(fabs(MML_get_number(&a)));
+		case MML_OP_NEGATE:
+			switch (a.type) {
+			case ComplexNumber_type:
+				return VAL_CNUM(-MML_get_complex(&a));
+			case Boolean_type:
+			case RealNumber_type:
+				return VAL_NUM(-MML_get_number(&a));
+			case Vector_type:
+				return MML_apply_binary_op(state, a, VAL_NUM(-1), MML_OP_MUL_TOK);
+			default:
+				MML_log_warn("failed to apply %s operator on %s operand\n", TOK_STRINGS[op], EXPR_TYPE_STRINGS[a.type]);
+				return VAL_INVAL;
+			}
+		case MML_PIPE_TOK:
+			switch (a.type) {
+			case ComplexNumber_type:
+				return VAL_CNUM(cabs(MML_get_complex(&a)));
+			case Boolean_type:
+			case RealNumber_type:
+				return VAL_NUM(fabs(MML_get_number(&a)));
+			case Vector_type:
+				// compute vector magnitude
+				_Complex double sum = 0.0;
+				MML_Value cur_elem;
+				for (size_t i = 0; i < dv_n(a.v); ++i)
+				{
+					cur_elem = MML_eval_expr(state, dv_a(a.v, i));
+					sum += MML_apply_binary_op(state, cur_elem, cur_elem, MML_OP_MUL_TOK).n;
+				}
+				_Complex double ret = csqrt(sum);
+				return (cimag(ret) == 0.0) ? VAL_NUM(creal(ret)) : VAL_CNUM(ret);
+			default:
+				MML_log_warn("failed to apply %s operator on %s operand\n", TOK_STRINGS[op], EXPR_TYPE_STRINGS[a.type]);
+				return VAL_INVAL;
+			}
 		case MML_TILDE_TOK:
 			MML_Expr *ret = calloc(1, sizeof(MML_Expr));
 			ret->type = Vector_type;
@@ -263,11 +292,6 @@ MML_Value MML_apply_binary_op(MML_state *restrict state, MML_Value a, MML_Value 
 	} else if (a.type == Vector_type && b.type == RealNumber_type
 			&& op == MML_OP_DOT_TOK)
 	{
-		if (a.type == RealNumber_type)
-		{
-			MML_log_err("cannot index real numebr with vector (that makes no sense, what are you doing\?\?)\n");
-			return VAL_INVAL;
-		}
 		// vector index
 		size_t i = (size_t)MML_get_number(&b);
 		if (fabs(i - MML_get_number(&b)) > EPSILON || MML_get_number(&b) < 0)
@@ -282,36 +306,44 @@ MML_Value MML_apply_binary_op(MML_state *restrict state, MML_Value a, MML_Value 
 		}
 		return MML_eval_expr(state, dv_a(a.v, i));
 	} else if (a.type == Vector_type && b.type == Vector_type
-		  && op == MML_OP_MUL_TOK
 		  && dv_n(a.v) == dv_n(b.v))
 	{
-		// n-dimensional dot product
-		//
-		// if vector contains nested vectors, performs a 'distributed dot product'
-		// where the dot product of two vectors is calculated using the dot products
-		// of the corresponding nested vectors in each, along with the regular
-		// multiplication. (not intentionally, that's just what happens)
-		double sum = 0.0;
-		for (size_t i = 0; i < dv_n(a.v); ++i)
-		{
-			sum += MML_apply_binary_op(state,
-					MML_eval_expr(state, dv_a(a.v, i)),
-					MML_eval_expr(state, dv_a(b.v, i)),
-					MML_OP_MUL_TOK).n;
+		switch (op) {
+			case MML_OP_MUL_TOK:
+			{
+				// n-dimensional dot product
+				//
+				// if vector contains nested vectors, performs a 'distributed dot product'
+				// where the dot product of two vectors is calculated using the dot products
+				// of the corresponding nested vectors in each, along with the regular
+				// multiplication. (not intentionally, that's just what happens)
+				double sum = 0.0;
+				for (size_t i = 0; i < dv_n(a.v); ++i)
+				{
+					sum += MML_apply_binary_op(state,
+							MML_eval_expr(state, dv_a(a.v, i)),
+							MML_eval_expr(state, dv_a(b.v, i)),
+							MML_OP_MUL_TOK).n;
+				}
+				return VAL_NUM(sum);
+			}
+			case MML_OP_EQ_TOK:
+			{
+				for (size_t i = 0; i < dv_n(a.v); ++i)
+				{
+					if (!MML_apply_binary_op(state,
+							MML_eval_expr(state, dv_a(a.v, i)),
+							MML_eval_expr(state, dv_a(b.v, i)), 
+							MML_OP_EQ_TOK).b)
+						return VAL_BOOL(false);
+				}
+				return VAL_BOOL(true);
+			}
+			default:
+				MML_log_err("invalid binary operator on two equal-length vector operands: %s\n",
+						TOK_STRINGS[op]);
+				return VAL_INVAL;
 		}
-		return VAL_NUM(sum);
-	} else if (a.type == Vector_type && op == MML_PIPE_TOK)
-	{
-		// compute vector magnitude
-		_Complex double sum = 0.0;
-		MML_Value cur_elem;
-		for (size_t i = 0; i < dv_n(a.v); ++i)
-		{
-			cur_elem = MML_eval_expr(state, dv_a(a.v, i));
-			sum += MML_apply_binary_op(state, cur_elem, cur_elem, MML_OP_MUL_TOK).n;
-		}
-		_Complex double ret = csqrt(sum);
-		return (cimag(ret) == 0.0) ? VAL_NUM(creal(ret)) : VAL_CNUM(ret);
 	} else if ((a.type == Vector_type && VAL_IS_NUM(b)) ||
 		     (VAL_IS_NUM(a) && b.type == Vector_type))
 	{
@@ -323,8 +355,6 @@ MML_Value MML_apply_binary_op(MML_state *restrict state, MML_Value a, MML_Value 
 			const MML_ExprVec *src_vec = (a.type == Vector_type)
 				? &a.v
 				: &b.v;
-			const MML_Value *scalar = (VAL_IS_NUM(a)) ? &a : &b;
-
 			MML_Expr *ret = calloc(1, sizeof(MML_Expr));
 			ret->type = Vector_type;
 			ret->should_free_vec_block = true;
@@ -334,10 +364,17 @@ MML_Value MML_apply_binary_op(MML_state *restrict state, MML_Value a, MML_Value 
 			MML_Expr *data = calloc(dv_n(*src_vec), sizeof(MML_Expr));
 			for (size_t i = 0; i < dv_n(*src_vec); ++i)
 			{
-				MML_Value cur = MML_apply_binary_op(state,
-						MML_eval_expr(state, dv_a(*src_vec, i)),
-						*scalar,
-						op);
+				MML_Value cur;
+				if (a.type == Vector_type)
+					cur = MML_apply_binary_op(state,
+							MML_eval_expr(state, dv_a(a.v, i)),
+							b,
+							op);
+				else
+					cur = MML_apply_binary_op(state,
+							a,
+							MML_eval_expr(state, dv_a(b.v, i)),
+							op);
 				data[i].type = cur.type;
 				data[i].num_refs = 1;
 				data[i].v = cur.v;
