@@ -16,6 +16,7 @@ enum {
 	BOOLS_PRINT_NUM = BIT(3),
 	NO_EVAL	= BIT(4),
 	RUN_PROMPT	= BIT(5),
+	DBG_TIME	= BIT(6),
 };
 
 #define SET_FLAG(f) (MML_global_config.runtime_flags |= (f))
