@@ -1,6 +1,7 @@
 #include <math.h>
 #include <complex.h>
 
+#include "cvi/dvec/dvec.h"
 #include "mml/expr.h"
 #include "mml/eval.h"
 #include "mml/config.h"
@@ -135,6 +136,37 @@ static MML_Value custom_min(MML_state *state, MML_ExprVec *args)
 	return min;
 }
 
+// set this before using compare_values()
+static MML_state *cur_state;
+
+static int compare_values(const void *a, const void *b)
+{
+	const MML_Value va = MML_eval_expr(cur_state, *(MML_Expr **)a);
+	const MML_Value vb = MML_eval_expr(cur_state, *(MML_Expr **)b);
+
+	if (!VALTYPE_IS_ORDERED(va) || !VALTYPE_IS_ORDERED(vb))
+		return INT32_MIN;
+	return MML_get_number(&va) - MML_get_number(&vb);
+}
+
+static MML_Value custom_sort(MML_state *state, MML_ExprVec *args)
+{
+	const MML_ExprVec *vec = &dv_a(*args, 0)->v;
+	MML_Expr *ret = calloc(1, sizeof(MML_Expr));
+	ret->type = Vector_type;
+	ret->should_free_vec_block = true;
+	dv_init(ret->v);
+	
+	dv_copy_to(ret->v, 0, _dv_ptr(*vec), dv_n(*vec));
+
+	dv_push(state->allocd_vecs, ret);
+
+	cur_state = state;
+	qsort(ret->v.items, dv_n(ret->v), _dv_item_size(ret->v), compare_values);
+
+	return (MML_Value) { Vector_type, .v = ret->v };
+}
+
 
 static void register_functions(hashmap *maps[6])
 {
@@ -143,6 +175,7 @@ static void register_functions(hashmap *maps[6])
 	hashmap_set(maps[1], hashmap_str_lit("root"),			(uintptr_t)custom_root);
 	hashmap_set(maps[1], hashmap_str_lit("logb"),			(uintptr_t)custom_logb);
 	hashmap_set(maps[1], hashmap_str_lit("atan2"),			(uintptr_t)custom_atan2);
+	hashmap_set(maps[1], hashmap_str_lit("sort"),			(uintptr_t)custom_sort);
 
 	hashmap_set(maps[2], hashmap_str_lit("sin"),			(uintptr_t)sin);
 	hashmap_set(maps[2], hashmap_str_lit("cos"),			(uintptr_t)cos);

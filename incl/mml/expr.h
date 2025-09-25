@@ -94,7 +94,7 @@ void MML_free_vec(MML_ExprVec *vec);
 void MML_free_pp(void *p);
 
 
-double MML_get_number(MML_Value *v);
-_Complex double MML_get_complex(MML_Value *v);
+double MML_get_number(const MML_Value *v);
+_Complex double MML_get_complex(const MML_Value *v);
 
 #endif /* EXPR_H */
