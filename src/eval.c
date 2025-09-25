@@ -6,12 +6,12 @@
 #include <string.h>
 #include <stdio.h>
 
-#include "cvi/dvec/dvec.h"
-#include "mml/parser.h"
 #include "mml/expr.h"
-#include "c-hashmap/map.h"
-#include "eval_funcs_incl.c"
+#include "mml/config.h"
 #include "mml/token.h"
+#include "mml/parser.h"
+#include "cvi/dvec/dvec.h"
+#include "c-hashmap/map.h"
 
 /* 0 constants
  * 1 tv_tv_funcs
@@ -31,6 +31,9 @@ static hashmap *eval_builtin_maps[] = {
 static bool eval_builtins_are_initialized = false;
 static size_t initialized_evaluators_count = 0;
 
+void math__register_functions(hashmap *maps[6]);
+void stdmml__register_functions(hashmap *maps[6]);
+
 MML_state *MML_init_state(void)
 {
 	MML_state *state = calloc(1, sizeof(MML_state));
@@ -39,91 +42,24 @@ MML_state *MML_init_state(void)
 		goto skip_builtins_init;
 
 	eval_builtin_maps[1] = hashmap_create();
+	eval_builtin_maps[2] = hashmap_create();
+	eval_builtin_maps[3] = hashmap_create();
+	eval_builtin_maps[4] = hashmap_create();
+	eval_builtin_maps[5] = hashmap_create();
+
 	hashmap_set(eval_builtin_maps[1], hashmap_str_lit("print"),			(uintptr_t)MML_print_typedval_multiargs);
 	hashmap_set(eval_builtin_maps[1], hashmap_str_lit("println"),		(uintptr_t)MML_println_typedval_multiargs);
-	hashmap_set(eval_builtin_maps[1], hashmap_str_lit("dbg"),			(uintptr_t)MML_print_exprh_tv_func);
-	hashmap_set(eval_builtin_maps[1], hashmap_str_lit("dbg_type"),		(uintptr_t)custom_dbg_type);
-	hashmap_set(eval_builtin_maps[1], hashmap_str_lit("dbg_ident"),		(uintptr_t)custom_dbg_ident);
-	hashmap_set(eval_builtin_maps[1], hashmap_str_lit("config_set"),		(uintptr_t)custom_config_set);
-	hashmap_set(eval_builtin_maps[1], hashmap_str_lit("max"),			(uintptr_t)custom_max);
-	hashmap_set(eval_builtin_maps[1], hashmap_str_lit("min"),			(uintptr_t)custom_min);
-	hashmap_set(eval_builtin_maps[1], hashmap_str_lit("root"),			(uintptr_t)custom_root);
-	hashmap_set(eval_builtin_maps[1], hashmap_str_lit("logb"),			(uintptr_t)custom_logb);
-	hashmap_set(eval_builtin_maps[1], hashmap_str_lit("atan2"),			(uintptr_t)custom_atan2);
 
-	eval_builtin_maps[2] = hashmap_create();
-	hashmap_set(eval_builtin_maps[2], hashmap_str_lit("sin"),			(uintptr_t)sin);
-	hashmap_set(eval_builtin_maps[2], hashmap_str_lit("cos"),			(uintptr_t)cos);
-	hashmap_set(eval_builtin_maps[2], hashmap_str_lit("tan"),			(uintptr_t)tan);
-	hashmap_set(eval_builtin_maps[2], hashmap_str_lit("asin"),			(uintptr_t)asin);
-	hashmap_set(eval_builtin_maps[2], hashmap_str_lit("acos"),			(uintptr_t)acos);
-	hashmap_set(eval_builtin_maps[2], hashmap_str_lit("atan"),			(uintptr_t)atan);
-	hashmap_set(eval_builtin_maps[2], hashmap_str_lit("sinh"),			(uintptr_t)sinh);
-	hashmap_set(eval_builtin_maps[2], hashmap_str_lit("cosh"),			(uintptr_t)cosh);
-	hashmap_set(eval_builtin_maps[2], hashmap_str_lit("tanh"),			(uintptr_t)tanh);
-	hashmap_set(eval_builtin_maps[2], hashmap_str_lit("asinh"),			(uintptr_t)asinh);
-	hashmap_set(eval_builtin_maps[2], hashmap_str_lit("acosh"),			(uintptr_t)acosh);
-	hashmap_set(eval_builtin_maps[2], hashmap_str_lit("atanh"),			(uintptr_t)atanh);
-	hashmap_set(eval_builtin_maps[2], hashmap_str_lit("ln"),			(uintptr_t)log);
-	hashmap_set(eval_builtin_maps[2], hashmap_str_lit("log2"),			(uintptr_t)log2);
-	hashmap_set(eval_builtin_maps[2], hashmap_str_lit("log10"),			(uintptr_t)log10);
-	hashmap_set(eval_builtin_maps[2], hashmap_str_lit("sqrt"),			(uintptr_t)sqrt);
-	hashmap_set(eval_builtin_maps[2], hashmap_str_lit("floor"),			(uintptr_t)floor);
-	hashmap_set(eval_builtin_maps[2], hashmap_str_lit("ceil"),			(uintptr_t)ceil);
-	hashmap_set(eval_builtin_maps[2], hashmap_str_lit("round"),			(uintptr_t)round);
 
-	eval_builtin_maps[3] = hashmap_create();
-	hashmap_set(eval_builtin_maps[3], hashmap_str_lit("complex_sin"),		(uintptr_t)csin);
-	hashmap_set(eval_builtin_maps[3], hashmap_str_lit("complex_cos"),		(uintptr_t)ccos);
-	hashmap_set(eval_builtin_maps[3], hashmap_str_lit("complex_tan"),		(uintptr_t)ctan);
-	hashmap_set(eval_builtin_maps[3], hashmap_str_lit("complex_asin"),	(uintptr_t)casin);
-	hashmap_set(eval_builtin_maps[3], hashmap_str_lit("complex_acos"),	(uintptr_t)cacos);
-	hashmap_set(eval_builtin_maps[3], hashmap_str_lit("complex_atan"),	(uintptr_t)catan);
-	hashmap_set(eval_builtin_maps[3], hashmap_str_lit("complex_sinh"),	(uintptr_t)csinh);
-	hashmap_set(eval_builtin_maps[3], hashmap_str_lit("complex_cosh"),	(uintptr_t)ccosh);
-	hashmap_set(eval_builtin_maps[3], hashmap_str_lit("complex_tanh"),	(uintptr_t)ctanh);
-	hashmap_set(eval_builtin_maps[3], hashmap_str_lit("complex_asinh"),	(uintptr_t)casinh);
-	hashmap_set(eval_builtin_maps[3], hashmap_str_lit("complex_acosh"),	(uintptr_t)cacosh);
-	hashmap_set(eval_builtin_maps[3], hashmap_str_lit("complex_atanh"),	(uintptr_t)catanh);
-	hashmap_set(eval_builtin_maps[3], hashmap_str_lit("complex_ln"),		(uintptr_t)clog);
-	hashmap_set(eval_builtin_maps[3], hashmap_str_lit("complex_log2"),	(uintptr_t)custom_clog2);
-	hashmap_set(eval_builtin_maps[3], hashmap_str_lit("complex_log10"),	(uintptr_t)custom_clog10);
-	hashmap_set(eval_builtin_maps[3], hashmap_str_lit("complex_sqrt"),	(uintptr_t)csqrt);
-	hashmap_set(eval_builtin_maps[3], hashmap_str_lit("complex_csqrt"),	(uintptr_t)csqrt);
-
-	eval_builtin_maps[4] = hashmap_create();
-	hashmap_set(eval_builtin_maps[4], hashmap_str_lit("csqrt"),			(uintptr_t)custom_sqrt);
-
-	eval_builtin_maps[5] = hashmap_create();
-	hashmap_set(eval_builtin_maps[5], hashmap_str_lit("complex_conj"),	(uintptr_t)conj);
-	hashmap_set(eval_builtin_maps[5], hashmap_str_lit("complex_phase"),	(uintptr_t)carg);
-	hashmap_set(eval_builtin_maps[5], hashmap_str_lit("complex_real"),	(uintptr_t)creal);
-	hashmap_set(eval_builtin_maps[5], hashmap_str_lit("complex_imag"),	(uintptr_t)cimag);
-
-	static constexpr MML_Value TRUE_M		= VAL_BOOL(true);
-	static constexpr MML_Value FALSE_M		= VAL_BOOL(false);
-	static constexpr MML_Value PI_M		= VAL_NUM(3.14159265358979323846);
-	static constexpr MML_Value E_M		= VAL_NUM(2.71828182845904523536);
-	static constexpr MML_Value PHI_M		= VAL_NUM(1.61803398874989484820);
-	static constexpr MML_Value I_M		= VAL_CNUM(I);
-	static constexpr MML_Value NAN_M		= VAL_NUM(NAN);
-	static constexpr MML_Value INFINITY_M	= VAL_NUM(INFINITY);
+	eval_builtin_maps[0] = hashmap_create();
 	static constexpr MML_Value EXIT_CMD_M	= { Invalid_type, .i = MML_QUIT_INVAL };
 	static constexpr MML_Value CLEAR_CMD_M	= { Invalid_type, .i = MML_CLEAR_INVAL };
 
-	eval_builtin_maps[0] = hashmap_create();
-	hashmap_set(eval_builtin_maps[0], hashmap_str_lit("true"),	(uintptr_t)&TRUE_M);
-	hashmap_set(eval_builtin_maps[0], hashmap_str_lit("false"),	(uintptr_t)&FALSE_M);
-	hashmap_set(eval_builtin_maps[0], hashmap_str_lit("pi"),	(uintptr_t)&PI_M);
-	hashmap_set(eval_builtin_maps[0], hashmap_str_lit("e"),	(uintptr_t)&E_M);
-	hashmap_set(eval_builtin_maps[0], hashmap_str_lit("phi"),	(uintptr_t)&PHI_M);
-	static_assert(I_M.cn == I, "how on earth does I != I? i think your computer's borked\n");
-	hashmap_set(eval_builtin_maps[0], hashmap_str_lit("i"),	(uintptr_t)&I_M);
-	hashmap_set(eval_builtin_maps[0], hashmap_str_lit("nan"),	(uintptr_t)&NAN_M);
-	hashmap_set(eval_builtin_maps[0], hashmap_str_lit("inf"),	(uintptr_t)&INFINITY_M);
 	hashmap_set(eval_builtin_maps[0], hashmap_str_lit("exit"),	(uintptr_t)&EXIT_CMD_M);
 	hashmap_set(eval_builtin_maps[0], hashmap_str_lit("clear"),	(uintptr_t)&CLEAR_CMD_M);
 
+	math__register_functions(eval_builtin_maps);
+	stdmml__register_functions(eval_builtin_maps);
 
 	eval_builtins_are_initialized = true;
 
@@ -186,7 +122,7 @@ MML_Expr *MML_eval_get_variable(MML_state *restrict state,
 	return NULL;
 }
 
-#define EPSILON 1e-15
+#define EPSILON 1e-14
 
 static MML_Value apply_func(MML_state *state,
 		strbuf ident, MML_Value right_vec)
@@ -495,7 +431,6 @@ inline MML_Value MML_eval_expr(MML_state *state, const MML_Expr *expr)
 
 inline int32_t MML_eval_push_expr(MML_state *state, MML_Expr *expr)
 {
-	--expr->num_refs;
 	return dv_push(state->exprs, expr);
 }
 inline MML_Value MML_eval_top_expr(MML_state *state)

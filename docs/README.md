@@ -16,8 +16,8 @@ MML uses the most of the usual syntax for mathematical expressions, as well as a
 In this guide, the word 'expression' will be used to mean any valid operation or constant, where an operation may have as one of its operands another operation. The word `expr` in a specification (the leftmost part of an entry) will be used to represent any valid expression.
 All expressions (equality or otherwise) found here evaluate to the boolean value `true`, for density of the explanation.
 #### Some of the relevant operators:
-- `A == B`	= estimated (15 digits) equality operator	(ex. `3 == 3`)
-- `A != B`	= estimated (15 digits) inequality operator	(ex. `9 != 5`)
+- `A == B`	= estimated (13 digits) equality operator	(ex. `3 == 3`)
+- `A != B`	= estimated (13 digits) inequality operator	(ex. `9 != 5`)
 - `A === B`	= exact equality operator					(ex. `3 === 3`)
 - `A !== B`	= exact inequality operator					(ex. `9 !== 5`)
 - `!A`		= unary Boolean NOT operator				(ex. `!false == true`)
@@ -75,6 +75,8 @@ In the leftmost section of a function's entry in this list, `...` represents the
 - `print{...}` = evaluates and prints the values of its arguments (which may be of any type), separated by spaces, with no newline following the final printed value.
 - `println{...}` = evaluates and prints the value of its arguments (which may be of any type), separated by newlines, with a newline following the final printed value.
 - `dbg{expr}` = prints the Abstract Syntax Tree (AST) construction of an expression `expr`. The expression is not evaluated.
+- `root{b, e} OR root{b}` = returns the `e`th root of `b`. if `e` is not present (one argument), the second root of `b` is returned.
+- `logb{a, b} OR logb{a}` = returns the base `b` logarith of `a`. If `b` is not present (one argument), the natural logarithm of `a` is returned (same as `ln{a}`).
 - `atan2{y, x}` = performs the `atan2` function on its 2 _real_ arguments `y` and `x` (see [the wiki page](https://en.wikipedia.org/wiki/Atan2)).
 - `sin{a}` = returns the trigonometric `sin` aka sine function of `a`.
 - `cos{a}` = returns the trigonometric `cos` aka cosine function of `a`.

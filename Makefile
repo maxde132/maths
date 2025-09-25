@@ -1,5 +1,7 @@
-OBJECTS := main.o expr.o parser.o eval.o config.o prompt.o map.o 
-OBJ_FILES := $(patsubst %.o, obj/%.o, $(OBJECTS))
+SOURCE := $(filter-out %_incl.c,$(wildcard src/*.c))
+LIB_SRC := $(filter-out %_incl.c,$(wildcard lib/*.c))
+
+OBJECTS := $(patsubst src/%.c,obj/%.o,$(SOURCE)) $(patsubst lib/%.c,lib/%.o,$(LIB_SRC)) obj/map.o
 
 CC := gcc
 
@@ -11,19 +13,19 @@ FPIC_FLAG :=
 CFLAGS := -Wall -Wextra -std=c23 -Iincl -I. $(NO_DEBUG) -g
 LDFLAGS := $(CFLAGS) -lm
 
-.PHONY: cleanobjs clean static_lib shared_lib
+.PHONY: build_func_libs cleanobjs clean static_lib shared_lib
 
-all: build/$(EXEC)
+all: build_func_libs build/$(EXEC)
 
-build/$(EXEC): build obj Makefile $(OBJ_FILES)
-	$(CC) $(OBJ_FILES) $(LDFLAGS) -o build/$(EXEC)
+build/$(EXEC): build obj Makefile $(OBJECTS)
+	$(CC) $(OBJECTS) $(LDFLAGS) -o build/$(EXEC)
 
-build/lib$(EXEC).a: build obj Makefile $(OBJ_FILES)
-	ar rcs build/lib$(EXEC).a $(OBJ_FILES)
+build/lib$(EXEC).a: build obj Makefile $(OBJECTS)
+	ar rcs build/lib$(EXEC).a $(OBJECTS)
 
 build/lib$(EXEC).so: FPIC_FLAG=-fPIC
-build/lib$(EXEC).so: build obj Makefile $(OBJ_FILES) 
-	$(CC) $(OBJ_FILES) $(LDFLAGS) -shared -o build/lib$(EXEC).so
+build/lib$(EXEC).so: build obj Makefile $(OBJECTS) 
+	$(CC) $(OBJECTS) $(LDFLAGS) -shared -o build/lib$(EXEC).so
 
 obj/main.o: Makefile src/main.c incl/mml/expr.h incl/mml/token.h incl/mml/parser.h incl/mml/eval.h cvi/dvec/dvec.h
 	$(CC) src/main.c -c -o obj/main.o $(CFLAGS) $(FPIC_FLAG)
@@ -34,7 +36,7 @@ obj/expr.o: Makefile src/expr.c incl/mml/expr.h incl/mml/config.h cvi/dvec/dvec.
 obj/parser.o: Makefile src/parser.c incl/mml/parser.h incl/mml/token.h incl/mml/expr.h incl/mml/config.h cvi/dvec/dvec.h
 	$(CC) src/parser.c -c -o obj/parser.o $(CFLAGS) $(FPIC_FLAG)
 
-obj/eval.o: Makefile src/eval.c incl/mml/eval.h incl/mml/expr.h incl/mml/config.h src/eval_funcs_incl.c cvi/dvec/dvec.h
+obj/eval.o: Makefile src/eval.c incl/mml/eval.h incl/mml/expr.h incl/mml/config.h cvi/dvec/dvec.h
 	$(CC) src/eval.c -c -o obj/eval.o $(CFLAGS) $(FPIC_FLAG)
 
 obj/config.o: Makefile src/config.c incl/mml/config.h incl/mml/token.h incl/mml/expr.h incl/mml/eval.h
@@ -46,6 +48,9 @@ obj/prompt.o: Makefile src/prompt.c incl/mml/prompt.h incl/mml/eval.h incl/mml/p
 obj/map.o: Makefile c-hashmap/map.c c-hashmap/map.h
 	$(CC) c-hashmap/map.c -Ic-hashmap -c -o obj/map.o $(CFLAGS) $(FPIC_FLAG)
 
+build_func_libs:
+	$(MAKE) -C lib
+
 obj:
 	mkdir obj
 build:
@@ -56,5 +61,6 @@ shared_lib: cleanobjs build/lib$(EXEC).so
 
 cleanobjs:
 	rm -f obj/*
+	$(MAKE) -C lib clean
 clean: cleanobjs
 	rm -f build/*
