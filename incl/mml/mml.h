@@ -7,4 +7,6 @@
 #include "mml/eval.h"
 #include "mml/parser.h"
 
+MML_Value MML_eval_parse(MML_state *state, const char *s);
+
 #endif /* MML_H */
