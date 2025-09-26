@@ -68,7 +68,7 @@ int32_t main(int32_t argc, char **argv)
 
 	if (expression.allocd)
 		free(expression.s);
-	MML_cleanup_config(&MML_global_config);
+	MML_cleanup_state(MML_global_config.eval_state);
 
 	return 0;
 }
