@@ -28,6 +28,7 @@ struct MML_config {
 	uint32_t runtime_flags;
 	MML_state *eval_state;
 	bool last_print_was_newline;
+	bool full_prec_floats;
 };
 extern struct MML_config MML_global_config;
 

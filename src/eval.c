@@ -474,3 +474,18 @@ inline MML_Value MML_eval_top_expr(MML_state *state)
 {
 	return MML_eval_expr_recurse(state, *(const MML_Expr **)dv_peek(state->exprs));
 }
+
+MML_Value MML_eval_parse(MML_state *state, const char *s)
+{
+	MML_ExprVec exprs = MML_parse_stmts_to_ret(s);
+	MML_Value cur;
+	MML_Expr **cur_expr;
+	dv_foreach(exprs, cur_expr)
+	{
+		cur = MML_eval_expr(state, *cur_expr);
+		if ((size_t)(cur_expr - _dv_ptr(exprs)) == dv_n(exprs)-1)
+			break;
+	}
+
+	return cur;
+}

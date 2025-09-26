@@ -27,18 +27,31 @@ MML_Value MML_print_typedval(MML_state *state, const MML_Value *val)
 		printf("%" PRIi64, val->i);
 		break;
 	case RealNumber_type:
-		printf("%.*f", MML_global_config.precision, val->n);
+		if (MML_global_config.full_prec_floats)
+			printf("%.*f", MML_global_config.precision, val->n);
+		else
+			printf("%.*g", MML_global_config.precision, val->n);
 		break;
 	case ComplexNumber_type:
-		printf("%.*f%+.*fi",
-				MML_global_config.precision, creal(val->cn),
-				MML_global_config.precision, cimag(val->cn));
+		if (MML_global_config.full_prec_floats)
+			printf("%.*f%+.*fi",
+					MML_global_config.precision, creal(val->cn),
+					MML_global_config.precision, cimag(val->cn));
+		else
+			printf("%.*g%+.*gi",
+					MML_global_config.precision, creal(val->cn),
+					MML_global_config.precision, cimag(val->cn));
 		break;
 	case Boolean_type:
 		if (FLAG_IS_SET(BOOLS_PRINT_NUM))
-			printf("%.*f",
-					MML_global_config.precision, (val->b) ? 1.0 : 0.0);
-		else
+		{
+			if (MML_global_config.full_prec_floats)
+				printf("%.*f",
+						MML_global_config.precision, (val->b) ? 1.0 : 0.0);
+			else
+				printf("%.*g",
+						MML_global_config.precision, (val->b) ? 1.0 : 0.0);
+		} else
 			printf("%s", (val->b) ? "true" : "false");
 		break;
 	case Identifier_type:
@@ -124,18 +137,31 @@ void MML_print_expr(const MML_Expr *expr, uint32_t indent)
 		printf("Integer(%" PRIi64 ")", expr->i);
 		break;
 	case RealNumber_type:
-		printf("RealNumber(%.*f)", MML_global_config.precision, expr->n);
+		if (MML_global_config.full_prec_floats)
+			printf("RealNumber(%.*f)", MML_global_config.precision, expr->n);
+		else
+			printf("RealNumber(%.*g)", MML_global_config.precision, expr->n);
 		break;
 	case ComplexNumber_type:
-		printf("ComplexNumber(%.*f%+.*fi)",
-				MML_global_config.precision, creal(expr->cn),
-				MML_global_config.precision, cimag(expr->cn));
+		if (MML_global_config.full_prec_floats)
+			printf("ComplexNumber(%.*g%+.*gi)",
+					MML_global_config.precision, creal(expr->cn),
+					MML_global_config.precision, cimag(expr->cn));
+		else
+			printf("ComplexNumber(%.*g%+.*gi)",
+					MML_global_config.precision, creal(expr->cn),
+					MML_global_config.precision, cimag(expr->cn));
 		break;
 	case Boolean_type:
 		if (FLAG_IS_SET(BOOLS_PRINT_NUM))
-			printf("Boolean(%.*f)",
-					MML_global_config.precision, (expr->b) ? 1.0 : 0.0);
-		else
+		{
+			if (MML_global_config.full_prec_floats)
+				printf("Boolean(%.*f)",
+						MML_global_config.precision, (expr->b) ? 1.0 : 0.0);
+			else
+				printf("Boolean(%.*g)",
+						MML_global_config.precision, (expr->b) ? 1.0 : 0.0);
+		} else
 			printf("Boolean(%s)", (expr->b) ? "true" : "false");
 		break;
 	case Identifier_type:

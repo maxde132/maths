@@ -14,10 +14,11 @@
 
 struct MML_config MML_global_config = {
 	.PROG_NAME = NULL,
-	.precision = 6,
+	.precision = 10,
 	.runtime_flags = 0,
 	.eval_state = nullptr,
 	.last_print_was_newline = true,
+	.full_prec_floats = false,
 };
 
 strbuf expression = { NULL, 0, false };
@@ -58,6 +59,7 @@ void MML_print_usage(void)
                     "  -P, --print                        Print the result value even if `print` was not called (default OFF)\n"
 			  "  -E EXPR, --expr=EXPR               Alternate way to specify the expression to be evaluated\n"
                     "  -p PREC, --precision=PREC          Set the number of decimal digits to be printed when printing numbers (default 6)\n"
+			  "  --full-prec-floats                 Decimal numbers are represented with the full precision specified by --precision ('%%f' format) (default OFF, uses '%%g').\n"
 			  "  --no-eval                          Only parse the expression; don't evaluate it (default OFF)\n"
                     "  --bools-are-nums                   Write the number 1 or 0 to represent boolean values (default OFF)\n"
 			  "  --dbg-time                         Debug option: the parser will print the time it took to parse and evaluate each line\n"
@@ -109,6 +111,8 @@ void MML_arg_parse(int32_t argc, char **argv)
 				SET_FLAG(BOOLS_PRINT_NUM);
 			else if (strcmp(argv[arg_n]+2, "dbg-time") == 0)
 				SET_FLAG(DBG_TIME);
+			else if (strcmp(argv[arg_n]+2, "full-prec-floats") == 0)
+				MML_global_config.full_prec_floats = true;
 			else if (strcmp(argv[arg_n]+2, "no-eval") == 0)
 				SET_FLAG(NO_EVAL);
 			else if (strcmp(argv[arg_n]+2, "interactive") == 0)

@@ -1,6 +1,7 @@
 #include <math.h>
 #include <stdio.h>
 
+#include "mml/eval.h"
 #include "mml/expr.h"
 #include "mml/config.h"
 #include "mml/parser.h"
@@ -38,11 +39,21 @@ static MML_Value custom_config_set(MML_state *state, MML_ExprVec *args)
 		MML_Value val = MML_eval_expr(state, dv_a(*args, 1));
 		if (val.type != RealNumber_type)
 		{
-			fprintf(stderr, "`config_set`: the `precision` config setting "
+			MML_log_err("`config_set`: the `precision` config setting "
 					"must be of type RealNumber\n");
 			return VAL_INVAL;
 		}
 		MML_global_config.precision = (uint32_t)floor(val.n);
+	} else if (strncmp(config_ident.s, "full_prec_floats", sizeof("full_prec_floats")-1) == 0)
+	{
+		MML_Value val = MML_eval_expr(state, dv_a(*args, 1));
+		if (val.type != Boolean_type)
+		{
+			MML_log_err("`config_set`: the `full_prec_floats` config setting "
+					"must be of type Boolean\n");
+			return VAL_INVAL;
+		}
+		MML_global_config.full_prec_floats = val.b;
 	} else
 	{
 		fprintf(stderr, "`config_set`: unknown config setting `%.*s`\n",
