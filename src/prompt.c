@@ -156,7 +156,7 @@ void MML_run_prompt(MML_state *state)
 	MML_Value cur_val = VAL_INVAL;
 	size_t expr_n_offset = 0;
 	puts("-- MML interactive prompt --");
-	puts("run `exit` or press SUPER+D to quit prompt.");
+	puts("run `exit` or press CTRL+D to quit prompt.");
 	ssize_t n_read = 0;
 	while (!(cur_val.type == Invalid_type && cur_val.i == MML_QUIT_INVAL))
 	{

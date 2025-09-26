@@ -1,10 +1,12 @@
 #include <signal.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <stddef.h>
 #include <inttypes.h>
 
+#include "mml/eval.h"
 #include "mml/expr.h"
-#include "mml/mml.h"
+#include "mml/parser.h"
 #include "mml/config.h"
 #include "mml/prompt.h"
 #include "cvi/dvec/dvec.h"
@@ -18,6 +20,12 @@ void sig_handler(int32_t signum)
 	fprintf(stderr, "\n\nterminated with signal %d\n", signum);
 	exit(2);
 }
+
+#define print_vec(p, n, fmt) { \
+fputc('[', stdout); \
+for (size_t i = 0; i < (n); ++i) \
+	printf(fmt "%s", (p)[i], (i<(n)-1) ? ", " : ""); \
+fputc(']', stdout); }
 
 int32_t main(int32_t argc, char **argv)
 {
