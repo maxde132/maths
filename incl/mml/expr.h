@@ -33,6 +33,10 @@ typedef dvec_t(MML_Expr *) MML_ExprVec;
 	 (v).type != Vector_type && \
 	 (v).type != Invalid_type)
 
+struct value_union_size {
+	uint8_t b[24];
+};
+
 typedef struct MML_Value {
 	MML_ExprType type;
 	union {
@@ -42,6 +46,7 @@ typedef struct MML_Value {
 		strbuf s;
 		MML_ExprVec v;
 		int64_t i;
+		struct value_union_size w;
 	};
 } MML_Value;
 
@@ -57,6 +62,7 @@ typedef struct MML_Expr {
 		strbuf s;
 		MML_ExprVec v;
 		int64_t i;
+		struct value_union_size w;
 	};
 } MML_Expr;
 

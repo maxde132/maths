@@ -280,8 +280,8 @@ static MML_Expr *parse_expr(const char **s, uint32_t max_preced, struct parser_s
 					break;
 				MML_Expr *next_expr = parse_expr(s, PARSER_MAX_PRECED, state);
 				dv_push(left->o.right->v, next_expr);
-				if (next_expr != nullptr)
-					--next_expr->num_refs;
+				//if (next_expr != nullptr)
+				//	--next_expr->num_refs;
 			} while (get_next_token(s, state).type == MML_COMMA_TOK);
 
 			if (state->current_tok.type != MML_CLOSE_BRAC_TOK)
@@ -357,7 +357,7 @@ static MML_Expr *parse_expr(const char **s, uint32_t max_preced, struct parser_s
 		}
 		MML_Expr *opnode = calloc(1, sizeof(MML_Expr));
 		opnode->type = Operation_type;
-		opnode->num_refs = 2;
+		opnode->num_refs = 1;
 		opnode->o.left = left;
 		opnode->o.right = nullptr;
 		opnode->o.op = MML_PIPE_TOK;

@@ -13,19 +13,15 @@ FPIC_FLAG :=
 CFLAGS := -Wall -Wextra -std=c23 -Iincl -I. $(NO_DEBUG) -g
 LDFLAGS := $(CFLAGS) -lm
 
-.PHONY: build_func_libs cleanobjs clean static_lib shared_lib
+.PHONY: cleanobjs clean static_lib shared_lib print_done
 
-all: build_func_libs build/$(EXEC)
+all: build obj \
+	print_building_func_libs build_func_libs print_done_libs \
+	print_building_objects $(OBJECTS) print_done_obj \
+	print_building_exe build/$(EXEC) print_done_exe
 
-build/$(EXEC): build obj Makefile $(OBJECTS)
+build/$(EXEC): Makefile $(OBJECTS)
 	$(CC) $(OBJECTS) $(LDFLAGS) -o build/$(EXEC)
-
-build/lib$(EXEC).a: build obj Makefile $(OBJECTS)
-	ar rcs build/lib$(EXEC).a $(OBJECTS)
-
-build/lib$(EXEC).so: FPIC_FLAG=-fPIC
-build/lib$(EXEC).so: build obj Makefile $(OBJECTS) 
-	$(CC) $(OBJECTS) $(LDFLAGS) -shared -o build/lib$(EXEC).so
 
 obj/main.o: Makefile src/main.c incl/mml/expr.h incl/mml/token.h incl/mml/parser.h incl/mml/eval.h cvi/dvec/dvec.h
 	$(CC) src/main.c -c -o obj/main.o $(CFLAGS) $(FPIC_FLAG)
@@ -48,17 +44,52 @@ obj/prompt.o: Makefile src/prompt.c incl/mml/prompt.h incl/mml/eval.h incl/mml/p
 obj/map.o: Makefile c-hashmap/map.c c-hashmap/map.h
 	$(CC) c-hashmap/map.c -Ic-hashmap -c -o obj/map.o $(CFLAGS) $(FPIC_FLAG)
 
+
+# printing
+.PHONY: print_building_exe
+print_building_exe:
+	@echo --- Building executable from object files \(object files found in 'obj' dir\) ---
+
+.PHONY: print_building_objects
+print_building_objects:
+	@echo --- Building object files \(source found in 'src' dir\) ---
+
+.PHONY: print_building_func_libs
+print_building_func_libs:
+	@echo --- Building function libraries \(found in 'lib' dir\) ---
+
+.PHONY: build_func_libs
 build_func_libs:
 	$(MAKE) -C lib
 
+.PHONY: build_func_libs_shared
+build_func_libs_shared:
+	$(MAKE) -C lib SHARED=-fPIC
+
+print_done_%:
+	@echo --- DONE ---
+
+
+# directory makers
 obj:
 	mkdir obj
 build:
 	mkdir build
 
+
+# library targets
 static_lib: cleanobjs build/lib$(EXEC).a
 shared_lib: cleanobjs build/lib$(EXEC).so
 
+build/lib$(EXEC).a: build obj Makefile build_func_libs $(OBJECTS)
+	ar rcs build/lib$(EXEC).a $(OBJECTS)
+
+build/lib$(EXEC).so: FPIC_FLAG=-fPIC
+build/lib$(EXEC).so: build obj Makefile build_func_libs_shared $(OBJECTS) 
+	$(CC) $(OBJECTS) $(LDFLAGS) -shared -o build/lib$(EXEC).so
+
+
+# clean targets
 cleanobjs:
 	rm -f obj/*
 	$(MAKE) -C lib clean

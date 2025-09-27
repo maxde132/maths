@@ -1,6 +1,8 @@
-CFLAGS := -I../incl -I.. -Wall -Wextra -Wpedantic -Wno-gnu-zero-variadic-macro-arguments -Wno-gnu-folding-constant -std=c23 -O3 -g
+CFLAGS := -I../incl -I.. -Wall -Wextra -Wno-gnu-zero-variadic-macro-arguments -Wno-gnu-folding-constant -std=c23 -O3 -g
 LDFLAGS := -O3 -g -fPIC
 CC := gcc
+
+SHARED := 
 
 SRC := $(wildcard *.c)
 OUT := $(patsubst %.c,%.o,$(SRC))
@@ -8,7 +10,7 @@ OUT := $(patsubst %.c,%.o,$(SRC))
 all: $(OUT)
 
 %.o: %.c Makefile
-	$(CC) $(CFLAGS) $(LDFLAGS) -c -o $@ $<
+	$(CC) $(CFLAGS) $(LDFLAGS) $(SHARED) -c -o $@ $<
 
 .PHONY: clean
 clean:

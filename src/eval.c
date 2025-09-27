@@ -2,6 +2,7 @@
 
 #include <complex.h>
 #include <math.h>
+#include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
@@ -221,6 +222,7 @@ MML_Value MML_apply_binary_op(MML_state *restrict state, MML_Value a, MML_Value 
 		case MML_TILDE_TOK:
 			MML_Expr *ret = calloc(1, sizeof(MML_Expr));
 			ret->type = Vector_type;
+			ret->num_refs = 1;
 			ret->should_free_vec_block = true;
 			dv_init(ret->v);
 			dv_resize(ret->v, 2);
@@ -230,17 +232,27 @@ MML_Value MML_apply_binary_op(MML_state *restrict state, MML_Value a, MML_Value 
 					a,
 					VAL_INVAL,
 					MML_OP_NEGATE);
-			data[0] = (MML_Expr) { a.type, .num_refs=1, .v=a.v };
-			data[1] = (MML_Expr) { negated_a.type, .num_refs=1, .v=negated_a.v };
+			data[0] = (MML_Expr) { a.type, .num_refs=1 };
+			memcpy(&data[0].w, &a.w, sizeof(a.w));
+			data[1] = (MML_Expr) { negated_a.type, .num_refs=1 };
+			memcpy(&data[1].w, &negated_a.w, sizeof(negated_a.w));
 			dv_a(ret->v, 0) = &data[0];
 			dv_a(ret->v, 1) = &data[1];
 
 			dv_push(state->allocd_vecs, ret);
 			return (MML_Value) { Vector_type, .v = ret->v };
 		case MML_OP_UNARY_NOTHING: return a;
-		case MML_OP_ROOT: return (a.type == ComplexNumber_type)
-				? VAL_CNUM(csqrt(MML_get_complex(&a)))
-				: VAL_NUM(sqrt(MML_get_number(&a)));
+		case MML_OP_ROOT:
+			switch (a.type) {
+			case ComplexNumber_type:
+				return VAL_CNUM(csqrt(MML_get_complex(&a)));
+			case Boolean_type:
+			case RealNumber_type:
+				return VAL_NUM(sqrt(MML_get_number(&a)));
+			default:
+				MML_log_warn("failed to apply %s operator on %s operand\n", TOK_STRINGS[op], EXPR_TYPE_STRINGS[a.type]);
+				return VAL_INVAL;
+			}
 		default:
 			//fprintf(stderr, "invalid unary operator on %s operand: %s\n",
 			//		(a.type == ComplexNumber_type) ? "complex" : "real",
@@ -357,6 +369,7 @@ MML_Value MML_apply_binary_op(MML_state *restrict state, MML_Value a, MML_Value 
 				: &b.v;
 			MML_Expr *ret = calloc(1, sizeof(MML_Expr));
 			ret->type = Vector_type;
+			ret->num_refs = 1;
 			ret->should_free_vec_block = true;
 			dv_init(ret->v);
 			dv_resize(ret->v, dv_n(*src_vec));
@@ -377,7 +390,7 @@ MML_Value MML_apply_binary_op(MML_state *restrict state, MML_Value a, MML_Value 
 							op);
 				data[i].type = cur.type;
 				data[i].num_refs = 1;
-				data[i].v = cur.v;
+				memcpy(&data[i].w, &cur.w, sizeof(cur.w));
 				dv_a(ret->v, i) = &data[i];
 			}
 			dv_push(state->allocd_vecs, ret);
