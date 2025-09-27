@@ -51,13 +51,13 @@ int32_t main(int32_t argc, char **argv)
 	MML_parse_stmts(expression.s, MML_global_config.eval_state);
 	if (FLAG_IS_SET(DEBUG)) MML_println_typedval(
 			MML_global_config.eval_state,
-			&(MML_Value) { .type=Vector_type, .v=MML_global_config.eval_state->exprs });
+			&(MML_value) { .type=Vector_type, .v=MML_global_config.eval_state->exprs });
 
 	if (!FLAG_IS_SET(NO_EVAL))
 	{
 		for (size_t i = 0; i < dv_n(MML_global_config.eval_state->exprs); ++i)
 		{
-			MML_Value val = MML_eval_expr(
+			MML_value val = MML_eval_expr(
 					MML_global_config.eval_state,
 					dv_a(MML_global_config.eval_state->exprs, i));
 

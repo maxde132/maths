@@ -15,7 +15,7 @@ void MML_print_indent(uint32_t indent)
 	printf("%*s", indent, "");
 }
 
-MML_Value MML_print_typedval(MML_state *state, const MML_Value *val)
+MML_value MML_print_typedval(MML_state *state, const MML_value *val)
 {
 	if (val == nullptr)
 	{
@@ -27,30 +27,30 @@ MML_Value MML_print_typedval(MML_state *state, const MML_Value *val)
 		printf("%" PRIi64, val->i);
 		break;
 	case RealNumber_type:
-		if (MML_global_config.full_prec_floats)
-			printf("%.*f", MML_global_config.precision, val->n);
+		if (state->config->full_prec_floats)
+			printf("%.*f", state->config->precision, val->n);
 		else
-			printf("%.*g", MML_global_config.precision, val->n);
+			printf("%.*g", state->config->precision, val->n);
 		break;
 	case ComplexNumber_type:
-		if (MML_global_config.full_prec_floats)
+		if (state->config->full_prec_floats)
 			printf("%.*f%+.*fi",
-					MML_global_config.precision, creal(val->cn),
-					MML_global_config.precision, cimag(val->cn));
+					state->config->precision, creal(val->cn),
+					state->config->precision, cimag(val->cn));
 		else
 			printf("%.*g%+.*gi",
-					MML_global_config.precision, creal(val->cn),
-					MML_global_config.precision, cimag(val->cn));
+					state->config->precision, creal(val->cn),
+					state->config->precision, cimag(val->cn));
 		break;
 	case Boolean_type:
 		if (FLAG_IS_SET(BOOLS_PRINT_NUM))
 		{
-			if (MML_global_config.full_prec_floats)
+			if (state->config->full_prec_floats)
 				printf("%.*f",
-						MML_global_config.precision, (val->b) ? 1.0 : 0.0);
+						state->config->precision, (val->b) ? 1.0 : 0.0);
 			else
 				printf("%.*g",
-						MML_global_config.precision, (val->b) ? 1.0 : 0.0);
+						state->config->precision, (val->b) ? 1.0 : 0.0);
 		} else
 			printf("%s", (val->b) ? "true" : "false");
 		break;
@@ -59,8 +59,8 @@ MML_Value MML_print_typedval(MML_state *state, const MML_Value *val)
 		break;
 	case Vector_type:
 		fputc('[', stdout);
-		MML_Value cur_val;
-		MML_Expr **cur;
+		MML_value cur_val;
+		MML_expr **cur;
 		dv_foreach(val->v, cur)
 		{
 			cur_val = MML_eval_expr(state, *cur);
@@ -75,42 +75,42 @@ MML_Value MML_print_typedval(MML_state *state, const MML_Value *val)
 		break;
 	}
 
-	MML_global_config.last_print_was_newline = false;
-	return (MML_Value) { Invalid_type, .n = NAN };
+	state->config->last_print_was_newline = false;
+	return (MML_value) { Invalid_type, .n = NAN };
 }
 
-inline MML_Value MML_println_typedval(MML_state *state, const MML_Value *val)
+inline MML_value MML_println_typedval(MML_state *state, const MML_value *val)
 {
-	MML_Value ret = MML_print_typedval(state, val);
+	MML_value ret = MML_print_typedval(state, val);
 	fputc('\n', stdout);
-	MML_global_config.last_print_was_newline = true;
+	state->config->last_print_was_newline = true;
 	return ret;
 }
-MML_Value MML_print_typedval_multiargs(MML_state *state, MML_ExprVec *args)
+MML_value MML_print_typedval_multiargs(MML_state *state, MML_expr_vec *args)
 {
 	for (size_t i = 0; i < dv_n(*args); ++i)
 	{
-		MML_Value cur_val = MML_eval_expr(state, dv_a(*args, i));
+		MML_value cur_val = MML_eval_expr(state, dv_a(*args, i));
 		MML_print_typedval(state, &cur_val);
 		if (i < dv_n(*args)-1) fputc(' ', stdout);
 	}
 
-	return (MML_Value) { Invalid_type, .n = NAN };
+	return (MML_value) { Invalid_type, .n = NAN };
 }
-MML_Value MML_println_typedval_multiargs(MML_state *state, MML_ExprVec *args)
+MML_value MML_println_typedval_multiargs(MML_state *state, MML_expr_vec *args)
 {
 	for (size_t i = 0; i < dv_n(*args); ++i)
 	{
-		MML_Value cur_val = MML_eval_expr(state, dv_a(*args, i));
+		MML_value cur_val = MML_eval_expr(state, dv_a(*args, i));
 		MML_println_typedval(state, &cur_val);
 	}
 	if (dv_n(*args) == 0)
 		fputc('\n', stdout);
 
-	return (MML_Value) { Invalid_type, .n = NAN };
+	return (MML_value) { Invalid_type, .n = NAN };
 }
 
-void MML_print_expr(const MML_Expr *expr, uint32_t indent)
+void MML_print_expr(struct MML_config *config, const MML_expr *expr, uint32_t indent)
 {
 	MML_print_indent(indent);
 	if (expr == nullptr)
@@ -124,43 +124,43 @@ void MML_print_expr(const MML_Expr *expr, uint32_t indent)
 		MML_print_indent(indent+2);
 
 		printf("Left:\n");
-		MML_print_expr(expr->o.left, indent+4);
+		MML_print_expr(config, expr->o.left, indent+4);
 		if (expr->o.right)
 		{
 			fputc('\n', stdout);
 			MML_print_indent(indent+2);
 			printf("Right:\n");
-			MML_print_expr(expr->o.right, indent+4);
+			MML_print_expr(config, expr->o.right, indent+4);
 		}
 		break;
 	case Integer_type:
 		printf("Integer(%" PRIi64 ")", expr->i);
 		break;
 	case RealNumber_type:
-		if (MML_global_config.full_prec_floats)
-			printf("RealNumber(%.*f)", MML_global_config.precision, expr->n);
+		if (config->full_prec_floats)
+			printf("RealNumber(%.*f)", config->precision, expr->n);
 		else
-			printf("RealNumber(%.*g)", MML_global_config.precision, expr->n);
+			printf("RealNumber(%.*g)", config->precision, expr->n);
 		break;
 	case ComplexNumber_type:
-		if (MML_global_config.full_prec_floats)
+		if (config->full_prec_floats)
 			printf("ComplexNumber(%.*g%+.*gi)",
-					MML_global_config.precision, creal(expr->cn),
-					MML_global_config.precision, cimag(expr->cn));
+					config->precision, creal(expr->cn),
+					config->precision, cimag(expr->cn));
 		else
 			printf("ComplexNumber(%.*g%+.*gi)",
-					MML_global_config.precision, creal(expr->cn),
-					MML_global_config.precision, cimag(expr->cn));
+					config->precision, creal(expr->cn),
+					config->precision, cimag(expr->cn));
 		break;
 	case Boolean_type:
 		if (FLAG_IS_SET(BOOLS_PRINT_NUM))
 		{
-			if (MML_global_config.full_prec_floats)
+			if (config->full_prec_floats)
 				printf("Boolean(%.*f)",
-						MML_global_config.precision, (expr->b) ? 1.0 : 0.0);
+						config->precision, (expr->b) ? 1.0 : 0.0);
 			else
 				printf("Boolean(%.*g)",
-						MML_global_config.precision, (expr->b) ? 1.0 : 0.0);
+						config->precision, (expr->b) ? 1.0 : 0.0);
 		} else
 			printf("Boolean(%s)", (expr->b) ? "true" : "false");
 		break;
@@ -171,7 +171,7 @@ void MML_print_expr(const MML_Expr *expr, uint32_t indent)
 		printf("Vector(n=%zu):\n", dv_n(expr->v));
 		for (size_t i = 0; i < dv_n(expr->v); ++i)
 		{
-			MML_print_expr(dv_a(expr->v, i), indent+2);
+			MML_print_expr(config, dv_a(expr->v, i), indent+2);
 			if (i < dv_n(expr->v) - 1) fputc('\n', stdout);
 		}
 		break;
@@ -180,25 +180,25 @@ void MML_print_expr(const MML_Expr *expr, uint32_t indent)
 		break;
 	}
 
-	MML_global_config.last_print_was_newline = false;
+	config->last_print_was_newline = false;
 }
 
-inline void MML_print_exprh(MML_Expr *expr)
+inline void MML_print_exprh(MML_expr *expr)
 {
-	MML_print_expr(expr, 0);
+	MML_print_expr(&MML_global_config, expr, 0);
 	fputc('\n', stdout);
 	MML_global_config.last_print_was_newline = true;
 }
-inline MML_Value MML_print_exprh_tv_func(MML_state *, MML_ExprVec *args)
+inline MML_value MML_print_exprh_tv_func(MML_state *state, MML_expr_vec *args)
 {
-	MML_print_expr(dv_a(*args, 0), 0);
+	MML_print_expr(state->config, dv_a(*args, 0), 0);
 	fputc('\n', stdout);
-	MML_global_config.last_print_was_newline = true;
+	state->config->last_print_was_newline = true;
 
 	return VAL_INVAL;
 }
 
-void MML_free_expr(MML_Expr **e)
+void MML_free_expr(MML_expr **e)
 {
 	if (*e == nullptr) return;
 	if (--(*e)->num_refs > 0)
@@ -230,7 +230,7 @@ void MML_free_expr(MML_Expr **e)
 	*e = nullptr;
 }
 
-void MML_free_vec(MML_ExprVec *vec)
+void MML_free_vec(MML_expr_vec *vec)
 {
 	for (size_t i = 0; i < dv_n(*vec); ++i)
 		MML_free_expr(&dv_a(*vec, i));
@@ -242,7 +242,7 @@ inline void MML_free_pp(void *p)
 	free(*(void **)p);
 }
 
-inline double MML_get_number(const MML_Value *v)
+inline double MML_get_number(const MML_value *v)
 {
 	if (!VAL_IS_NUM(*v) || v->type == ComplexNumber_type)
 		return NAN;
@@ -250,7 +250,7 @@ inline double MML_get_number(const MML_Value *v)
 		? v->n
 		: ((v->b) ? 1.0 : 0.0);
 }
-inline _Complex double MML_get_complex(const MML_Value *v)
+inline _Complex double MML_get_complex(const MML_value *v)
 {
 	if (!VAL_IS_NUM(*v))
 		return NAN;

@@ -82,9 +82,9 @@ const char *const EXPR_TYPE_STRINGS[] = {
 
 
 // Gets the next token and advances the string pointer.
-static MML_Token get_next_token(const char **s, struct parser_state *state)
+static MML_token get_next_token(const char **s, struct parser_state *state)
 {
-	MML_Token ret = nToken(MML_INVALID_TOK, NULL, 0);
+	MML_token ret = nToken(MML_INVALID_TOK, NULL, 0);
 
 	if (state->has_peeked) {
 		state->has_peeked = false;
@@ -95,7 +95,7 @@ static MML_Token get_next_token(const char **s, struct parser_state *state)
 	const char *cached_s = *s;
 	while (isspace(*cached_s)) ++cached_s;
 
-	MML_TokenType type = TOK_BY_CHAR[(unsigned char)*cached_s];
+	MML_token_type type = TOK_BY_CHAR[(unsigned char)*cached_s];
 	switch (type) {
 	case MML_EOF_TOK:
 		*s = cached_s;
@@ -205,7 +205,7 @@ static MML_Token get_next_token(const char **s, struct parser_state *state)
 }
 
 // Peeks at the next token without advancing the string pointer.
-static MML_Token peek_token(const char **s, struct parser_state *state)
+static MML_token peek_token(const char **s, struct parser_state *state)
 {
 	if (!state->has_peeked)
 	{
@@ -219,33 +219,33 @@ static MML_Token peek_token(const char **s, struct parser_state *state)
 
 #define PARSER_MAX_PRECED 15
 
-static bool op_is_unary(MML_TokenType op)
+static bool op_is_unary(MML_token_type op)
 {
 	return (op == MML_TILDE_TOK || (op >= MML_OP_NOT_TOK && op <= MML_OP_UNARY_NOTHING));
 }
 
-static bool op_is_right_associative(MML_TokenType op)
+static bool op_is_right_associative(MML_token_type op)
 {
 	return op == MML_OP_POW_TOK || op_is_unary(op);
 }
 
-static MML_Expr *parse_expr(const char **s, uint32_t max_preced, struct parser_state *state)
+static MML_expr *parse_expr(const char **s, uint32_t max_preced, struct parser_state *state)
 {
-	MML_Token tok = get_next_token(s, state);
+	MML_token tok = get_next_token(s, state);
 
-	MML_Expr *left = calloc(1, sizeof(MML_Expr));
+	MML_expr *left = calloc(1, sizeof(MML_expr));
 	left->num_refs = 1; // i don't know why isn't 1 but i have memory leaks if it is
 
 	if (tok.type == MML_OP_SUB_TOK || tok.type == MML_OP_ADD_TOK
 			|| op_is_unary(tok.type))
 	{
-		MML_TokenType new_token_type = tok.type;
+		MML_token_type new_token_type = tok.type;
 		if (new_token_type == MML_OP_ADD_TOK)
 			new_token_type = MML_OP_UNARY_NOTHING;
 		else if (new_token_type == MML_OP_SUB_TOK)
 			new_token_type = MML_OP_NEGATE;
 		
-		MML_Expr *operand = parse_expr(s, PRECEDENCE[new_token_type], state);
+		MML_expr *operand = parse_expr(s, PRECEDENCE[new_token_type], state);
 
 		left->type = Operation_type;
 		left->o.left = operand;
@@ -253,12 +253,12 @@ static MML_Expr *parse_expr(const char **s, uint32_t max_preced, struct parser_s
 		left->o.op = new_token_type;
 	} else if (tok.type == MML_IDENT_TOK)
 	{
-		MML_Token ident = tok;
-		MML_Token next_tok = peek_token(s, state);
+		MML_token ident = tok;
+		MML_token next_tok = peek_token(s, state);
 
 		if (tok.type == MML_IDENT_TOK && next_tok.type == MML_OPEN_BRAC_TOK)
 		{
-			MML_Expr *name = calloc(1, sizeof(MML_Expr));
+			MML_expr *name = calloc(1, sizeof(MML_expr));
 			name->type = Identifier_type;
 			name->num_refs = 1;
 			name->s = ident.buf;
@@ -269,16 +269,16 @@ static MML_Expr *parse_expr(const char **s, uint32_t max_preced, struct parser_s
 
 			get_next_token(s, state);
 
-			left->o.right = calloc(1, sizeof(MML_Expr));
+			left->o.right = calloc(1, sizeof(MML_expr));
 			left->o.right->type = Vector_type;
 			left->o.right->num_refs = 1;
 			left->o.right->should_free_vec_block = false;
-			left->o.right->v = (MML_ExprVec) DVEC_INIT;
+			left->o.right->v = (MML_expr_vec) DVEC_INIT;
 			do
 			{
 				if (**s == '\0' || peek_token(s, state).type == MML_CLOSE_BRAC_TOK)
 					break;
-				MML_Expr *next_expr = parse_expr(s, PARSER_MAX_PRECED, state);
+				MML_expr *next_expr = parse_expr(s, PARSER_MAX_PRECED, state);
 				dv_push(left->o.right->v, next_expr);
 				//if (next_expr != nullptr)
 				//	--next_expr->num_refs;
@@ -301,7 +301,7 @@ static MML_Expr *parse_expr(const char **s, uint32_t max_preced, struct parser_s
 	{
 		MML_free_expr(&left);
 		left = parse_expr(s, PARSER_MAX_PRECED, state);
-		MML_Token close_paren_tok = get_next_token(s, state);
+		MML_token close_paren_tok = get_next_token(s, state);
 		if (close_paren_tok.type != MML_CLOSE_PAREN_TOK)
 		{
 			get_next_token(s, state);
@@ -311,14 +311,14 @@ static MML_Expr *parse_expr(const char **s, uint32_t max_preced, struct parser_s
 		}
 	} else if (tok.type == MML_OPEN_BRACKET_TOK)
 	{
-		MML_ExprVec vec = DVEC_INIT;
+		MML_expr_vec vec = DVEC_INIT;
 		while (tok.type != MML_CLOSE_BRACKET_TOK)
 		{
 			tok = peek_token(s, state);
 			if (tok.type == MML_CLOSE_BRACKET_TOK)
 				break;
 
-			MML_Expr *e = parse_expr(s, PARSER_MAX_PRECED, state);
+			MML_expr *e = parse_expr(s, PARSER_MAX_PRECED, state);
 			dv_push(vec, e);
 			/*if (e != nullptr)
 				--e->num_refs;*/
@@ -335,7 +335,7 @@ static MML_Expr *parse_expr(const char **s, uint32_t max_preced, struct parser_s
 				return nullptr;
 			}
 		}
-		*left = (MML_Expr) { Vector_type, 1, .v = vec };
+		*left = (MML_expr) { Vector_type, 1, .v = vec };
 	} else if (tok.type == MML_PIPE_TOK)
 	{
 		MML_free_expr(&left);
@@ -346,7 +346,7 @@ static MML_Expr *parse_expr(const char **s, uint32_t max_preced, struct parser_s
 			return nullptr;
 		}
 		left = parse_expr(s, PARSER_MAX_PRECED, state);
-		MML_Token close_pipe_tok = get_next_token(s, state);
+		MML_token close_pipe_tok = get_next_token(s, state);
 		if (close_pipe_tok.type != MML_PIPE_TOK)
 		{
 			get_next_token(s, state);
@@ -355,7 +355,7 @@ static MML_Expr *parse_expr(const char **s, uint32_t max_preced, struct parser_s
 			MML_free_expr(&left);
 			return nullptr;*/
 		}
-		MML_Expr *opnode = calloc(1, sizeof(MML_Expr));
+		MML_expr *opnode = calloc(1, sizeof(MML_expr));
 		opnode->type = Operation_type;
 		opnode->num_refs = 1;
 		opnode->o.left = left;
@@ -379,7 +379,7 @@ static MML_Expr *parse_expr(const char **s, uint32_t max_preced, struct parser_s
 
 	for (;;)
 	{
-		MML_Token op_tok = peek_token(s, state);
+		MML_token op_tok = peek_token(s, state);
 		if (op_tok.type == MML_INVALID_TOK)
 		{
 			break;
@@ -404,7 +404,7 @@ static MML_Expr *parse_expr(const char **s, uint32_t max_preced, struct parser_s
 		if (op_tok.type == MML_OP_DOT_TOK)
 			state->looking_for_int = true;
 
-		MML_Expr *right = parse_expr(s,
+		MML_expr *right = parse_expr(s,
 				op_is_right_associative(op_tok.type)
 					? preced
 					: preced-1, state);
@@ -417,7 +417,7 @@ static MML_Expr *parse_expr(const char **s, uint32_t max_preced, struct parser_s
 			return nullptr;
 		}
 
-		MML_Expr *opnode = calloc(1, sizeof(MML_Expr));
+		MML_expr *opnode = calloc(1, sizeof(MML_expr));
 		opnode->type = Operation_type;
 		opnode->num_refs = 1; // i don't know why isn't 1 but i have memory leaks if it is
 		opnode->o.left = left;
@@ -430,14 +430,14 @@ static MML_Expr *parse_expr(const char **s, uint32_t max_preced, struct parser_s
 	return left;
 }
 
-inline MML_Expr *MML_parse(const char *s)
+inline MML_expr *MML_parse(const char *s)
 {
 	struct parser_state state = {0};
 	return parse_expr(&s, PARSER_MAX_PRECED, &state);
 }
-MML_ExprVec MML_parse_stmts_to_ret(const char *s)
+MML_expr_vec MML_parse_stmts_to_ret(const char *s)
 {
-	MML_ExprVec ret = DVEC_INIT;
+	MML_expr_vec ret = DVEC_INIT;
 	struct parser_state state = {0};
 	do
 	{
@@ -452,7 +452,7 @@ void MML_parse_stmts(const char *s, MML_state *state)
 	struct parser_state parser_state = {0};
 	do
 	{
-		MML_Expr *cur_expr = parse_expr(&s, PARSER_MAX_PRECED, &parser_state);
+		MML_expr *cur_expr = parse_expr(&s, PARSER_MAX_PRECED, &parser_state);
 		if (cur_expr != nullptr)
 			MML_eval_push_expr(state, cur_expr);
 	} while (get_next_token(&s, &parser_state).type == MML_SEMICOLON_TOK);

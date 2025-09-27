@@ -25,7 +25,7 @@ constexpr const uint8_t PRECEDENCE[] = {
 
 	2, 2, 2,
 };
-constexpr const MML_TokenType TOK_BY_CHAR[] = {
+constexpr const MML_token_type TOK_BY_CHAR[] = {
 	MML_EOF_TOK,		//'\x00'
 	MML_INVALID_TOK,		//'\x01'
 	MML_INVALID_TOK,		//'\x02'
@@ -292,8 +292,8 @@ extern const char *const EXPR_TYPE_STRINGS[];
 
 struct parser_state {
 	const char *saved_s;
-	MML_Token peeked_tok;
-	MML_Token current_tok;
+	MML_token peeked_tok;
+	MML_token current_tok;
 	bool has_peeked;
 	bool looking_for_int;
 };
@@ -301,9 +301,9 @@ struct parser_state {
 
 [[nodiscard("you really need to make sure you keep this `MML_Expr *`, "
 		"otherwise severe memory leaks will ensue...")]]
-MML_Expr *MML_parse(const char *s);
+MML_expr *MML_parse(const char *s);
 
-MML_ExprVec MML_parse_stmts_to_ret(const char *s);
+MML_expr_vec MML_parse_stmts_to_ret(const char *s);
 void MML_parse_stmts(const char *s, MML_state *state);
 
 #endif /* PARSER_H */

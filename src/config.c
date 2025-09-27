@@ -128,7 +128,7 @@ void MML_arg_parse(int32_t argc, char **argv)
 					exit(1);
 				}
 				strbuf name = { argv[arg_n]+2+8, cur - (argv[arg_n]+2+8) - 1, false };
-				MML_Expr *e = MML_parse(cur);
+				MML_expr *e = MML_parse(cur);
 				MML_eval_set_variable(MML_global_config.eval_state, name, e);
 				--e->num_refs;
 			} else

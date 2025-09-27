@@ -5,7 +5,6 @@
 #include <stdarg.h>
 #include <stdio.h>
 
-#include "eval.h"
 #include "token.h"
 
 #define BIT(n) (1<<n)
@@ -20,7 +19,14 @@ enum {
 };
 
 #define SET_FLAG(f) (MML_global_config.runtime_flags |= (f))
+#define CLEAR_FLAG(c_p, f) (MML_global_config.runtime_flags &= ~(f))
 #define FLAG_IS_SET(f) ((MML_global_config.runtime_flags & (f)) != 0)
+
+#define CSET_FLAG(c_p, f) ((c_p)->runtime_flags |= (f))
+#define CCLEAR_FLAG(c_p, f) ((c_p)->runtime_flags &= ~(f))
+#define CFLAG_IS_SET(c_p, f) (((c_p)->runtime_flags & (f)) != 0)
+
+typedef struct MML_state MML_state;
 
 struct MML_config {
 	char *PROG_NAME;

@@ -22,7 +22,7 @@ static _Complex double custom_sqrt(double a)
 	return csqrt(a + 0.0*I);
 }
 
-static MML_Value custom_root(MML_state *state, MML_ExprVec *args)
+static MML_value custom_root(MML_state *state, MML_expr_vec *args)
 {
 	if (dv_n(*args) == 1)
 	{
@@ -43,11 +43,11 @@ static MML_Value custom_root(MML_state *state, MML_ExprVec *args)
 			MML_eval_expr(state, dv_a(*args, 1)), MML_OP_ROOT);
 }
 
-static MML_Value custom_logb(MML_state *state, MML_ExprVec *args)
+static MML_value custom_logb(MML_state *state, MML_expr_vec *args)
 {
 	if (dv_n(*args) == 1)
 	{
-		MML_Value a = MML_eval_expr(state, dv_a(*args, 0));
+		MML_value a = MML_eval_expr(state, dv_a(*args, 0));
 		if (!VAL_IS_NUM(a))
 		{
 			MML_log_err("`logb`: takes either 2 number (real number, complex number, or Boolean) arguments or 1 number argument\n");
@@ -65,8 +65,8 @@ static MML_Value custom_logb(MML_state *state, MML_ExprVec *args)
 		return VAL_INVAL;
 	}
 
-	MML_Value a = MML_eval_expr(state, dv_a(*args, 0));
-	MML_Value b = MML_eval_expr(state, dv_a(*args, 1));
+	MML_value a = MML_eval_expr(state, dv_a(*args, 0));
+	MML_value b = MML_eval_expr(state, dv_a(*args, 1));
 
 	if (!VAL_IS_NUM(a) || !VAL_IS_NUM(b))
 	{
@@ -80,7 +80,7 @@ static MML_Value custom_logb(MML_state *state, MML_ExprVec *args)
 		return VAL_CNUM(clog(MML_get_complex(&a)) / clog(MML_get_complex(&b)));
 }
 
-static MML_Value custom_atan2(MML_state *state, MML_ExprVec *args)
+static MML_value custom_atan2(MML_state *state, MML_expr_vec *args)
 {
 	if (dv_n(*args) != 2)
 	{
@@ -88,8 +88,8 @@ static MML_Value custom_atan2(MML_state *state, MML_ExprVec *args)
 		return VAL_INVAL;
 	}
 
-	const MML_Value y = MML_eval_expr(state, dv_a(*args, 0));
-	const MML_Value x = MML_eval_expr(state, dv_a(*args, 1));
+	const MML_value y = MML_eval_expr(state, dv_a(*args, 0));
+	const MML_value x = MML_eval_expr(state, dv_a(*args, 1));
 	if (y.type != RealNumber_type || x.type != RealNumber_type)
 	{
 		MML_log_err("`atan2` takes exactly 2 real number arguments\n");
@@ -98,9 +98,9 @@ static MML_Value custom_atan2(MML_state *state, MML_ExprVec *args)
 	return VAL_NUM(atan2(y.n, x.n));
 }
 
-static MML_Value custom_max(MML_state *state, MML_ExprVec *args)
+static MML_value custom_max(MML_state *state, MML_expr_vec *args)
 {
-	MML_Value max = VAL_INVAL;
+	MML_value max = VAL_INVAL;
 
 	for (size_t i = 0; i < dv_n(*args); ++i)
 	{
@@ -108,8 +108,8 @@ static MML_Value custom_max(MML_state *state, MML_ExprVec *args)
 			max = MML_eval_expr(state, dv_a(*args, i));
 		if (!VALTYPE_IS_ORDERED(max))
 			return VAL_INVAL;
-		MML_Value cur = MML_eval_expr(state, dv_a(*args, i));
-		MML_Value tmp = MML_apply_binary_op(state, cur, max, MML_OP_GREATER_TOK);
+		MML_value cur = MML_eval_expr(state, dv_a(*args, i));
+		MML_value tmp = MML_apply_binary_op(state, cur, max, MML_OP_GREATER_TOK);
 		if (tmp.type == Boolean_type && tmp.b)
 			max = cur;
 	}
@@ -117,9 +117,9 @@ static MML_Value custom_max(MML_state *state, MML_ExprVec *args)
 	return max;
 }
 
-static MML_Value custom_min(MML_state *state, MML_ExprVec *args)
+static MML_value custom_min(MML_state *state, MML_expr_vec *args)
 {
-	MML_Value min = VAL_INVAL;
+	MML_value min = VAL_INVAL;
 
 	for (size_t i = 0; i < dv_n(*args); ++i)
 	{
@@ -127,8 +127,8 @@ static MML_Value custom_min(MML_state *state, MML_ExprVec *args)
 			min = MML_eval_expr(state, dv_a(*args, i));
 		if (!VALTYPE_IS_ORDERED(min))
 			return VAL_INVAL;
-		MML_Value cur = MML_eval_expr(state, dv_a(*args, i));
-		MML_Value tmp = MML_apply_binary_op(state, cur, min, MML_OP_LESS_TOK);
+		MML_value cur = MML_eval_expr(state, dv_a(*args, i));
+		MML_value tmp = MML_apply_binary_op(state, cur, min, MML_OP_LESS_TOK);
 		if (tmp.type == Boolean_type && tmp.b)
 			min = cur;
 	}
@@ -141,18 +141,18 @@ static MML_state *cur_state;
 
 static int compare_values(const void *a, const void *b)
 {
-	const MML_Value va = MML_eval_expr(cur_state, *(MML_Expr **)a);
-	const MML_Value vb = MML_eval_expr(cur_state, *(MML_Expr **)b);
+	const MML_value va = MML_eval_expr(cur_state, *(MML_expr **)a);
+	const MML_value vb = MML_eval_expr(cur_state, *(MML_expr **)b);
 
 	if (!VALTYPE_IS_ORDERED(va) || !VALTYPE_IS_ORDERED(vb))
 		return INT32_MIN;
 	return MML_get_number(&va) - MML_get_number(&vb);
 }
 
-static MML_Value custom_sort(MML_state *state, MML_ExprVec *args)
+static MML_value custom_sort(MML_state *state, MML_expr_vec *args)
 {
-	const MML_ExprVec *vec = &dv_a(*args, 0)->v;
-	MML_Expr *ret = calloc(1, sizeof(MML_Expr));
+	const MML_expr_vec *vec = &dv_a(*args, 0)->v;
+	MML_expr *ret = calloc(1, sizeof(MML_expr));
 	ret->type = Vector_type;
 	ret->should_free_vec_block = true;
 	dv_init(ret->v);
@@ -164,7 +164,7 @@ static MML_Value custom_sort(MML_state *state, MML_ExprVec *args)
 	cur_state = state;
 	qsort(ret->v.items, dv_n(ret->v), _dv_item_size(ret->v), compare_values);
 
-	return (MML_Value) { Vector_type, .v = ret->v };
+	return (MML_value) { Vector_type, .v = ret->v };
 }
 
 
@@ -225,14 +225,14 @@ static void register_functions(hashmap *maps[6])
 	hashmap_set(maps[5], hashmap_str_lit("complex_imag"),		(uintptr_t)cimag);
 
 
-	static constexpr MML_Value TRUE_M		= VAL_BOOL(true);
-	static constexpr MML_Value FALSE_M		= VAL_BOOL(false);
-	static constexpr MML_Value PI_M		= VAL_NUM(3.14159265358979323846);
-	static constexpr MML_Value E_M		= VAL_NUM(2.71828182845904523536);
-	static constexpr MML_Value PHI_M		= VAL_NUM(1.61803398874989484820);
-	static constexpr MML_Value I_M		= VAL_CNUM(I);
-	static constexpr MML_Value NAN_M		= VAL_NUM(NAN);
-	static constexpr MML_Value INFINITY_M	= VAL_NUM(INFINITY);
+	static constexpr MML_value TRUE_M		= VAL_BOOL(true);
+	static constexpr MML_value FALSE_M		= VAL_BOOL(false);
+	static constexpr MML_value PI_M		= VAL_NUM(3.14159265358979323846);
+	static constexpr MML_value E_M		= VAL_NUM(2.71828182845904523536);
+	static constexpr MML_value PHI_M		= VAL_NUM(1.61803398874989484820);
+	static constexpr MML_value I_M		= VAL_CNUM(I);
+	static constexpr MML_value NAN_M		= VAL_NUM(NAN);
+	static constexpr MML_value INFINITY_M	= VAL_NUM(INFINITY);
 
 	hashmap_set(maps[0], hashmap_str_lit("true"), 	(uintptr_t)&TRUE_M);
 	hashmap_set(maps[0], hashmap_str_lit("false"), 	(uintptr_t)&FALSE_M);

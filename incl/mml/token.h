@@ -63,7 +63,7 @@ typedef enum {
 	MML_INVALID_TOK,
 	MML_WHITESPACE_TOK,
 	MML_EOF_TOK,
-} MML_TokenType;
+} MML_token_type;
 
 typedef struct strbuf {
 	char *s;
@@ -73,11 +73,11 @@ typedef struct strbuf {
 
 #define str_lit(s) ((strbuf) { (s), sizeof(s)-1, false })
 
-typedef struct MML_Token {
+typedef struct MML_token {
 	strbuf buf;
-	MML_TokenType type;
-} MML_Token;
+	MML_token_type type;
+} MML_token;
 
-#define nToken(type, buf, len) ((MML_Token) { { (char *)(buf), (len), false }, (type) })
+#define nToken(type, buf, len) ((MML_token) { { (char *)(buf), (len), false }, (type) })
 
 #endif /* TOKEN_H */

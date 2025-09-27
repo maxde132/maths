@@ -153,7 +153,7 @@ void MML_run_prompt(MML_state *state)
 
 	char line_in[LINE_MAX_LEN+1] = {0};
 
-	MML_Value cur_val = VAL_INVAL;
+	MML_value cur_val = VAL_INVAL;
 	size_t expr_n_offset = 0;
 	puts("-- MML interactive prompt --");
 	puts("run `exit` or press CTRL+D to quit the prompt.");
@@ -186,7 +186,7 @@ void MML_run_prompt(MML_state *state)
 		{
 			while (expr_n_offset < dv_n(state->exprs))
 			{
-				MML_Expr *cur = dv_a(state->exprs, expr_n_offset++);
+				MML_expr *cur = dv_a(state->exprs, expr_n_offset++);
 				if (cur != nullptr)
 					cur_val = MML_eval_expr(state, cur);
 			}
@@ -195,7 +195,7 @@ void MML_run_prompt(MML_state *state)
 			time_blck(&nsecs, 
 			while (expr_n_offset < dv_n(state->exprs))
 			{
-				MML_Expr *cur = dv_a(state->exprs, expr_n_offset++);
+				MML_expr *cur = dv_a(state->exprs, expr_n_offset++);
 				if (cur != nullptr)
 					cur_val = MML_eval_expr(state, cur);
 			});
@@ -207,8 +207,10 @@ void MML_run_prompt(MML_state *state)
 		MML_global_config.last_print_was_newline = true;
 
 		if (cur_val.type != Invalid_type)
+		{
 			MML_println_typedval(state, &cur_val);
-		else
+			state->last_val = cur_val;
+		} else
 		{
 			switch (cur_val.i) {
 			case MML_CLEAR_INVAL:
