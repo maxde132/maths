@@ -138,6 +138,12 @@ static MML_value apply_func(MML_state *restrict state,
 	_Complex double (*cd_d_func) (double);
 	double (*d_cd_func) (_Complex double);
 
+	if (dv_n(right_vec.v) == 0)
+	{
+		MML_log_err("undefined function for empty argument list in call to function: '%.*s'\n",
+				(int)ident.len, ident.s);
+		return VAL_INVAL;
+	}
 	const MML_value first_arg_val = MML_eval_expr(state, dv_a(right_vec.v, 0));
 	if (first_arg_val.type == RealNumber_type)
 	{
