@@ -234,7 +234,7 @@ static MML_expr *parse_expr(const char **s, uint32_t max_preced, struct parser_s
 	MML_token tok = get_next_token(s, state);
 
 	MML_expr *left = calloc(1, sizeof(MML_expr));
-	left->num_refs = 1; // i don't know why isn't 1 but i have memory leaks if it is
+	left->num_refs = 1;
 
 	if (tok.type == MML_OP_SUB_TOK || tok.type == MML_OP_ADD_TOK
 			|| op_is_unary(tok.type))
@@ -387,7 +387,10 @@ static MML_expr *parse_expr(const char **s, uint32_t max_preced, struct parser_s
 		//	return nullptr;
 		}
 		bool do_advance = true;
-		if (op_tok.type == MML_IDENT_TOK || op_tok.type == MML_NUMBER_TOK || op_tok.type == MML_OPEN_PAREN_TOK)
+		if (op_tok.type == MML_IDENT_TOK
+		 || op_tok.type == MML_NUMBER_TOK
+		 || op_tok.type == MML_OPEN_PAREN_TOK
+		 || op_tok.type == MML_OPEN_BRACKET_TOK)
 		{
 			op_tok.type = MML_OP_MUL_TOK;
 			do_advance = false;
@@ -419,7 +422,7 @@ static MML_expr *parse_expr(const char **s, uint32_t max_preced, struct parser_s
 
 		MML_expr *opnode = calloc(1, sizeof(MML_expr));
 		opnode->type = Operation_type;
-		opnode->num_refs = 1; // i don't know why isn't 1 but i have memory leaks if it is
+		opnode->num_refs = 1;
 		opnode->o.left = left;
 		opnode->o.right = right;
 		opnode->o.op = op_tok.type;

@@ -202,9 +202,9 @@ void MML_run_prompt(MML_state *state)
 			MML_log_dbg("evaluated in %.6fs\n", (double)nsecs/NSEC_IN_SEC);
 		}
 
-		if (!MML_global_config.last_print_was_newline)
+		if (!state->config->last_print_was_newline)
 			puts("\033[7m%\033[0m");
-		MML_global_config.last_print_was_newline = true;
+		state->config->last_print_was_newline = true;
 
 		if (cur_val.type != Invalid_type)
 		{
