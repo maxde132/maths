@@ -183,7 +183,7 @@ void MML_print_expr(struct MML_config *config, const MML_expr *expr, uint32_t in
 	config->last_print_was_newline = false;
 }
 
-inline void MML_print_exprh(MML_expr *expr)
+inline void MML_print_exprh(const MML_expr *expr)
 {
 	MML_print_expr(&MML_global_config, expr, 0);
 	fputc('\n', stdout);

@@ -7,11 +7,11 @@
 #include "mml/expr.h"
 
 #define _create_leaf(t, f, val) ({ \
-	MML_expr *e = calloc(1, sizeof(MML_expr)); \
-	e->type = (t); \
-	e->f = (val); \
-	e->num_refs = 1; \
-	e; \
+	MML_expr *e__ = calloc(1, sizeof(MML_expr)); \
+	e__->type = (t); \
+	e__->f = (val); \
+	e__->num_refs = 1; \
+	e__; \
 })
 
 static inline MML_expr *_create_vec_leaf(size_t n, ...) { 
@@ -34,13 +34,13 @@ static inline MML_expr *_create_vec_leaf(size_t n, ...) {
 
 /* whichever is named `_create_oper` is the one used */
 #define _create_oper(oper, a, b) ({ \
-	MML_expr *e = calloc(1, sizeof(MML_expr)); \
-	e->type = Operation_type; \
-	e->o.op = (oper); \
-	e->o.left = (a); \
-	e->o.right = (b); \
-	e->num_refs = 1; \
-	e; \
+	MML_expr *__e = calloc(1, sizeof(MML_expr)); \
+	__e->type = Operation_type; \
+	__e->o.op = (oper); \
+	__e->o.left = (a); \
+	__e->o.right = (b); \
+	__e->num_refs = 1; \
+	__e; \
 })
 static inline MML_expr *__create_oper(MML_token_type op, MML_expr *a, MML_expr *b) {
 	MML_expr *e = calloc(1, sizeof(MML_expr));

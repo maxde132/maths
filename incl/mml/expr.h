@@ -90,7 +90,7 @@ MML_value MML_print_typedval(MML_state *, const MML_value *val);
 MML_value MML_println_typedval(MML_state *state, const MML_value *val);
 MML_value MML_print_typedval_multiargs(MML_state *state, MML_expr_vec *args);
 MML_value MML_println_typedval_multiargs(MML_state *state, MML_expr_vec *args);
-void MML_print_exprh(MML_expr *expr);
+void MML_print_exprh(const MML_expr *expr);
 MML_value MML_print_exprh_tv_func(MML_state *, MML_expr_vec *args);
 
 void MML_free_expr(MML_expr **e);
