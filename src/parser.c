@@ -7,6 +7,7 @@
 #include "mml/token.h"
 #include "mml/config.h"
 #include "cvi/dvec/dvec.h"
+#include "tests/ast_test.h"
 
 const char *const TOK_STRINGS[] = {
 	"OP_FUNC_CALL",
@@ -229,6 +230,8 @@ static bool op_is_right_associative(MML_token_type op)
 	return op == MML_OP_POW_TOK || op_is_unary(op);
 }
 
+static bool in_pipe_block = false;
+
 static MML_expr *parse_expr(const char **s, uint32_t max_preced, struct parser_state *state)
 {
 	MML_token tok = get_next_token(s, state);
@@ -247,10 +250,7 @@ static MML_expr *parse_expr(const char **s, uint32_t max_preced, struct parser_s
 		
 		MML_expr *operand = parse_expr(s, PRECEDENCE[new_token_type], state);
 
-		left->type = Operation_type;
-		left->o.left = operand;
-		left->o.right = NULL;
-		left->o.op = new_token_type;
+		_write_oper(left, new_token_type, operand, NULL);
 	} else if (tok.type == MML_IDENT_TOK)
 	{
 		MML_token ident = tok;
@@ -345,6 +345,7 @@ static MML_expr *parse_expr(const char **s, uint32_t max_preced, struct parser_s
 			MML_log_err("expected expression in pipe block\n");
 			return nullptr;
 		}
+		in_pipe_block = true;
 		left = parse_expr(s, PARSER_MAX_PRECED, state);
 		MML_token close_pipe_tok = get_next_token(s, state);
 		if (close_pipe_tok.type != MML_PIPE_TOK)
@@ -355,14 +356,10 @@ static MML_expr *parse_expr(const char **s, uint32_t max_preced, struct parser_s
 			MML_free_expr(&left);
 			return nullptr;*/
 		}
-		MML_expr *opnode = calloc(1, sizeof(MML_expr));
-		opnode->type = Operation_type;
-		opnode->num_refs = 1;
-		opnode->o.left = left;
-		opnode->o.right = nullptr;
-		opnode->o.op = MML_PIPE_TOK;
+		in_pipe_block = false;
+		//MML_expr *opnode = Pipe(left);
 
-		left = opnode;
+		left = Pipe(left);
 	} else if (tok.type == MML_NUMBER_TOK)
 	{
 		if (state->looking_for_int)
@@ -390,7 +387,8 @@ static MML_expr *parse_expr(const char **s, uint32_t max_preced, struct parser_s
 		if (op_tok.type == MML_IDENT_TOK
 		 || op_tok.type == MML_NUMBER_TOK
 		 || op_tok.type == MML_OPEN_PAREN_TOK
-		 || op_tok.type == MML_OPEN_BRACKET_TOK)
+		 || op_tok.type == MML_OPEN_BRACKET_TOK
+		 || (op_tok.type == MML_PIPE_TOK && !in_pipe_block))
 		{
 			op_tok.type = MML_OP_MUL_TOK;
 			do_advance = false;

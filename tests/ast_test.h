@@ -6,10 +6,13 @@
 
 #include "mml/expr.h"
 
+#define _write_leaf(__e__, t, f, val) ({ \
+	(__e__)->type = (t); \
+	(__e__)->f = (val); \
+})
 #define _create_leaf(t, f, val) ({ \
 	MML_expr *e__ = calloc(1, sizeof(MML_expr)); \
-	e__->type = (t); \
-	e__->f = (val); \
+	_write_leaf(e__, t, f, (val)); \
 	e__->num_refs = 1; \
 	e__; \
 })
@@ -31,23 +34,22 @@ static inline MML_expr *_create_vec_leaf(size_t n, ...) {
 	return e;
 }
 
-
+#define _write_oper(__e__, oper, a, b) ({ \
+	(__e__)->type = Operation_type; \
+	(__e__)->o.op = (oper); \
+	(__e__)->o.left = (a); \
+	(__e__)->o.right = (b); \
+})
 /* whichever is named `_create_oper` is the one used */
 #define _create_oper(oper, a, b) ({ \
 	MML_expr *__e = calloc(1, sizeof(MML_expr)); \
-	__e->type = Operation_type; \
-	__e->o.op = (oper); \
-	__e->o.left = (a); \
-	__e->o.right = (b); \
+	_write_oper(__e, (oper), (a), (b)); \
 	__e->num_refs = 1; \
 	__e; \
 })
 static inline MML_expr *__create_oper(MML_token_type op, MML_expr *a, MML_expr *b) {
 	MML_expr *e = calloc(1, sizeof(MML_expr));
-	e->type = Operation_type;
-	e->o.op = op;
-	e->o.left = a;
-	e->o.right = b;
+	_write_oper(e, op, a, b);
 	e->num_refs = 1;
 	return e;
 }
@@ -91,10 +93,12 @@ static inline MML_expr *__create_oper(MML_token_type op, MML_expr *a, MML_expr *
 #define AssertEqual(a, b) \
 	(_create_oper(MML_OP_ASSERT_EQUAL, (a), (b)))
 
-#define Not(a, b) \
-	(_create_oper(MML_OP_NOT_TOK, (a), (b)))
-#define Negate(a, b) \
-	(_create_oper(MML_OP_NEGATE, (a), (b)))
+#define Not(a) \
+	(_create_oper(MML_OP_NOT_TOK, (a), NULL))
+#define Negate(a) \
+	(_create_oper(MML_OP_NEGATE, (a), NULL))
+#define Pipe(a) \
+	(_create_oper(MML_PIPE_TOK, (a), NULL))
 
 
 #define Real(r) \

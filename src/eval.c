@@ -488,7 +488,7 @@ inline MML_value MML_eval_expr(MML_state *restrict state, const MML_expr *expr)
 
 inline int32_t MML_eval_push_expr(MML_state *restrict state, MML_expr *expr)
 {
-	return dv_push(state->exprs, expr);
+	return dv_push(state->exprs, expr) != NULL;
 }
 inline MML_value MML_eval_top_expr(MML_state *restrict state)
 {
