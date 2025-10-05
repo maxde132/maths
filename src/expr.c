@@ -1,10 +1,11 @@
 #include <assert.h>
 #include <stdarg.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <math.h>
 #include <stdlib.h>
 
-#include "cvi/dvec/dvec.h"
+#include "arena/arena.h"
 #include "mml/parser.h"
 #include "mml/eval.h"
 #include "mml/expr.h"
@@ -60,12 +61,11 @@ MML_value MML_print_typedval(MML_state *state, const MML_value *val)
 	case Vector_type:
 		fputc('[', stdout);
 		MML_value cur_val;
-		MML_expr **cur;
-		dv_foreach(val->v, cur)
+		for (size_t i = 0; i < val->v.n; ++i)
 		{
-			cur_val = MML_eval_expr(state, *cur);
+			cur_val = MML_eval_expr(state, *mml_ii(val->v.i, arena_index, i));
 			MML_print_typedval(state, &cur_val);
-			if ((size_t)(cur - _dv_ptr(val->v)) < dv_n(val->v)-1)
+			if (i < val->v.n-1)
 				fputs(", ", stdout);
 		}
 		fputc(']', stdout);
@@ -88,23 +88,23 @@ inline MML_value MML_println_typedval(MML_state *state, const MML_value *val)
 }
 MML_value MML_print_typedval_multiargs(MML_state *state, MML_expr_vec *args)
 {
-	for (size_t i = 0; i < dv_n(*args); ++i)
+	for (size_t i = 0; i < args->n; ++i)
 	{
-		MML_value cur_val = MML_eval_expr(state, dv_a(*args, i));
+		MML_value cur_val = MML_eval_expr(state, *mml_ii(args->i, arena_index, i));
 		MML_print_typedval(state, &cur_val);
-		if (i < dv_n(*args)-1) fputc(' ', stdout);
+		if (i < args->n-1) fputc(' ', stdout);
 	}
 
 	return (MML_value) { Invalid_type, .n = NAN };
 }
 MML_value MML_println_typedval_multiargs(MML_state *state, MML_expr_vec *args)
 {
-	for (size_t i = 0; i < dv_n(*args); ++i)
+	for (size_t i = 0; i < args->n; ++i)
 	{
-		MML_value cur_val = MML_eval_expr(state, dv_a(*args, i));
+		MML_value cur_val = MML_eval_expr(state, *mml_ii(args->i, arena_index, i));
 		MML_println_typedval(state, &cur_val);
 	}
-	if (dv_n(*args) == 0)
+	if (args->n == 0)
 		fputc('\n', stdout);
 
 	return (MML_value) { Invalid_type, .n = NAN };
@@ -124,13 +124,13 @@ void MML_print_expr(struct MML_config *config, const MML_expr *expr, uint32_t in
 		MML_print_indent(indent+2);
 
 		printf("Left:\n");
-		MML_print_expr(config, expr->o.left, indent+4);
+		MML_print_expr(config, mml_i(expr->o.left, MML_expr), indent+4);
 		if (expr->o.right)
 		{
 			fputc('\n', stdout);
 			MML_print_indent(indent+2);
 			printf("Right:\n");
-			MML_print_expr(config, expr->o.right, indent+4);
+			MML_print_expr(config, mml_i(expr->o.right, MML_expr), indent+4);
 		}
 		break;
 	case Integer_type:
@@ -168,11 +168,11 @@ void MML_print_expr(struct MML_config *config, const MML_expr *expr, uint32_t in
 		printf("Identifier('%.*s')", (int)expr->s.len, expr->s.s);
 		break;
 	case Vector_type:
-		printf("Vector(n=%zu):\n", dv_n(expr->v));
-		for (size_t i = 0; i < dv_n(expr->v); ++i)
+		printf("Vector(n=%zu):\n", expr->v.n);
+		for (size_t i = 0; i < expr->v.n; ++i)
 		{
-			MML_print_expr(config, dv_a(expr->v, i), indent+2);
-			if (i < dv_n(expr->v) - 1) fputc('\n', stdout);
+			MML_print_expr(config, mml_i(*mml_ii(expr->v.i, arena_index, i), MML_expr), indent+2);
+			if (i < expr->v.n - 1) fputc('\n', stdout);
 		}
 		break;
 	default:
@@ -191,50 +191,37 @@ inline void MML_print_exprh(const MML_expr *expr)
 }
 inline MML_value MML_print_exprh_tv_func(MML_state *state, MML_expr_vec *args)
 {
-	MML_print_expr(state->config, dv_a(*args, 0), 0);
+	MML_print_expr(state->config, mml_i(*mml_ii(args->i, arena_index, 0), MML_expr), 0);
 	fputc('\n', stdout);
 	state->config->last_print_was_newline = true;
 
 	return VAL_INVAL;
 }
 
-void MML_free_expr(MML_expr **e)
+void MML_free_expr(arena_index e)
 {
-	if (*e == nullptr) return;
-	if (--(*e)->num_refs > 0)
-	{
-		*e = nullptr;
-		return;
-	}
-	if ((*e)->type == Operation_type)
-	{
-		MML_free_expr(&(*e)->o.left);
-		MML_free_expr(&(*e)->o.right);
-	} else if ((*e)->type == Identifier_type)
-	{
-		if ((*e)->s.allocd)
-			free((*e)->s.s);
-	} else if ((*e)->type == Vector_type)
-	{
-		if (!(*e)->should_free_vec_block)
-			MML_free_vec(&(*e)->v);
-		else
-		{
-			free(dv_a((*e)->v, 0));
-			dv_destroy((*e)->v);
-			_dv_ptr((*e)->v) = nullptr;
-		}
-	}
+	if (e == SIZE_MAX) return;
+	MML_expr *expr = mml_e(e);
+	MML_log_dbg("arena base = %p\n", MML_global_arena->base);
+	MML_log_dbg("e = %zu\n", e);
+	MML_log_dbg("SIZE_MAX - e == %zu\n", SIZE_MAX-e);
+	MML_log_dbg("mml_e(e) = %p\n", expr);
 
-	free(*e);
-	*e = nullptr;
+	if (expr->type == Operation_type) {
+		MML_free_expr(expr->o.left);
+		MML_free_expr(expr->o.right);
+	} else if (expr->type == Identifier_type) {
+		if (expr->s.allocd)
+			free(expr->s.s);
+	} else if (expr->type == Vector_type) {
+		MML_free_vec(expr->v);
+	}
 }
 
-void MML_free_vec(MML_expr_vec *vec)
+void MML_free_vec(MML_expr_vec vec)
 {
-	for (size_t i = 0; i < dv_n(*vec); ++i)
-		MML_free_expr(&dv_a(*vec, i));
-	dv_destroy(*vec);
+	for (size_t i = 0; i < vec.n; ++i)
+		MML_free_expr(*mml_ii(vec.i, arena_index, i));
 }
 
 inline void MML_free_pp(void *p)

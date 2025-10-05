@@ -4,14 +4,15 @@
 #include <complex.h>
 #include <stdint.h>
 
+#include "arena/arena.h"
 #include "token.h"
 #include "cvi/dvec/dvec.h"
 
 typedef struct MML_expr MML_expr;
 
 typedef struct MML_Operation {
-	MML_expr *left;
-	MML_expr *right;
+	arena_index left; // MML_expr *
+	arena_index right; // MML_expr *
 	MML_token_type op;
 } MML_Operation;
 
@@ -26,7 +27,12 @@ typedef enum MML_ExprType {
 	Vector_type,
 } MML_expr_type;
 
-typedef dvec_t(MML_expr *) MML_expr_vec;
+typedef dvec_t(arena_index) arena_index_vec;
+
+typedef struct {
+	arena_index i; // MML_expr **, pointer to `n` contiguous arena indices which each point to an MML_expr
+	size_t n;
+} MML_expr_vec;
 
 #define VALTYPE_IS_ORDERED(v) \
 	((v).type != ComplexNumber_type && \
@@ -34,7 +40,7 @@ typedef dvec_t(MML_expr *) MML_expr_vec;
 	 (v).type != Invalid_type)
 
 struct value_union_size {
-	uint8_t b[24];
+	uint64_t b[3];
 };
 
 typedef struct MML_value {
@@ -52,8 +58,6 @@ typedef struct MML_value {
 
 typedef struct MML_expr {
 	MML_expr_type type;
-	uint16_t num_refs;
-	bool should_free_vec_block;
 	union {
 		MML_Operation o;
 		double n;
@@ -62,7 +66,7 @@ typedef struct MML_expr {
 		strbuf s;
 		MML_expr_vec v;
 		int64_t i;
-		struct value_union_size w;
+		struct value_union_size w; // used for copying the union between MML_expr's
 	};
 } MML_expr;
 
@@ -86,16 +90,16 @@ constexpr MML_value VAL_INVAL = { Invalid_type, .i = MML_ERROR_INVAL };
 
 typedef struct MML_state MML_state;
 void MML_print_indent(uint32_t indent);
-MML_value MML_print_typedval(MML_state *, const MML_value *val);
-MML_value MML_println_typedval(MML_state *state, const MML_value *val);
-MML_value MML_print_typedval_multiargs(MML_state *state, MML_expr_vec *args);
-MML_value MML_println_typedval_multiargs(MML_state *state, MML_expr_vec *args);
+MML_value MML_print_typedval(MML_state *restrict state, const MML_value *val);
+MML_value MML_println_typedval(MML_state *restrict state, const MML_value *val);
+MML_value MML_print_typedval_multiargs(MML_state *restrict state, MML_expr_vec *args);
+MML_value MML_println_typedval_multiargs(MML_state *restrict state, MML_expr_vec *args);
 void MML_print_exprh(const MML_expr *expr);
-MML_value MML_print_exprh_tv_func(MML_state *, MML_expr_vec *args);
+MML_value MML_print_exprh_tv_func(MML_state *restrict , MML_expr_vec *args);
 
-void MML_free_expr(MML_expr **e);
+void MML_free_expr(arena_index e);
 
-void MML_free_vec(MML_expr_vec *vec);
+void MML_free_vec(MML_expr_vec vec);
 
 void MML_free_pp(void *p);
 

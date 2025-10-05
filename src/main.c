@@ -48,20 +48,18 @@ int32_t main(int32_t argc, char **argv)
 
 	//Expr *expr = parse(expression.s);
 	//eval_push_expr(&eval_state, expr);
-	MML_parse_stmts(expression.s, MML_global_config.eval_state);
-	if (FLAG_IS_SET(DEBUG)) MML_println_typedval(
-			MML_global_config.eval_state,
-			&(MML_value) { .type=Vector_type, .v=MML_global_config.eval_state->exprs });
+	arena_index_vec exprs = MML_parse_stmts_to_ret(expression.s);
 
 	if (!FLAG_IS_SET(NO_EVAL))
 	{
-		for (size_t i = 0; i < dv_n(MML_global_config.eval_state->exprs); ++i)
+		arena_index *cur;
+		dv_foreach(exprs, cur)
 		{
 			MML_value val = MML_eval_expr(
 					MML_global_config.eval_state,
-					dv_a(MML_global_config.eval_state->exprs, i));
+					*cur);
 
-			if (i == dv_n(MML_global_config.eval_state->exprs)-1 && FLAG_IS_SET(PRINT))
+			if ((size_t)(cur - _dv_ptr(exprs)) == dv_n(exprs)-1 && FLAG_IS_SET(PRINT))
 				MML_print_typedval(MML_global_config.eval_state, &val);
 		}
 	}

@@ -1,9 +1,16 @@
 #ifndef PARSER_H
 #define PARSER_H
 
+#include "arena/arena.h"
 #include "token.h"
 #include "expr.h"
 #include "eval.h"
+
+
+arena_index MML_parse(const char *s);
+
+arena_index_vec MML_parse_stmts_to_ret(const char *s);
+void MML_parse_stmts(const char *s, MML_state *state);
 
 #ifndef MML_BARE_USE
 constexpr const uint8_t PRECEDENCE[] = {
@@ -299,11 +306,5 @@ struct parser_state {
 };
 #endif
 
-[[nodiscard("you really need to make sure you keep this `MML_Expr *`, "
-		"otherwise severe memory leaks will ensue...")]]
-MML_expr *MML_parse(const char *s);
-
-MML_expr_vec MML_parse_stmts_to_ret(const char *s);
-void MML_parse_stmts(const char *s, MML_state *state);
 
 #endif /* PARSER_H */

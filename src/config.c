@@ -8,6 +8,7 @@
 #include <stdlib.h>
 #include <inttypes.h>
 
+#include "arena/arena.h"
 #include "mml/parser.h"
 #include "mml/token.h"
 #include "mml/eval.h"
@@ -128,9 +129,7 @@ void MML_arg_parse(int32_t argc, char **argv)
 					exit(1);
 				}
 				strbuf name = { argv[arg_n]+2+8, cur - (argv[arg_n]+2+8) - 1, false };
-				MML_expr *e = MML_parse(cur);
-				MML_eval_set_variable(MML_global_config.eval_state, name, e);
-				--e->num_refs;
+				MML_eval_set_variable(MML_global_config.eval_state, name, MML_parse(cur));
 			} else
 			{
 				fprintf(stderr, "argument error: unknown option '%s'\n", argv[arg_n]);

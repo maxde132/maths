@@ -1,7 +1,7 @@
 #include <math.h>
 #include <complex.h>
 
-#include "cvi/dvec/dvec.h"
+#include "arena/arena.h"
 #include "mml/expr.h"
 #include "mml/eval.h"
 #include "mml/config.h"
@@ -24,30 +24,30 @@ static _Complex double custom_sqrt(double a)
 
 static MML_value custom_root(MML_state *state, MML_expr_vec *args)
 {
-	if (dv_n(*args) == 1)
+	if (args->n == 1)
 	{
 		return MML_apply_binary_op(state,
-				MML_eval_expr(state, dv_a(*args, 0)),
+				MML_eval_expr(state, *mml_vi(*args, 0)),
 				VAL_INVAL,
 				MML_OP_ROOT);
 	}
 
-	if (dv_n(*args) != 2)
+	if (args->n != 2)
 	{
 		MML_log_err("`root`: takes either 2 number (number, complex number, or Boolean) arguments or 1 number argument\n");
 		return VAL_INVAL;
 	}
 
 	return MML_apply_binary_op(state,
-			MML_eval_expr(state, dv_a(*args, 0)),
-			MML_eval_expr(state, dv_a(*args, 1)), MML_OP_ROOT);
+			MML_eval_expr(state, *mml_vi(*args, 0)),
+			MML_eval_expr(state, *mml_vi(*args, 1)), MML_OP_ROOT);
 }
 
 static MML_value custom_logb(MML_state *state, MML_expr_vec *args)
 {
-	if (dv_n(*args) == 1)
+	if (args->n == 1)
 	{
-		MML_value a = MML_eval_expr(state, dv_a(*args, 0));
+		MML_value a = MML_eval_expr(state, *mml_vi(*args, 0));
 		if (!VAL_IS_NUM(a))
 		{
 			MML_log_err("`logb`: takes either 2 number (real number, complex number, or Boolean) arguments or 1 number argument\n");
@@ -59,14 +59,14 @@ static MML_value custom_logb(MML_state *state, MML_expr_vec *args)
 			return VAL_CNUM(clog(MML_get_complex(&a)));
 	}
 
-	if (dv_n(*args) != 2)
+	if (args->n != 2)
 	{
 		MML_log_err("`logb`: takes either 2 number (real number, complex number, or Boolean) arguments or 1 number argument\n");
 		return VAL_INVAL;
 	}
 
-	MML_value a = MML_eval_expr(state, dv_a(*args, 0));
-	MML_value b = MML_eval_expr(state, dv_a(*args, 1));
+	MML_value a = MML_eval_expr(state, *mml_vi(*args, 0));
+	MML_value b = MML_eval_expr(state, *mml_vi(*args, 1));
 
 	if (!VAL_IS_NUM(a) || !VAL_IS_NUM(b))
 	{
@@ -82,14 +82,14 @@ static MML_value custom_logb(MML_state *state, MML_expr_vec *args)
 
 static MML_value custom_atan2(MML_state *state, MML_expr_vec *args)
 {
-	if (dv_n(*args) != 2)
+	if (args->n != 2)
 	{
 		MML_log_err("`atan2`: takes exactly 2 real number arguments\n");
 		return VAL_INVAL;
 	}
 
-	const MML_value y = MML_eval_expr(state, dv_a(*args, 0));
-	const MML_value x = MML_eval_expr(state, dv_a(*args, 1));
+	const MML_value y = MML_eval_expr(state, *mml_vi(*args, 0));
+	const MML_value x = MML_eval_expr(state, *mml_vi(*args, 1));
 	if (y.type != RealNumber_type || x.type != RealNumber_type)
 	{
 		MML_log_err("`atan2` takes exactly 2 real number arguments\n");
@@ -102,13 +102,13 @@ static MML_value custom_max(MML_state *state, MML_expr_vec *args)
 {
 	MML_value max = VAL_INVAL;
 
-	for (size_t i = 0; i < dv_n(*args); ++i)
+	for (size_t i = 0; i < args->n; ++i)
 	{
 		if (max.type == Invalid_type)
-			max = MML_eval_expr(state, dv_a(*args, i));
+			max = MML_eval_expr(state, *mml_vi(*args, i));
 		if (!VALTYPE_IS_ORDERED(max))
 			return VAL_INVAL;
-		MML_value cur = MML_eval_expr(state, dv_a(*args, i));
+		MML_value cur = MML_eval_expr(state, *mml_vi(*args, i));
 		MML_value tmp = MML_apply_binary_op(state, cur, max, MML_OP_GREATER_TOK);
 		if (tmp.type == Boolean_type && tmp.b)
 			max = cur;
@@ -121,13 +121,13 @@ static MML_value custom_min(MML_state *state, MML_expr_vec *args)
 {
 	MML_value min = VAL_INVAL;
 
-	for (size_t i = 0; i < dv_n(*args); ++i)
+	for (size_t i = 0; i < args->n; ++i)
 	{
 		if (min.type == Invalid_type)
-			min = MML_eval_expr(state, dv_a(*args, i));
+			min = MML_eval_expr(state, *mml_vi(*args, i));
 		if (!VALTYPE_IS_ORDERED(min))
 			return VAL_INVAL;
-		MML_value cur = MML_eval_expr(state, dv_a(*args, i));
+		MML_value cur = MML_eval_expr(state, *mml_vi(*args, i));
 		MML_value tmp = MML_apply_binary_op(state, cur, min, MML_OP_LESS_TOK);
 		if (tmp.type == Boolean_type && tmp.b)
 			min = cur;
@@ -141,8 +141,8 @@ static MML_state *cur_state;
 
 static int compare_values(const void *a, const void *b)
 {
-	const MML_value va = MML_eval_expr(cur_state, *(MML_expr **)a);
-	const MML_value vb = MML_eval_expr(cur_state, *(MML_expr **)b);
+	const MML_value va = MML_eval_expr(cur_state, *(const arena_index *)a);
+	const MML_value vb = MML_eval_expr(cur_state, *(const arena_index *)b);
 
 	if (!VALTYPE_IS_ORDERED(va) || !VALTYPE_IS_ORDERED(vb))
 		return INT32_MIN;
@@ -151,20 +151,23 @@ static int compare_values(const void *a, const void *b)
 
 static MML_value custom_sort(MML_state *state, MML_expr_vec *args)
 {
-	const MML_expr_vec *vec = &dv_a(*args, 0)->v;
-	MML_expr *ret = calloc(1, sizeof(MML_expr));
-	ret->type = Vector_type;
-	ret->should_free_vec_block = true;
-	dv_init(ret->v);
-	
-	dv_copy_to(ret->v, 0, _dv_ptr(*vec), dv_n(*vec));
+	const MML_expr_vec *vec = &mml_e(*mml_vi(*args, 0))->v;
+	MML_expr_vec ret_vec;
+	ret_vec.i = arena_alloc(MML_global_arena, vec->n * sizeof(arena_index));
+	ret_vec.n = vec->n;
 
-	dv_push(state->allocd_vecs, ret);
+	memcpy(
+			mml_i(ret_vec.i, arena_index),
+			mml_i(vec->i, arena_index),
+			ret_vec.n * sizeof(arena_index));
 
 	cur_state = state;
-	qsort(ret->v.items, dv_n(ret->v), _dv_item_size(ret->v), compare_values);
+	qsort(
+			mml_i(ret_vec.i, arena_index),
+			ret_vec.n, sizeof(arena_index),
+			compare_values);
 
-	return (MML_value) { Vector_type, .v = ret->v };
+	return (MML_value) { Vector_type, .v = ret_vec };
 }
 
 

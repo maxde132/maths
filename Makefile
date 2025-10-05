@@ -21,7 +21,7 @@ all: build obj \
 	print_building_exe build/$(EXEC) print_done_exe
 
 build/$(EXEC): Makefile $(OBJECTS)
-	$(CC) $(OBJECTS) $(LDFLAGS) -o build/$(EXEC)
+	$(CC) $(CFLAGS) $(LDFLAGS) $(OBJECTS) -o build/$(EXEC)
 
 obj/main.o: Makefile src/main.c incl/mml/expr.h incl/mml/token.h incl/mml/parser.h incl/mml/eval.h cvi/dvec/dvec.h
 	$(CC) src/main.c -c -o obj/main.o $(CFLAGS) $(FPIC_FLAG)
@@ -40,6 +40,9 @@ obj/config.o: Makefile src/config.c incl/mml/config.h incl/mml/token.h incl/mml/
 
 obj/prompt.o: Makefile src/prompt.c incl/mml/prompt.h incl/mml/eval.h incl/mml/parser.h cvi/dvec/dvec.h incl/mml/expr.h
 	$(CC) src/prompt.c -c -o obj/prompt.o $(CFLAGS) $(FPIC_FLAG)
+
+obj/arena.o: Makefile src/arena.c incl/arena/arena.h
+	$(CC) src/arena.c -c -o obj/arena.o $(CFLAGS) $(FPIC_FLAG)
 
 obj/map.o: Makefile c-hashmap/map.c c-hashmap/map.h
 	$(CC) c-hashmap/map.c -Ic-hashmap -c -o obj/map.o $(CFLAGS) $(FPIC_FLAG)

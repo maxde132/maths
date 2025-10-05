@@ -5,20 +5,20 @@
 #include <stdlib.h>
 
 #include "mml/expr.h"
+#include "mml/eval.h"
 
 #define _write_leaf(__e__, t, f, val) ({ \
 	(__e__)->type = (t); \
 	(__e__)->f = (val); \
 })
 #define _create_leaf(t, f, val) ({ \
-	MML_expr *e__ = calloc(1, sizeof(MML_expr)); \
+	MML_expr *e__ = mml_alloc(1, MML_expr); \
 	_write_leaf(e__, t, f, (val)); \
-	e__->num_refs = 1; \
 	e__; \
 })
 
 static inline MML_expr *_create_vec_leaf(size_t n, ...) { 
-	MML_expr *e = calloc(1, sizeof(MML_expr));
+	MML_expr *e = mml_alloc(1, MML_expr);
 	e->type = Vector_type;
 	dv_init(e->v);
 	dv_resize(e->v, n);
@@ -26,10 +26,8 @@ static inline MML_expr *_create_vec_leaf(size_t n, ...) {
 	va_list ap;
 	va_start(ap, n);
 	for (size_t i = 0; i < n; ++i)
-		dv_a(e->v, i) = va_arg(ap, MML_expr *);
+		dv_a(e->v, i) = mml_p_i(va_arg(ap, MML_expr *));
 	va_end(ap);
-
-	e->num_refs = 1;
 
 	return e;
 }
@@ -37,20 +35,18 @@ static inline MML_expr *_create_vec_leaf(size_t n, ...) {
 #define _write_oper(__e__, oper, a, b) ({ \
 	(__e__)->type = Operation_type; \
 	(__e__)->o.op = (oper); \
-	(__e__)->o.left = (a); \
-	(__e__)->o.right = (b); \
+	(__e__)->o.left = mml_p_i(a); \
+	(__e__)->o.right = mml_p_i(b); \
 })
 /* whichever is named `_create_oper` is the one used */
 #define _create_oper(oper, a, b) ({ \
-	MML_expr *__e = calloc(1, sizeof(MML_expr)); \
+	MML_expr *__e = mml_alloc(1, MML_expr); \
 	_write_oper(__e, (oper), (a), (b)); \
-	__e->num_refs = 1; \
 	__e; \
 })
 static inline MML_expr *__create_oper(MML_token_type op, MML_expr *a, MML_expr *b) {
-	MML_expr *e = calloc(1, sizeof(MML_expr));
+	MML_expr *e = mml_alloc(1, MML_expr);
 	_write_oper(e, op, a, b);
-	e->num_refs = 1;
 	return e;
 }
 

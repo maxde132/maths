@@ -9,6 +9,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "arena/arena.h"
 #include "mml/config.h"
 #include "mml/expr.h"
 #include "mml/eval.h"
@@ -186,8 +187,8 @@ void MML_run_prompt(MML_state *state)
 		{
 			while (expr_n_offset < dv_n(state->exprs))
 			{
-				MML_expr *cur = dv_a(state->exprs, expr_n_offset++);
-				if (cur != nullptr)
+				arena_index cur = dv_a(state->exprs, expr_n_offset++);
+				if (cur != SIZE_MAX)
 					cur_val = MML_eval_expr(state, cur);
 			}
 		} else
@@ -195,8 +196,8 @@ void MML_run_prompt(MML_state *state)
 			time_blck(&nsecs, 
 			while (expr_n_offset < dv_n(state->exprs))
 			{
-				MML_expr *cur = dv_a(state->exprs, expr_n_offset++);
-				if (cur != nullptr)
+				arena_index cur = dv_a(state->exprs, expr_n_offset++);
+				if (cur != SIZE_MAX)
 					cur_val = MML_eval_expr(state, cur);
 			});
 			MML_log_dbg("evaluated in %.6fs\n", (double)nsecs/NSEC_IN_SEC);

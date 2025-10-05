@@ -1,8 +1,17 @@
 #ifndef EVAL_H
 #define EVAL_H
 
-#include "config.h"
-#include "expr.h"
+#include "mml/config.h"
+#include "mml/expr.h"
+#include "arena/arena.h"
+
+extern Arena *MML_global_arena;
+#define mml_i(_I, _T) (arena_i(MML_global_arena, (_I), _T))
+#define mml_e(_I) (mml_i((_I), MML_expr))
+#define mml_ii(_I, _T, _i) (arena_i(MML_global_arena, (_I), _T) + (_i))
+#define mml_vi(_v, _i) (mml_ii((_v).i, arena_index, (_i)))
+#define mml_ei(_e, _i) (mml_vi((_e).v, (_i)))
+#define mml_p_i(_p) ((uint8_t *)(_p) - MML_global_arena->base)
 
 typedef struct hashmap hashmap;
 
@@ -11,10 +20,7 @@ typedef struct MML_state {
 
 	hashmap *variables;
 
-	MML_expr_vec exprs;
-
-	MML_expr_vec vars_storage;
-	MML_expr_vec allocd_vecs;
+	dvec_t(arena_index) exprs;
 
 	MML_value last_val;
 	bool is_init;
@@ -39,20 +45,18 @@ MML_state *MML_init_state(void);
  * STATE must have been obtained by a call to `MML_init_state`. See `MML_init_state` for
  * more details. */
 void MML_cleanup_state(MML_state *restrict state);
-/* push-moves EXPR into the variable storage for STATE with the identifier in NAME.
- * IS_INSERTED determines whether the variable will be moved to the user-defined or
- * inserted variable namespace. */
-int32_t MML_eval_set_variable(MML_state *restrict state, strbuf name, MML_expr *expr);
-MML_expr *MML_eval_get_variable(MML_state *restrict state, strbuf name);
+
+int32_t MML_eval_set_variable(MML_state *restrict state, strbuf name, arena_index expr);
+arena_index MML_eval_get_variable(MML_state *restrict state, strbuf name);
 
 /* evaluates EXPR using the evaluator state data in STATE */
-MML_value MML_eval_expr(MML_state *restrict state, const MML_expr *expr);
-MML_value MML_eval_expr_recurse(MML_state *restrict state, const MML_expr *expr);
+MML_value MML_eval_expr(MML_state *restrict state, arena_index expr);
+MML_value MML_eval_expr_recurse(MML_state *restrict state, arena_index expr);
 
 MML_value MML_eval_parse(MML_state *state, const char *s);
 
 /* push-moves EXPR onto the expression storage for STATE */
-int32_t MML_eval_push_expr(MML_state *restrict state, MML_expr *expr);
+int32_t MML_eval_push_expr(MML_state *restrict state, arena_index expr);
 /* evaluates the last expression in the expression storage for STATE */
 MML_value MML_eval_top_expr(MML_state *restrict state);
 
