@@ -84,8 +84,8 @@ build:
 static_lib: cleanobjs build/lib$(EXEC).a
 shared_lib: cleanobjs build/lib$(EXEC).so
 
-build/lib$(EXEC).a: build obj Makefile build_func_libs $(OBJECTS)
-	ar rcs build/lib$(EXEC).a $(OBJECTS)
+build/lib$(EXEC).a: build obj Makefile build_func_libs $(filter-out obj/main.o,$(OBJECTS))
+	ar rcs build/lib$(EXEC).a $(filter-out obj/main.o,$(OBJECTS))
 
 build/lib$(EXEC).so: FPIC_FLAG=-fPIC
 build/lib$(EXEC).so: build obj Makefile build_func_libs_shared $(OBJECTS) 

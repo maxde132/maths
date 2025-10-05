@@ -4,6 +4,10 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "cpp_compat.h"
+
+MML__CPP_COMPAT_BEGIN_DECLS
+
 typedef struct Arena {
 	uint8_t *base;
 	size_t size;
@@ -17,5 +21,7 @@ Arena *arena_make(size_t init_size);
 void arena_free(Arena *arena);
 
 arena_index arena_alloc(Arena *arena, size_t size);
+
+MML__CPP_COMPAT_END_DECLS
 
 #endif /* ARENA__ARENA_H */

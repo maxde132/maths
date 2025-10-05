@@ -514,5 +514,7 @@ MML_value MML_eval_parse(MML_state *restrict state, const char *s)
 	dv_foreach(exprs, cur_i)
 		cur = MML_eval_expr(state, *cur_i);
 
+	dv_destroy(exprs);
+
 	return cur;
 }

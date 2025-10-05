@@ -1,11 +1,13 @@
 #ifndef PARSER_H
 #define PARSER_H
 
+#include "mml/token.h"
+#include "mml/expr.h"
+#include "mml/eval.h"
 #include "arena/arena.h"
-#include "token.h"
-#include "expr.h"
-#include "eval.h"
+#include "cpp_compat.h"
 
+MML__CPP_COMPAT_BEGIN_DECLS
 
 arena_index MML_parse(const char *s);
 
@@ -306,5 +308,6 @@ struct parser_state {
 };
 #endif
 
+MML__CPP_COMPAT_END_DECLS
 
 #endif /* PARSER_H */

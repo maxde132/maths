@@ -3,6 +3,10 @@
 
 #include <stddef.h>
 
+#include "cpp_compat.h"
+
+MML__CPP_COMPAT_BEGIN_DECLS
+
 typedef enum {
 	// operator tokens
 	MML_OP_FUNC_CALL_TOK,
@@ -79,5 +83,7 @@ typedef struct MML_token {
 } MML_token;
 
 #define nToken(type, buf, len) ((MML_token) { { (char *)(buf), (len), false }, (type) })
+
+MML__CPP_COMPAT_END_DECLS
 
 #endif /* TOKEN_H */

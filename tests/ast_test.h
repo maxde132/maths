@@ -4,48 +4,49 @@
 #include <stdarg.h>
 #include <stdlib.h>
 
+#include "arena/arena.h"
 #include "mml/expr.h"
 #include "mml/eval.h"
 
 #define _write_leaf(__e__, t, f, val) ({ \
-	(__e__)->type = (t); \
-	(__e__)->f = (val); \
+	mml_e(__e__)->type = (t); \
+	mml_e(__e__)->f = (val); \
 })
 #define _create_leaf(t, f, val) ({ \
-	MML_expr *e__ = mml_alloc(1, MML_expr); \
+	arena_index e__ = arena_alloc(MML_global_arena, sizeof(MML_expr)); \
 	_write_leaf(e__, t, f, (val)); \
 	e__; \
 })
 
-static inline MML_expr *_create_vec_leaf(size_t n, ...) { 
-	MML_expr *e = mml_alloc(1, MML_expr);
-	e->type = Vector_type;
-	dv_init(e->v);
-	dv_resize(e->v, n);
+static inline arena_index _create_vec_leaf(size_t n, ...) { 
+	arena_index e = arena_alloc(MML_global_arena, sizeof(MML_expr));
+	mml_e(e)->type = Vector_type;
+	mml_e(e)->v.i = arena_alloc(MML_global_arena, n * sizeof(MML_expr));
+	mml_e(e)->v.n = n;
 
 	va_list ap;
 	va_start(ap, n);
 	for (size_t i = 0; i < n; ++i)
-		dv_a(e->v, i) = mml_p_i(va_arg(ap, MML_expr *));
+		*mml_ei(*mml_e(e), i) = va_arg(ap, arena_index);
 	va_end(ap);
 
 	return e;
 }
 
 #define _write_oper(__e__, oper, a, b) ({ \
-	(__e__)->type = Operation_type; \
-	(__e__)->o.op = (oper); \
-	(__e__)->o.left = mml_p_i(a); \
-	(__e__)->o.right = mml_p_i(b); \
+	mml_e(__e__)->type = Operation_type; \
+	mml_e(__e__)->o.op = (oper); \
+	mml_e(__e__)->o.left = (a); \
+	mml_e(__e__)->o.right = (b); \
 })
 /* whichever is named `_create_oper` is the one used */
 #define _create_oper(oper, a, b) ({ \
-	MML_expr *__e = mml_alloc(1, MML_expr); \
+	arena_index __e = arena_alloc(MML_global_arena, sizeof(MML_expr)); \
 	_write_oper(__e, (oper), (a), (b)); \
 	__e; \
 })
-static inline MML_expr *__create_oper(MML_token_type op, MML_expr *a, MML_expr *b) {
-	MML_expr *e = mml_alloc(1, MML_expr);
+static inline arena_index __create_oper(MML_token_type op, arena_index a, arena_index b) {
+	arena_index e = arena_alloc(MML_global_arena, sizeof(MML_expr));
 	_write_oper(e, op, a, b);
 	return e;
 }

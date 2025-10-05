@@ -13,3 +13,4 @@
 - [ ] change prompt to use MML_parse_stmts_to_ret to maybe fix variables not working past their definition? <br />
 - [x] fix random memory leaks (probably caused by evaluator but I can't figure out the root cause) <br />
 - [x] fix the identifier 'a' having inexplicable bugs (--set_var doesn't work with it, it never flags an 'undefined variable' error even when it should, etc.) <br />
+- [ ] vector literals have regressed; each element is (null) or the first thing that was evaluated (no idea why) <br />

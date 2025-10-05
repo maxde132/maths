@@ -5,7 +5,10 @@
 #include <stdarg.h>
 #include <stdio.h>
 
-#include "token.h"
+#include "cpp_compat.h"
+#include "mml/token.h"
+
+MML__CPP_COMPAT_BEGIN_DECLS
 
 #define BIT(n) (1<<n)
 enum {
@@ -84,5 +87,7 @@ static inline void MML_dbg_print_func(
 #define MML_log_dbg(fmt, ...) (MML_dbg_print_func(__FILE_NAME__, __LINE__, stderr, MML_LOG_DEBUG, fmt, ##__VA_ARGS__))
 #define MML_log_err(fmt, ...) (MML_dbg_print_func(__FILE_NAME__, __LINE__, stderr, MML_LOG_ERROR, fmt, ##__VA_ARGS__))
 #define MML_log_warn(fmt, ...) (MML_dbg_print_func(__FILE_NAME__, __LINE__, stderr, MML_LOG_WARN, fmt, ##__VA_ARGS__))
+
+MML__CPP_COMPAT_END_DECLS
 
 #endif /* CONFIG_H */
