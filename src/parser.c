@@ -442,7 +442,7 @@ static arena_index parse_expr(const char **s, uint32_t max_preced, struct parser
 	return left;
 }
 
-inline arena_index MML_parse(const char *s)
+arena_index MML_parse(const char *s)
 {
 	struct parser_state state = {0};
 	return parse_expr(&s, PARSER_MAX_PRECED, &state);
