@@ -1,6 +1,7 @@
 CFLAGS := -I../incl -I.. -Wall -Wextra -Wno-gnu-zero-variadic-macro-arguments -Wno-gnu-folding-constant -std=c23 -O3 -g
 LDFLAGS := -O3 -g -fPIC
-CC := gcc
+
+CC := cc
 
 SHARED := 
 

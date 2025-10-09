@@ -63,6 +63,7 @@ int32_t main(int32_t argc, char **argv)
 				MML_print_typedval(MML_global_config.eval_state, &val);
 		}
 	}
+	dv_destroy(exprs);
 
 	//if (expression.allocd)
 	//	free(expression.s);

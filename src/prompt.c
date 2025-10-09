@@ -13,6 +13,7 @@
 #include "mml/expr.h"
 #include "mml/eval.h"
 #include "mml/parser.h"
+#include "cvi/dvec/dvec.h"
 
 #define NSEC_IN_SEC 1000000000
 
@@ -217,6 +218,8 @@ void MML_run_prompt(MML_state *state)
 				break;
 			}
 		}
+
+		dv_destroy(exprs);
 
 		fflush(stdout);
 		fflush(stderr);

@@ -3,7 +3,7 @@ LIB_SRC := $(filter-out %_incl.c,$(wildcard lib/*.c))
 
 OBJECTS := $(patsubst src/%.c,obj/%.o,$(SOURCE)) $(patsubst lib/%.c,lib/%.o,$(LIB_SRC)) obj/map.o
 
-CC := gcc
+CC := cc
 
 EXEC := mml
 
