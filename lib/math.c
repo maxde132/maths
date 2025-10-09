@@ -27,7 +27,7 @@ static MML_value custom_root(MML_state *state, MML_expr_vec *args)
 	if (args->n == 1)
 	{
 		return MML_apply_binary_op(state,
-				MML_eval_expr(state, *mml_vi(*args, 0)),
+				MML_eval_expr(state, args->ptr[0]),
 				VAL_INVAL,
 				MML_OP_ROOT);
 	}
@@ -39,15 +39,15 @@ static MML_value custom_root(MML_state *state, MML_expr_vec *args)
 	}
 
 	return MML_apply_binary_op(state,
-			MML_eval_expr(state, *mml_vi(*args, 0)),
-			MML_eval_expr(state, *mml_vi(*args, 1)), MML_OP_ROOT);
+			MML_eval_expr(state, args->ptr[0]),
+			MML_eval_expr(state, args->ptr[1]), MML_OP_ROOT);
 }
 
 static MML_value custom_logb(MML_state *state, MML_expr_vec *args)
 {
 	if (args->n == 1)
 	{
-		MML_value a = MML_eval_expr(state, *mml_vi(*args, 0));
+		MML_value a = MML_eval_expr(state, args->ptr[0]);
 		if (!VAL_IS_NUM(a))
 		{
 			MML_log_err("`logb`: takes either 2 number (real number, complex number, or Boolean) arguments or 1 number argument\n");
@@ -65,8 +65,8 @@ static MML_value custom_logb(MML_state *state, MML_expr_vec *args)
 		return VAL_INVAL;
 	}
 
-	MML_value a = MML_eval_expr(state, *mml_vi(*args, 0));
-	MML_value b = MML_eval_expr(state, *mml_vi(*args, 1));
+	MML_value a = MML_eval_expr(state, args->ptr[0]);
+	MML_value b = MML_eval_expr(state, args->ptr[1]);
 
 	if (!VAL_IS_NUM(a) || !VAL_IS_NUM(b))
 	{
@@ -88,8 +88,8 @@ static MML_value custom_atan2(MML_state *state, MML_expr_vec *args)
 		return VAL_INVAL;
 	}
 
-	const MML_value y = MML_eval_expr(state, *mml_vi(*args, 0));
-	const MML_value x = MML_eval_expr(state, *mml_vi(*args, 1));
+	const MML_value y = MML_eval_expr(state, args->ptr[0]);
+	const MML_value x = MML_eval_expr(state, args->ptr[1]);
 	if (y.type != RealNumber_type || x.type != RealNumber_type)
 	{
 		MML_log_err("`atan2` takes exactly 2 real number arguments\n");
@@ -105,10 +105,10 @@ static MML_value custom_max(MML_state *state, MML_expr_vec *args)
 	for (size_t i = 0; i < args->n; ++i)
 	{
 		if (max.type == Invalid_type)
-			max = MML_eval_expr(state, *mml_vi(*args, i));
+			max = MML_eval_expr(state, args->ptr[i]);
 		if (!VALTYPE_IS_ORDERED(max))
 			return VAL_INVAL;
-		MML_value cur = MML_eval_expr(state, *mml_vi(*args, i));
+		MML_value cur = MML_eval_expr(state, args->ptr[i]);
 		MML_value tmp = MML_apply_binary_op(state, cur, max, MML_OP_GREATER_TOK);
 		if (tmp.type == Boolean_type && tmp.b)
 			max = cur;
@@ -124,10 +124,10 @@ static MML_value custom_min(MML_state *state, MML_expr_vec *args)
 	for (size_t i = 0; i < args->n; ++i)
 	{
 		if (min.type == Invalid_type)
-			min = MML_eval_expr(state, *mml_vi(*args, i));
+			min = MML_eval_expr(state, args->ptr[i]);
 		if (!VALTYPE_IS_ORDERED(min))
 			return VAL_INVAL;
-		MML_value cur = MML_eval_expr(state, *mml_vi(*args, i));
+		MML_value cur = MML_eval_expr(state, args->ptr[i]);
 		MML_value tmp = MML_apply_binary_op(state, cur, min, MML_OP_LESS_TOK);
 		if (tmp.type == Boolean_type && tmp.b)
 			min = cur;
@@ -141,8 +141,8 @@ static MML_state *cur_state;
 
 static int compare_values(const void *a, const void *b)
 {
-	const MML_value va = MML_eval_expr(cur_state, *(const arena_index *)a);
-	const MML_value vb = MML_eval_expr(cur_state, *(const arena_index *)b);
+	const MML_value va = MML_eval_expr(cur_state, *(const MML_expr **)a);
+	const MML_value vb = MML_eval_expr(cur_state, *(const MML_expr **)b);
 
 	if (!VALTYPE_IS_ORDERED(va) || !VALTYPE_IS_ORDERED(vb))
 		return INT32_MIN;
@@ -151,20 +151,20 @@ static int compare_values(const void *a, const void *b)
 
 static MML_value custom_sort(MML_state *state, MML_expr_vec *args)
 {
-	const MML_expr_vec *vec = &mml_e(*mml_vi(*args, 0))->v;
+	const MML_expr_vec *vec = &args->ptr[0]->v;
 	MML_expr_vec ret_vec;
-	ret_vec.i = arena_alloc(MML_global_arena, vec->n * sizeof(arena_index));
+	ret_vec.ptr = arena_alloc_T(MML_global_arena, vec->n, MML_expr *);
 	ret_vec.n = vec->n;
 
 	memcpy(
-			mml_i(ret_vec.i, arena_index),
-			mml_i(vec->i, arena_index),
-			ret_vec.n * sizeof(arena_index));
+			ret_vec.ptr,
+			vec->ptr,
+			ret_vec.n * sizeof(MML_expr *));
 
 	cur_state = state;
 	qsort(
-			mml_i(ret_vec.i, arena_index),
-			ret_vec.n, sizeof(arena_index),
+			ret_vec.ptr,
+			ret_vec.n, sizeof(MML_expr *),
 			compare_values);
 
 	return (MML_value) { Vector_type, .v = ret_vec };

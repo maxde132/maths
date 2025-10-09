@@ -48,11 +48,11 @@ int32_t main(int32_t argc, char **argv)
 
 	//Expr *expr = parse(expression.s);
 	//eval_push_expr(&eval_state, expr);
-	arena_index_vec exprs = MML_parse_stmts_to_ret(expression.s);
+	MML_expr_dvec exprs = MML_parse_stmts(expression.s);
 
 	if (!FLAG_IS_SET(NO_EVAL))
 	{
-		arena_index *cur;
+		MML_expr **cur;
 		dv_foreach(exprs, cur)
 		{
 			MML_value val = MML_eval_expr(
@@ -64,8 +64,8 @@ int32_t main(int32_t argc, char **argv)
 		}
 	}
 
-	if (expression.allocd)
-		free(expression.s);
+	//if (expression.allocd)
+	//	free(expression.s);
 	MML_cleanup_state(MML_global_config.eval_state);
 
 	return 0;

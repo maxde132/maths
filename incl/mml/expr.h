@@ -4,18 +4,17 @@
 #include <complex.h>
 #include <stdint.h>
 
-#include "cpp_compat.h"
 #include "mml/token.h"
 #include "cvi/dvec/dvec.h"
-#include "arena/arena.h"
+#include "cpp_compat.h"
 
 MML__CPP_COMPAT_BEGIN_DECLS
 
 typedef struct MML_expr MML_expr;
 
 typedef struct MML_Operation {
-	arena_index left; // MML_expr *
-	arena_index right; // MML_expr *
+	MML_expr *left;
+	MML_expr *right;
 	MML_token_type op;
 } MML_Operation;
 
@@ -30,12 +29,12 @@ typedef enum MML_ExprType {
 	Vector_type,
 } MML_expr_type;
 
-typedef dvec_t(arena_index) arena_index_vec;
-
 typedef struct {
-	arena_index i; // MML_expr **, pointer to `n` contiguous arena indices which each point to an MML_expr
+	MML_expr **ptr;
 	size_t n;
 } MML_expr_vec;
+
+typedef dvec_t(MML_expr *) MML_expr_dvec;
 
 #define VALTYPE_IS_ORDERED(v) \
 	((v).type != ComplexNumber_type && \
@@ -99,10 +98,6 @@ MML_value MML_print_typedval_multiargs(MML_state *crestrict state, MML_expr_vec 
 MML_value MML_println_typedval_multiargs(MML_state *crestrict state, MML_expr_vec *args);
 void MML_print_exprh(const MML_expr *expr);
 MML_value MML_print_exprh_tv_func(MML_state *crestrict , MML_expr_vec *args);
-
-void MML_free_expr(arena_index e);
-
-void MML_free_vec(MML_expr_vec vec);
 
 void MML_free_pp(void *p);
 

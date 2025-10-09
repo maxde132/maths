@@ -9,7 +9,6 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include "arena/arena.h"
 #include "mml/config.h"
 #include "mml/expr.h"
 #include "mml/eval.h"
@@ -155,7 +154,6 @@ void MML_run_prompt(MML_state *state)
 	char line_in[LINE_MAX_LEN+1] = {0};
 
 	MML_value cur_val = VAL_INVAL;
-	size_t expr_n_offset = 0;
 	puts("-- MML interactive prompt --");
 	puts("run `exit` or press CTRL+D to quit the prompt.");
 	ssize_t n_read = 0;
@@ -176,29 +174,27 @@ void MML_run_prompt(MML_state *state)
 	#endif
 
 		uint64_t nsecs;
+		MML_expr_dvec exprs;
 		if (!FLAG_IS_SET(DBG_TIME))
-			MML_parse_stmts(line_in, state);
+			exprs = MML_parse_stmts(line_in);
 		else {
-			time_blck(&nsecs, MML_parse_stmts(line_in, state));
+			time_blck(&nsecs, exprs = MML_parse_stmts(line_in));
 			MML_log_dbg("parsed in %.6fs\n", (double)nsecs/NSEC_IN_SEC);
 		}
 
+		MML_expr **cur;
 		if (!FLAG_IS_SET(DBG_TIME))
 		{
-			while (expr_n_offset < dv_n(state->exprs))
-			{
-				arena_index cur = dv_a(state->exprs, expr_n_offset++);
-				if (cur != SIZE_MAX)
-					cur_val = MML_eval_expr(state, cur);
-			}
+			dv_foreach(exprs, cur)
+				if (*cur != NULL)
+					cur_val = MML_eval_expr(state, *cur);
 		} else
 		{
 			time_blck(&nsecs, 
-			while (expr_n_offset < dv_n(state->exprs))
+			dv_foreach(exprs, cur)
 			{
-				arena_index cur = dv_a(state->exprs, expr_n_offset++);
-				if (cur != SIZE_MAX)
-					cur_val = MML_eval_expr(state, cur);
+				if (*cur != NULL)
+					cur_val = MML_eval_expr(state, *cur);
 			});
 			MML_log_dbg("evaluated in %.6fs\n", (double)nsecs/NSEC_IN_SEC);
 		}

@@ -4,15 +4,13 @@
 #include "mml/token.h"
 #include "mml/expr.h"
 #include "mml/eval.h"
-#include "arena/arena.h"
 #include "cpp_compat.h"
 
 MML__CPP_COMPAT_BEGIN_DECLS
 
-arena_index MML_parse(const char *s);
+MML_expr *MML_parse(const char *s);
 
-arena_index_vec MML_parse_stmts_to_ret(const char *s);
-void MML_parse_stmts(const char *s, MML_state *state);
+MML_expr_dvec MML_parse_stmts(const char *s);
 
 #ifndef MML_BARE_USE
 constexpr const uint8_t PRECEDENCE[] = {

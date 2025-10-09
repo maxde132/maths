@@ -9,7 +9,7 @@
 
 static MML_value custom_dbg_type(MML_state *state, MML_expr_vec *args)
 {
-	printf("%s", EXPR_TYPE_STRINGS[MML_eval_expr(state, *mml_vi(*args, 0)).type]);
+	printf("%s", EXPR_TYPE_STRINGS[MML_eval_expr(state, args->ptr[0]).type]);
 	state->config->last_print_was_newline = false;
 
 	return VAL_INVAL;
@@ -17,7 +17,7 @@ static MML_value custom_dbg_type(MML_state *state, MML_expr_vec *args)
 
 static MML_value custom_dbg_ident(MML_state *state, MML_expr_vec *args)
 {
-	MML_print_exprh(mml_e(MML_eval_get_variable(state, mml_e(*mml_vi(*args, 0))->s)));
+	MML_print_exprh(MML_eval_get_variable(state, args->ptr[0]->s));
 
 	return VAL_INVAL;
 }
@@ -25,18 +25,18 @@ static MML_value custom_dbg_ident(MML_state *state, MML_expr_vec *args)
 static MML_value custom_config_set(MML_state *state, MML_expr_vec *args)
 {
 	if (args->n != 2
-	 || mml_e(*mml_vi(*args, 0))->type != Identifier_type)
+	 || args->ptr[0]->type != Identifier_type)
 	{
 		fprintf(stderr, "`config_set` takes two arguments; "
 				"an identifier and some other value\n");
 		return VAL_INVAL;
 	}
 
-	const strbuf config_ident = mml_e(*mml_vi(*args, 0))->s;
+	const strbuf config_ident = args->ptr[0]->s;
 
 	if (strncmp(config_ident.s, "precision", sizeof("precision")-1) == 0)
 	{
-		MML_value val = MML_eval_expr(state, *mml_vi(*args, 1));
+		MML_value val = MML_eval_expr(state, args->ptr[1]);
 		if (val.type != RealNumber_type)
 		{
 			MML_log_err("`config_set`: the `precision` config setting "
@@ -46,7 +46,7 @@ static MML_value custom_config_set(MML_state *state, MML_expr_vec *args)
 		state->config->precision = (uint32_t)floor(val.n);
 	} else if (strncmp(config_ident.s, "full_prec_floats", sizeof("full_prec_floats")-1) == 0)
 	{
-		MML_value val = MML_eval_expr(state, *mml_vi(*args, 1));
+		MML_value val = MML_eval_expr(state, args->ptr[1]);
 		if (val.type != Boolean_type)
 		{
 			MML_log_err("`config_set`: the `full_prec_floats` config setting "
@@ -56,7 +56,7 @@ static MML_value custom_config_set(MML_state *state, MML_expr_vec *args)
 		state->config->full_prec_floats = val.b;
 	} else if (strncmp(config_ident.s, "bools_are_nums", sizeof("bools_are_nums")-1) == 0)
 	{
-		MML_value val = MML_eval_expr(state, *mml_vi(*args, 1));
+		MML_value val = MML_eval_expr(state, args->ptr[1]);
 		if (val.type != Boolean_type)
 		{
 			MML_log_err("`config_set`: the `bools_are_nums` config setting "

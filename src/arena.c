@@ -4,33 +4,76 @@
 #include <stdint.h>
 #include <stddef.h>
 
-Arena *arena_make(size_t init_size)
+typedef struct ArenaBucket {
+	uint8_t *base;
+	struct ArenaBucket *next;
+} ArenaBucket;
+
+typedef struct Arena {
+	ArenaBucket *first;
+	ArenaBucket *current;
+	size_t index;
+	size_t bucket_init_size;
+} Arena;
+
+
+Arena *arena_make(size_t bucket_init_size)
 {
 	Arena *ret = calloc(1, sizeof(Arena));
-	ret->base = malloc(ret->size = init_size);
+	ret->bucket_init_size = bucket_init_size;
+
+	ret->current = calloc(1, sizeof(ArenaBucket));
+	ret->current->base = malloc(ret->bucket_init_size);
+	ret->first = ret->current;
+
 	ret->index = 0;
 
 	return ret;
 }
 
-void arena_free(Arena *arena)
+void free_arena_buckets(ArenaBucket *first);
+
+void arena_destroy(Arena *arena)
 {
-	free(arena->base);
+	free_arena_buckets(arena->first);
 	free(arena);
 }
 
-#define ARENA_REALLOC_FACTOR 2
-inline arena_index arena_alloc(Arena *arena, size_t size)
+void free_arena_buckets(ArenaBucket *first)
 {
-	if (arena->index + size > arena->size) {
-		uint8_t *new_base = realloc(arena->base, arena->size *= ARENA_REALLOC_FACTOR);
-		if (new_base == NULL)
-			return SIZE_MAX;
-		arena->base = new_base;
+	if (first == NULL) return;
+
+	ArenaBucket *temp, *cur = first;
+	do
+	{
+		temp = cur->next;
+		free(cur->base);
+		free(cur);
+		cur = temp;
+	} while (cur != NULL);
+}
+
+#define MAX(a,b) ((a<b) ? b : a)
+
+#define ARENA_REALLOC_FACTOR 2
+inline void *arena_alloc(Arena *arena, size_t size)
+{
+	void *ret_ptr = &arena->current->base[arena->index];
+
+	if (arena->index + size > arena->bucket_init_size)
+	{
+		// current bucket is full; allocate a new one
+		ArenaBucket *new_bucket = calloc(1, sizeof(ArenaBucket));
+
+		new_bucket->base = malloc(MAX(arena->bucket_init_size, size));
+
+		arena->current = arena->current->next = new_bucket;
+
+		arena->index = size;
+		return arena->current->base;
 	}
-	
-	size_t ret_index = arena->index;
 	arena->index += size;
 
-	return ret_index;
+	return ret_ptr;
 }
+

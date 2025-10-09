@@ -72,17 +72,16 @@ typedef enum {
 typedef struct strbuf {
 	char *s;
 	size_t len;
-	bool allocd;
 } strbuf;
 
-#define str_lit(s) ((strbuf) { (s), sizeof(s)-1, false })
+#define str_lit(s) ((strbuf) { (s), sizeof(s)-1 })
 
 typedef struct MML_token {
 	strbuf buf;
 	MML_token_type type;
 } MML_token;
 
-#define nToken(type, buf, len) ((MML_token) { { (char *)(buf), (len), false }, (type) })
+#define nToken(type, buf, len) ((MML_token) { { (char *)(buf), (len) }, (type) })
 
 MML__CPP_COMPAT_END_DECLS
 

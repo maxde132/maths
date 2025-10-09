@@ -4,18 +4,11 @@
 #include "mml/config.h"
 #include "mml/expr.h"
 #include "cpp_compat.h"
-#include "cvi/dvec/dvec.h"
 #include "arena/arena.h"
 
 MML__CPP_COMPAT_BEGIN_DECLS
 
 extern Arena *MML_global_arena;
-#define mml_i(_I, _T) (arena_i(MML_global_arena, (_I), _T))
-#define mml_e(_I) (mml_i((_I), MML_expr))
-#define mml_ii(_I, _T, _i) (arena_i(MML_global_arena, (_I), _T) + (_i))
-#define mml_vi(_v, _i) (mml_ii((_v).i, arena_index, (_i)))
-#define mml_ei(_e, _i) (mml_vi((_e).v, (_i)))
-#define mml_p_i(_p) ((uint8_t *)(_p) - MML_global_arena->base)
 
 typedef struct hashmap hashmap;
 
@@ -23,8 +16,6 @@ typedef struct MML_state {
 	struct MML_config *config;
 
 	hashmap *variables;
-
-	dvec_t(arena_index) exprs;
 
 	MML_value last_val;
 	bool is_init;
@@ -50,21 +41,14 @@ MML_state *MML_init_state(void);
  * more details. */
 void MML_cleanup_state(MML_state *crestrict state);
 
-int32_t MML_eval_set_variable(MML_state *crestrict state, strbuf name, arena_index expr);
-arena_index MML_eval_get_variable(MML_state *crestrict state, strbuf name);
+int32_t MML_eval_set_variable(MML_state *crestrict state, strbuf name, MML_expr *expr);
+MML_expr *MML_eval_get_variable(MML_state *crestrict state, strbuf name);
 
 /* evaluates EXPR using the evaluator state data in STATE */
-MML_value MML_eval_expr(MML_state *crestrict state, arena_index expr);
-MML_value MML_eval_expr_recurse(MML_state *crestrict state, arena_index expr);
+MML_value MML_eval_expr(MML_state *crestrict state, const MML_expr *expr);
+MML_value MML_eval_expr_recurse(MML_state *crestrict state, const MML_expr *expr);
 
 MML_value MML_eval_parse(MML_state *state, const char *s);
-
-/* push-moves EXPR onto the expression storage for STATE */
-int32_t MML_eval_push_expr(MML_state *crestrict state, arena_index expr);
-/* evaluates the last expression in the expression storage for STATE */
-MML_value MML_eval_top_expr(MML_state *crestrict state);
-
-MML_value MML_eval_last_val(MML_state *crestrict state);
 
 MML__CPP_COMPAT_END_DECLS
 

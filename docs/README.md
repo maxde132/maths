@@ -56,11 +56,11 @@ Example: `5pi == 5*pi` <br />
 MML supports complex numbers as well. A complex number can be defined as: `z = 5 + 3i`, where `i` is a built-in constant (see [Built-ins](#built-ins) for other built-in constants) that is multiplied by the number `3` and added to `5`. This was not made possible via any special syntax---really, under the hood, MML just promotes a number to a complex number if it used in an expression with a complex number, so all the example really does is promote `3` to the complex number `3+0i`, multiply it by `i` to create `0+3i`, and add `5` to make `5+3i`, which is assigned to `z`.
 
 Additionally, built-in functions are provided, though user-defined functions are not yet implemented. Functions are called via this syntax:
-`function_name{argument1, argument2, ...}`. Most functions take just 1 argument, but some take 2 or more. For example: `cos{1.5pi} == 0` (due to rounding errors, this statement evaluates to `false` if the `--no-estimate-equality` argument is passed to the `mml` CLI).
+`function_name{argument1, argument2, ...}`. Most functions take just 1 argument, but some take 2 or more. For example: `cos{1.5pi} == 0` (due to rounding errors, this statement evaluates to `false` if the `===` exact equality operator is used: `cos{1.5pi} === 0`).
 A full catalogue of all provided built-in functions and their properties is available in [Built-ins](#built-ins).
 
 ## <span id="built-ins">Built-ins</span> [↩](#contents)
-#### Built-in constants that can be used:
+#### Built-in constants:
 - `true` = the Boolean value `true` (value of `1 == 1`)
 - `false` = the Boolean value `false` (value of `0 == 1`)
 - `pi` = the mathematical constant `π` (the ratio of a circle's circumference to its diameter).

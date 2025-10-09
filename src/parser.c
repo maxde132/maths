@@ -233,12 +233,12 @@ static bool op_is_right_associative(MML_token_type op)
 
 static bool in_pipe_block = false;
 
-static arena_index parse_expr(const char **s, uint32_t max_preced, struct parser_state *state)
+static MML_expr *parse_expr(const char **s, uint32_t max_preced, struct parser_state *state)
 {
 	MML_token tok = get_next_token(s, state);
 
-	arena_index left = arena_alloc(MML_global_arena, sizeof(MML_expr));
-	mml_e(left)->type = Invalid_type;
+	MML_expr *left = arena_alloc_T(MML_global_arena, 1, MML_expr);
+	left->type = Invalid_type;
 
 	if (tok.type == MML_OP_SUB_TOK || tok.type == MML_OP_ADD_TOK
 			|| op_is_unary(tok.type))
@@ -249,12 +249,12 @@ static arena_index parse_expr(const char **s, uint32_t max_preced, struct parser
 		else if (new_token_type == MML_OP_SUB_TOK)
 			new_token_type = MML_OP_NEGATE;
 		
-		arena_index operand = parse_expr(s, PRECEDENCE[new_token_type], state);
+		MML_expr *operand = parse_expr(s, PRECEDENCE[new_token_type], state);
 
-		mml_e(left)->type = Operation_type;
-		mml_e(left)->o.op = new_token_type;
-		mml_e(left)->o.left = operand;
-		mml_e(left)->o.right = SIZE_MAX;
+		left->type = Operation_type;
+		left->o.op = new_token_type;
+		left->o.left = operand;
+		left->o.right = NULL;
 	} else if (tok.type == MML_IDENT_TOK)
 	{
 		MML_token ident = tok;
@@ -262,36 +262,36 @@ static arena_index parse_expr(const char **s, uint32_t max_preced, struct parser
 
 		if (tok.type == MML_IDENT_TOK && next_tok.type == MML_OPEN_BRAC_TOK)
 		{
-			arena_index name = arena_alloc(MML_global_arena, sizeof(MML_expr));
-			mml_e(name)->type = Identifier_type;
-			mml_e(name)->s = ident.buf;
+			MML_expr *name = arena_alloc_T(MML_global_arena, 1, MML_expr);
+			name->type = Identifier_type;
+			name->s = ident.buf;
 
-			mml_e(left)->type = Operation_type;
-			mml_e(left)->o.left = name;
-			mml_e(left)->o.op = MML_OP_FUNC_CALL_TOK;
+			left->type = Operation_type;
+			left->o.left = name;
+			left->o.op = MML_OP_FUNC_CALL_TOK;
 
 			get_next_token(s, state);
 
-			mml_e(left)->o.right = arena_alloc(MML_global_arena, sizeof(MML_expr));
-			mml_e(mml_e(left)->o.right)->type = Vector_type;
+			left->o.right = arena_alloc(MML_global_arena, sizeof(MML_expr));
+			left->o.right->type = Vector_type;
 			// temporary dvec because we don't know how many elements it'll have
-			dvec_t(arena_index) temp = DVEC_INIT;
+			MML_expr_dvec temp = DVEC_INIT;
 			do
 			{
 				if (**s == '\0' || peek_token(s, state).type == MML_CLOSE_BRAC_TOK)
 					break;
-				arena_index next_expr = parse_expr(s, PARSER_MAX_PRECED, state);
+				MML_expr *next_expr = parse_expr(s, PARSER_MAX_PRECED, state);
 				dv_push(temp, next_expr);
 				//if (next_expr != nullptr)
 				//	--next_expr->num_refs;
 			} while (get_next_token(s, state).type == MML_COMMA_TOK);
-			mml_e(mml_e(left)->o.right)->v.i = arena_alloc(MML_global_arena, dv_n(temp) * sizeof(arena_index));
+			left->o.right->v.ptr = arena_alloc_T(MML_global_arena, dv_n(temp), MML_expr *);
+			left->o.right->v.n = dv_n(temp);
 			// copy `temp` into the actual vector
 			memcpy(
-				mml_i(mml_e(mml_e(left)->o.right)->v.i, arena_index),
-				temp.items,
-				dv_n(temp) * sizeof(arena_index));
-			mml_e(mml_e(left)->o.right)->v.n = dv_n(temp);
+				left->o.right->v.ptr,
+				_dv_ptr(temp),
+				dv_n(temp) * sizeof(MML_expr *));
 			dv_destroy(temp);
 
 			if (state->current_tok.type != MML_CLOSE_BRAC_TOK)
@@ -304,27 +304,26 @@ static arena_index parse_expr(const char **s, uint32_t max_preced, struct parser
 			}
 		} else
 		{
-			mml_e(left)->type = Identifier_type;
-			mml_e(left)->s = ident.buf;
+			left->type = Identifier_type;
+			left->s = ident.buf;
 		}
 	} else if (tok.type == MML_OPEN_PAREN_TOK)
 	{
-		MML_free_expr(left);
 		left = parse_expr(s, PARSER_MAX_PRECED, state);
-		MML_log_dbg("left type = %s\n", EXPR_TYPE_STRINGS[mml_e(left)->type]);
+		MML_log_dbg("left type = %s\n", EXPR_TYPE_STRINGS[left->type]);
 		MML_token close_paren_tok = get_next_token(s, state);
 		if (close_paren_tok.type != MML_CLOSE_PAREN_TOK)
 			get_next_token(s, state);
 	} else if (tok.type == MML_OPEN_BRACKET_TOK)
 	{
-		dvec_t(arena_index) temp = DVEC_INIT;
+		MML_expr_dvec temp = DVEC_INIT;
 		while (tok.type != MML_CLOSE_BRACKET_TOK)
 		{
 			tok = peek_token(s, state);
 			if (tok.type == MML_CLOSE_BRACKET_TOK)
 				break;
 
-			arena_index e = parse_expr(s, PARSER_MAX_PRECED, state);
+			MML_expr *e = parse_expr(s, PARSER_MAX_PRECED, state);
 			dv_push(temp, e);
 
 			tok = get_next_token(s, state);
@@ -334,30 +333,29 @@ static arena_index parse_expr(const char **s, uint32_t max_preced, struct parser
 				MML_log_err("unexpected token %s found after element"
 						" in vector literal (expected CLOSE_BRACKET_TOK or COMMA_TOK)\n",
 					 TOK_STRINGS[tok.type]);
-				MML_free_expr(left);
-				
-				arena_index *cur;
-				dv_foreach(temp, cur)
-					MML_free_expr(*cur);
 				dv_destroy(temp);
 
-				return SIZE_MAX;
+				return NULL;
 			}
 		}
 		
-		mml_e(left)->type = Vector_type;
-		mml_e(left)->v.i = arena_alloc(MML_global_arena, dv_n(temp) * sizeof(arena_index));
-		mml_e(left)->v.n = dv_n(temp);
+		left->type = Vector_type;
+		left->v.ptr = arena_alloc_T(MML_global_arena, dv_n(temp), MML_expr *);
+		left->v.n = dv_n(temp);
+		memcpy(
+			left->v.ptr,
+			_dv_ptr(temp),
+			dv_n(temp) * sizeof(MML_expr *)
+		);
 
 		dv_destroy(temp);
 	} else if (tok.type == MML_PIPE_TOK)
 	{
-		MML_free_expr(left);
 		tok = peek_token(s, state);
 		if (tok.type == MML_PIPE_TOK)
 		{
 			MML_log_err("expected expression in pipe block\n");
-			return SIZE_MAX;
+			return NULL;
 		}
 
 		in_pipe_block = true;
@@ -371,23 +369,22 @@ static arena_index parse_expr(const char **s, uint32_t max_preced, struct parser
 		in_pipe_block = false;
 		//MML_expr *opnode = Pipe(left);
 
-		arena_index opnode = arena_alloc(MML_global_arena, sizeof(MML_expr));
-		mml_e(opnode)->type = Operation_type;
-		mml_e(opnode)->o.op = MML_PIPE_TOK;
-		mml_e(opnode)->o.left = left;
-		mml_e(opnode)->o.right = SIZE_MAX;
+		MML_expr *opnode = arena_alloc_T(MML_global_arena, 1, MML_expr);
+		opnode->type = Operation_type;
+		opnode->o.op = MML_PIPE_TOK;
+		opnode->o.left = left;
+		opnode->o.right = NULL;
 
 		left = opnode;
 	} else if (tok.type == MML_NUMBER_TOK)
 	{
 		if (state->looking_for_int)
-			*mml_e(left) = EXPR_NUM((double)strtoll(tok.buf.s, NULL, 10));
+			*left = EXPR_NUM((double)strtoll(tok.buf.s, NULL, 10));
 		else
-			*mml_e(left) = EXPR_NUM(strtod(tok.buf.s, NULL)); 
+			*left = EXPR_NUM(strtod(tok.buf.s, NULL)); 
 		state->looking_for_int = false;
 	} else {
-		MML_free_expr(left);
-		return SIZE_MAX;
+		return NULL;
 	}
 
 	for (;;)
@@ -418,23 +415,22 @@ static arena_index parse_expr(const char **s, uint32_t max_preced, struct parser
 		if (op_tok.type == MML_OP_DOT_TOK)
 			state->looking_for_int = true;
 
-		arena_index right = parse_expr(s,
+		MML_expr *right = parse_expr(s,
 				op_is_right_associative(op_tok.type)
 					? preced
 					: preced-1, state);
 
-		if (right == SIZE_MAX) {
+		if (right == NULL) {
 			MML_log_err("expected expression after operator %s\n",
 					TOK_STRINGS[op_tok.type]);
-			MML_free_expr(left); 
-			return SIZE_MAX;
+			return NULL;
 		}
 
-		arena_index opnode = arena_alloc(MML_global_arena, sizeof(MML_expr));
-		mml_e(opnode)->type = Operation_type;
-		mml_e(opnode)->o.left = left;
-		mml_e(opnode)->o.right = right;
-		mml_e(opnode)->o.op = op_tok.type;
+		MML_expr *opnode = arena_alloc_T(MML_global_arena, 1, MML_expr);
+		opnode->type = Operation_type;
+		opnode->o.left = left;
+		opnode->o.right = right;
+		opnode->o.op = op_tok.type;
 
 		left = opnode;
 	}
@@ -442,14 +438,14 @@ static arena_index parse_expr(const char **s, uint32_t max_preced, struct parser
 	return left;
 }
 
-arena_index MML_parse(const char *s)
+MML_expr *MML_parse(const char *s)
 {
 	struct parser_state state = {0};
 	return parse_expr(&s, PARSER_MAX_PRECED, &state);
 }
-arena_index_vec MML_parse_stmts_to_ret(const char *s)
+MML_expr_dvec MML_parse_stmts(const char *s)
 {
-	arena_index_vec temp = DVEC_INIT;
+	MML_expr_dvec temp = DVEC_INIT;
 	struct parser_state state = {0};
 	do
 	{
@@ -457,15 +453,4 @@ arena_index_vec MML_parse_stmts_to_ret(const char *s)
 	} while (get_next_token(&s, &state).type == MML_SEMICOLON_TOK);
 
 	return temp;
-}
-
-void MML_parse_stmts(const char *s, MML_state *state)
-{
-	struct parser_state parser_state = {0};
-	do
-	{
-		arena_index cur_expr = parse_expr(&s, PARSER_MAX_PRECED, &parser_state);
-		if (cur_expr != SIZE_MAX)
-			MML_eval_push_expr(state, cur_expr);
-	} while (get_next_token(&s, &parser_state).type == MML_SEMICOLON_TOK);
 }

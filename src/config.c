@@ -22,7 +22,7 @@ struct MML_config MML_global_config = {
 	.full_prec_floats = false,
 };
 
-strbuf expression = { NULL, 0, false };
+strbuf expression = { NULL, 0 };
 
 static struct termios old_term;
 static bool raw_mode_is_set = false;
@@ -128,7 +128,7 @@ void MML_arg_parse(int32_t argc, char **argv)
 					MML_cleanup_state(MML_global_config.eval_state);
 					exit(1);
 				}
-				strbuf name = { argv[arg_n]+2+8, cur - (argv[arg_n]+2+8) - 1, false };
+				strbuf name = { argv[arg_n]+2+8, cur - (argv[arg_n]+2+8) - 1 };
 				MML_eval_set_variable(MML_global_config.eval_state, name, MML_parse(cur));
 			} else
 			{
@@ -208,12 +208,12 @@ void MML_arg_parse(int32_t argc, char **argv)
 strbuf MML_read_string_from_stream(FILE *stream)
 {
 	size_t buf_size = 2048;
-	strbuf ret_buf = { NULL, 0, true };
+	strbuf ret_buf = { NULL, 0 };
 	ret_buf.s = malloc(buf_size);
 	if (ret_buf.s == NULL)
 	{
 		fprintf(stderr, "failed to allocate the initial buffer size\n");
-		return (strbuf) { NULL, 0, 0 };
+		return (strbuf) { NULL, 0 };
 	}
 
 	size_t cur_chunk_read;
@@ -229,7 +229,7 @@ strbuf MML_read_string_from_stream(FILE *stream)
 			{
 				free(ret_buf.s);
 				fprintf(stderr, "failed to reallocate buffer with size %zu\n", buf_size);
-				return (strbuf) { NULL, 0, 0 };
+				return (strbuf) { NULL, 0 };
 			}
 			ret_buf.s = temp_buf;
 		}
@@ -237,5 +237,11 @@ strbuf MML_read_string_from_stream(FILE *stream)
 
 	ret_buf.s[ret_buf.len++] = '\0';
 
+	char *old_buf = ret_buf.s;
+	ret_buf.s = arena_alloc_T(MML_global_arena, ret_buf.len, char);
+	memcpy(ret_buf.s, old_buf, ret_buf.len);
+
+	free(old_buf);
+	
 	return ret_buf;
 }

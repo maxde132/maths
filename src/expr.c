@@ -63,7 +63,7 @@ MML_value MML_print_typedval(MML_state *state, const MML_value *val)
 		MML_value cur_val;
 		for (size_t i = 0; i < val->v.n; ++i)
 		{
-			cur_val = MML_eval_expr(state, *mml_ii(val->v.i, arena_index, i));
+			cur_val = MML_eval_expr(state, val->v.ptr[i]);
 			MML_print_typedval(state, &cur_val);
 			if (i < val->v.n-1)
 				fputs(", ", stdout);
@@ -90,7 +90,7 @@ MML_value MML_print_typedval_multiargs(MML_state *state, MML_expr_vec *args)
 {
 	for (size_t i = 0; i < args->n; ++i)
 	{
-		MML_value cur_val = MML_eval_expr(state, *mml_ii(args->i, arena_index, i));
+		MML_value cur_val = MML_eval_expr(state, args->ptr[i]);
 		MML_print_typedval(state, &cur_val);
 		if (i < args->n-1) fputc(' ', stdout);
 	}
@@ -101,7 +101,7 @@ MML_value MML_println_typedval_multiargs(MML_state *state, MML_expr_vec *args)
 {
 	for (size_t i = 0; i < args->n; ++i)
 	{
-		MML_value cur_val = MML_eval_expr(state, *mml_ii(args->i, arena_index, i));
+		MML_value cur_val = MML_eval_expr(state, args->ptr[i]);
 		MML_println_typedval(state, &cur_val);
 	}
 	if (args->n == 0)
@@ -124,13 +124,13 @@ void MML_print_expr(struct MML_config *config, const MML_expr *expr, uint32_t in
 		MML_print_indent(indent+2);
 
 		printf("Left:\n");
-		MML_print_expr(config, mml_i(expr->o.left, MML_expr), indent+4);
+		MML_print_expr(config, expr->o.left, indent+4);
 		if (expr->o.right)
 		{
 			fputc('\n', stdout);
 			MML_print_indent(indent+2);
 			printf("Right:\n");
-			MML_print_expr(config, mml_i(expr->o.right, MML_expr), indent+4);
+			MML_print_expr(config, expr->o.right, indent+4);
 		}
 		break;
 	case Integer_type:
@@ -171,7 +171,7 @@ void MML_print_expr(struct MML_config *config, const MML_expr *expr, uint32_t in
 		printf("Vector(n=%zu):\n", expr->v.n);
 		for (size_t i = 0; i < expr->v.n; ++i)
 		{
-			MML_print_expr(config, mml_i(*mml_ii(expr->v.i, arena_index, i), MML_expr), indent+2);
+			MML_print_expr(config, expr->v.ptr[i], indent+2);
 			if (i < expr->v.n - 1) fputc('\n', stdout);
 		}
 		break;
@@ -191,37 +191,11 @@ inline void MML_print_exprh(const MML_expr *expr)
 }
 inline MML_value MML_print_exprh_tv_func(MML_state *state, MML_expr_vec *args)
 {
-	MML_print_expr(state->config, mml_i(*mml_ii(args->i, arena_index, 0), MML_expr), 0);
+	MML_print_expr(state->config, args->ptr[0], 0);
 	fputc('\n', stdout);
 	state->config->last_print_was_newline = true;
 
 	return VAL_INVAL;
-}
-
-void MML_free_expr(arena_index e)
-{
-	if (e == SIZE_MAX) return;
-	MML_expr *expr = mml_e(e);
-	MML_log_dbg("arena base = %p\n", MML_global_arena->base);
-	MML_log_dbg("e = %zu\n", e);
-	MML_log_dbg("SIZE_MAX - e == %zu\n", SIZE_MAX-e);
-	MML_log_dbg("mml_e(e) = %p\n", expr);
-
-	if (expr->type == Operation_type) {
-		MML_free_expr(expr->o.left);
-		MML_free_expr(expr->o.right);
-	} else if (expr->type == Identifier_type) {
-		if (expr->s.allocd)
-			free(expr->s.s);
-	} else if (expr->type == Vector_type) {
-		MML_free_vec(expr->v);
-	}
-}
-
-void MML_free_vec(MML_expr_vec vec)
-{
-	for (size_t i = 0; i < vec.n; ++i)
-		MML_free_expr(*mml_ii(vec.i, arena_index, i));
 }
 
 inline void MML_free_pp(void *p)
