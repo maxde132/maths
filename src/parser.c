@@ -264,7 +264,7 @@ static MML_expr *parse_expr(const char **s, uint32_t max_preced, struct parser_s
 		{
 			MML_expr *name = arena_alloc_T(MML_global_arena, 1, MML_expr);
 			name->type = Identifier_type;
-			name->s = ident.buf;
+			name->s = strbuf_dup(ident.buf);
 
 			left->type = Operation_type;
 			left->o.left = name;
@@ -305,7 +305,7 @@ static MML_expr *parse_expr(const char **s, uint32_t max_preced, struct parser_s
 		} else
 		{
 			left->type = Identifier_type;
-			left->s = ident.buf;
+			left->s = strbuf_dup(ident.buf);
 		}
 	} else if (tok.type == MML_OPEN_PAREN_TOK)
 	{

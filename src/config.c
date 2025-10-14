@@ -245,3 +245,12 @@ strbuf MML_read_string_from_stream(FILE *stream)
 	
 	return ret_buf;
 }
+
+strbuf strbuf_dup(strbuf buf)
+{
+	strbuf ret = buf;
+	ret.s = arena_alloc_T(MML_global_arena, ret.len, char);
+	memcpy(ret.s, buf.s, ret.len);
+
+	return ret;
+}

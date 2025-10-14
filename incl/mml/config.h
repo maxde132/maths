@@ -47,6 +47,7 @@ void MML_print_usage(void);
 void MML_arg_parse(int32_t argc, char **argv);
 
 strbuf MML_read_string_from_stream(FILE *stream);
+strbuf strbuf_dup(strbuf buf);
 
 enum LOG_TYPE {
 	MML_LOG_DEBUG,
