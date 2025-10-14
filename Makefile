@@ -7,11 +7,9 @@ CC := cc
 
 EXEC := mml
 
-#NO_DEBUG := -DNDEBUG
-
-FPIC_FLAG := 
-CFLAGS := -Wall -Wextra -Wno-date-time -std=c23 -Iincl -I. $(NO_DEBUG) -O3 -g
-LDFLAGS := $(CFLAGS) -lm
+FPIC_FLAG :=
+CFLAGS := -Wall -Wextra -Wno-date-time -std=c2x -Iincl -I. $(NO_DEBUG) -O3 -g
+LDFLAGS := $(CFLAGS)
 
 .PHONY: cleanobjs clean static_lib shared_lib print_done
 
@@ -21,7 +19,7 @@ all: build obj \
 	print_building_exe build/$(EXEC) print_done_exe
 
 build/$(EXEC): Makefile $(OBJECTS)
-	$(CC) $(CFLAGS) $(LDFLAGS) $(OBJECTS) -o build/$(EXEC)
+	$(CC) $(CFLAGS) $(OBJECTS) -o build/$(EXEC) $(LDFLAGS) -lm
 
 obj/main.o: Makefile src/main.c incl/mml/expr.h incl/mml/token.h incl/mml/parser.h incl/mml/eval.h cvi/dvec/dvec.h
 	$(CC) src/main.c -c -o obj/main.o $(CFLAGS) $(FPIC_FLAG)
@@ -47,8 +45,6 @@ obj/arena.o: Makefile src/arena.c incl/arena/arena.h
 obj/map.o: Makefile c-hashmap/map.c c-hashmap/map.h
 	$(CC) c-hashmap/map.c -Ic-hashmap -c -o obj/map.o $(CFLAGS) $(FPIC_FLAG)
 
-
-# printing
 .PHONY: print_building_exe
 print_building_exe:
 	@echo --- Building executable from object files \(object files found in 'obj' dir\) ---
@@ -72,15 +68,11 @@ build_func_libs_shared:
 print_done_%:
 	@echo --- DONE ---
 
-
-# directory makers
 obj:
-	mkdir obj
+	mkdir -p obj
 build:
-	mkdir build
+	mkdir -p build
 
-
-# library targets
 static_lib: cleanobjs build/lib$(EXEC).a
 shared_lib: cleanobjs build/lib$(EXEC).so
 
@@ -88,11 +80,9 @@ build/lib$(EXEC).a: build obj Makefile build_func_libs $(filter-out obj/main.o,$
 	ar rcs build/lib$(EXEC).a $(filter-out obj/main.o,$(OBJECTS))
 
 build/lib$(EXEC).so: FPIC_FLAG=-fPIC
-build/lib$(EXEC).so: build obj Makefile build_func_libs_shared $(OBJECTS) 
-	$(CC) $(OBJECTS) $(LDFLAGS) -shared -o build/lib$(EXEC).so
+build/lib$(EXEC).so: build obj Makefile build_func_libs_shared $(OBJECTS)
+	$(CC) $(OBJECTS) $(LDFLAGS) -shared -o build/lib$(EXEC).so -lm
 
-
-# clean targets
 cleanobjs:
 	rm -f obj/*
 	$(MAKE) -C lib clean
